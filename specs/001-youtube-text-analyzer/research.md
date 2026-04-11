@@ -5,14 +5,24 @@
 
 ## Decision: YouTube Video Access Method
 
-**Chosen**: Use yt-dlp for downloading video segments on-demand, as streaming full videos in real-time is complex and unreliable with minimal dependencies.
+**Chosen**: Use yt-dlp for on-demand frame retrieval via stream URL negotiation and ffmpeg seeking, without requiring full-video downloads.
 
-**Rationale**: While the spec clarified "stream the video", practical implementation requires buffering/downloading frames for OCR processing. yt-dlp is lightweight, widely used, and handles YouTube access reliably. It can download in segments to simulate streaming.
+**Rationale**: On-demand frame retrieval aligns with FR-003 semantics while keeping dependencies minimal. yt-dlp reliably handles YouTube access, and ffmpeg supports second-based frame seeks for region selection and analysis.
 
 **Alternatives Considered**:
 - pafy + youtube-dl: Similar to yt-dlp, but yt-dlp is more maintained.
 - Direct API: YouTube API doesn't provide video streams for analysis.
 - Browser automation: Too heavy, violates minimal dependencies.
+
+## Decision: URL Validation Strategy
+
+**Chosen**: Two-stage validation before analysis: URL format validation followed by accessibility preflight check.
+
+**Rationale**: Separates fast local validation from network-dependent reachability checks, producing clear user-facing errors and reducing wasted analysis startup.
+
+**Alternatives Considered**:
+- Format-only validation: defers failures too late.
+- Runtime-only failure handling: unclear UX and noisy errors.
 
 ## Decision: Context Pattern Matching Strategy
 
@@ -84,9 +94,9 @@
 
 ## Decision: CSV Output Format
 
-**Chosen**: CSV with one row per normalized player name and event-based occurrence counts.
+**Chosen**: Fixed-schema CSV with one row per normalized player name and event-based occurrence counts.
 
-**Recommended Columns**: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`
+**Required Columns (in order)**: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`
 
 **Rationale**: Preserves deduplicated business output while keeping enough metadata for verification and debugging.
 
@@ -126,9 +136,9 @@
 - Prod: Obtain from CA (DigiCert, GlobalSign) ~$300-500/year
 - Sign with signtool: `signtool sign /f cert.pfx /p password /t {timestamp_url} /fd SHA256 dist/main.exe`
 
-## Decision: YouTube Streaming with Time-Based Frame Navigation
+## Decision: On-Demand Video Retrieval with Time-Based Frame Navigation
 
-**Chosen**: yt-dlp for stream format negotiation + ffmpeg for frame seeking and extraction.
+**Chosen**: yt-dlp for source URL negotiation + ffmpeg for frame seeking and extraction.
 
 **Rationale**: yt-dlp reliably handles YouTube access. ffmpeg `-ss` flag enables arbitrary-second seeking, enabling scrollbar-based frame navigation (FR-018). No full download required.
 
@@ -141,6 +151,15 @@
 - yt-dlp extracts live stream URL
 - ffmpeg pipes frames to OpenCV at specified start_sec with fps control
 - Region selector UI triggers frame extraction at scrollbar time value
+
+## Decision: Region Interaction Scope
+
+**Chosen**: Require explicit user capability to create, adjust, and confirm one or more rectangular regions before analysis starts.
+
+**Rationale**: Converts implied behavior into testable requirement language and aligns implementation tasks with FR-032.
+
+**Alternatives Considered**:
+- Implicit-only behavior via FR-009: too ambiguous for task mapping.
 
 ## Decision: Tesseract Integration in Bundled Executables
 
@@ -191,5 +210,8 @@
 - Context pattern matching: case-insensitive substring with optional before/after
 - Dedup semantics: normalized-name dedup with event-based occurrence counting
 - Performance-aware event aggregation: configurable gap threshold (default 1.0s)
+- URL validation semantics: format + accessibility preflight
+- Fixed CSV schema requirements for summary output
+- Explicit region interaction requirement for create/adjust/confirm behavior
 
 **Status**: Ready for Phase 1 design and task generation.

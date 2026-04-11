@@ -27,9 +27,9 @@ Python 3.11: Follow standard conventions
 
 ## Recent Changes
 - 001-youtube-text-analyzer: Added Python 3.11 + opencv-python, pytesseract, yt-dlp, tkinter
+- 001-youtube-text-analyzer: Added Python 3.11 + opencv-python, pytesseract, yt-dlp, tkinter
 - 001-youtube-text-analyzer: Added Python 3.11 + opencv-python (video processing), pytesseract (OCR), yt-dlp (YouTube streaming), tkinter (UI)
 
-- 001-youtube-text-analyzer: Added Python 3.11 + opencv-python (video processing), pytesseract (OCR), tkinter (UI)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

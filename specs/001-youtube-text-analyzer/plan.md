@@ -5,7 +5,7 @@
 
 ## Summary
 
-Build a Windows desktop app that analyzes YouTube gameplay videos for player names in user-defined regions, supports configurable surrounding-text extraction rules, and exports deduplicated CSV output. Extraction uses case-insensitive context-pattern matching with optional before/after compound rules, and aggregates repeated detections into per-player appearance events with a default 1.0s event-gap merge threshold.
+Deliver a Windows desktop app that analyzes on-demand YouTube video frames inside user-defined regions, extracts player names using configurable context patterns, and exports a fixed-schema deduplicated CSV summary. The system must validate URL format and accessibility before analysis, aggregate repeated detections into appearance events with a default 1.0s merge threshold, and support portable signed distribution bundles for x64/x86.
 
 ## Technical Context
 
@@ -15,22 +15,22 @@ Build a Windows desktop app that analyzes YouTube gameplay videos for player nam
 **Testing**: pytest (unit + integration)  
 **Target Platform**: Windows x64 and x86  
 **Project Type**: Desktop GUI application  
-**Performance Goals**: Analyze a 10-minute video in under 5 minutes; avoid duplicate rows and keep aggregation memory bounded by unique normalized names  
-**Constraints**: Portable offline-capable bundled runtime, bundled FFmpeg and Tesseract (eng/deu), code-signing for release, no mandatory external installs  
-**Scale/Scope**: Single-window app with advanced settings, OCR region analysis, name extraction and dedup aggregation, CSV export
+**Performance Goals**: Analyze a 10-minute video in under 5 minutes while keeping dedup memory bounded by unique normalized names  
+**Constraints**: Portable bundled runtime with FFmpeg/Tesseract data, no required external installs, code-signing for releases  
+**Scale/Scope**: Single-window UI with region selector, advanced settings (context patterns + filtering + gap threshold), deduplicated summary export
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 Pre-Phase 0 assessment:
-1. PASS - Simple and Modular Architecture: service/component layering remains intact.
-2. PASS - Readability Over Cleverness: rules are explicit (normalization and event merge policy).
-3. PASS - Testing for Business Logic: new logic (pattern extraction and dedup) is testable via deterministic unit tests.
-4. PASS - Minimal Dependencies: no new external dependency introduced for pattern matching/dedup.
-5. PASS - No Secrets in Repository: unchanged; config file stores non-secret user settings.
-6. PASS - Windows-Friendly Development: feature targets Windows and bundled deployment workflow.
-7. PASS - Incremental Changes and Working State: additions are isolated to services/components and backward-compatible defaults.
+1. PASS - Simple and Modular Architecture: extends existing `components/services/data` layering.
+2. PASS - Readability Over Cleverness: business rules are explicit (pattern matching, normalization, event merge).
+3. PASS - Testing for Business Logic: plan includes unit/integration validation for extraction and aggregation logic.
+4. PASS - Minimal Dependencies: no new external dependency required for clarified functionality.
+5. PASS - No Secrets in Repository: settings file stores non-secret preferences only.
+6. PASS - Windows-Friendly Development: requirements and release steps target Windows explicitly.
+7. PASS - Incremental Changes and Working State: phased rollout preserves independent user-story checkpoints.
 
 **Gate Result**: PASS
 
@@ -76,22 +76,23 @@ tests/
 └── integration/
 ```
 
-**Structure Decision**: Keep the existing single-project desktop architecture; extend `services` for extraction, normalization, and dedup/event aggregation logic; extend `components` for advanced settings UI.
+**Structure Decision**: Keep the single-project desktop structure and add clarified behavior in existing modules (`analysis_service`, `ocr_service`, `video_service`, `main_window`, and `export_service`) without introducing new top-level subsystems.
 
 ## Phase 0: Research & Resolution
 
-All technical unknowns from updated requirements are resolved in [specs/001-youtube-text-analyzer/research.md](research.md):
-- On-demand video access with yt-dlp + ffmpeg seeking.
-- Case-insensitive context-pattern matching without regex.
-- Compound before/after rule evaluation.
-- Dedup by normalized key across whole video.
-- Appearance-event counting with configurable gap threshold (default 1.0s).
+All major unknowns are resolved in [specs/001-youtube-text-analyzer/research.md](research.md):
+- On-demand frame retrieval from YouTube (no full download requirement)
+- URL preflight accessibility validation strategy
+- Context-pattern extraction and compound matching behavior
+- Deduplication and fixed CSV schema for `PlayerSummary`
+- Event-based occurrence aggregation with configurable threshold (default 1.0s)
+- Windows packaging, signing, and dependency bundling strategy
 
-No unresolved clarifications remain.
+No `NEEDS CLARIFICATION` items remain.
 
 ## Phase 1: Design & Contracts
 
-Design artifacts produced and aligned with FR-001 to FR-030:
+Design artifacts aligned with FR-001 through FR-032:
 - [specs/001-youtube-text-analyzer/data-model.md](data-model.md)
 - [specs/001-youtube-text-analyzer/contracts/ocr_service.md](contracts/ocr_service.md)
 - [specs/001-youtube-text-analyzer/contracts/video_streaming.md](contracts/video_streaming.md)
@@ -99,10 +100,10 @@ Design artifacts produced and aligned with FR-001 to FR-030:
 
 ## Post-Design Constitution Check
 
-1. PASS - Architecture remains modular with explicit responsibilities.
-2. PASS - Business rules are explicit and testable.
-3. PASS - No unnecessary dependency added.
-4. PASS - Windows packaging/deployment constraints preserved.
+1. PASS - Architecture remains modular and incremental.
+2. PASS - Core business logic is explicit and testable.
+3. PASS - Dependency surface remains minimal.
+4. PASS - Windows distribution requirements remain first-class.
 
 **Gate Result**: PASS
 

@@ -20,8 +20,8 @@
 ## Usage
 
 1. Run `python src/main.py`.
-2. Enter a YouTube URL.
-3. Use the time scrollbar to pick a representative frame and draw region(s).
+2. Enter a YouTube URL and confirm validation (format + accessibility preflight).
+3. Use the time scrollbar to pick a representative frame, create one or more regions, adjust as needed, and confirm the final set.
 4. Open Advanced Settings and review context patterns:
 	- default `after_text`: `joined`
 	- default `after_text`: `connected`
