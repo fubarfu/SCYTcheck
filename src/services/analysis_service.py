@@ -96,10 +96,20 @@ class AnalysisService:
                     for diagnostic in ocr_diagnostics:
                         if bool(diagnostic.get("accepted")):
                             continue
+                        raw = str(diagnostic.get("raw_string", ""))
                         analysis.add_log_record(
                             LogRecord(
                                 timestamp_sec=self.format_timestamp(frame_time),
-                                raw_string=str(diagnostic.get("raw_string", "")),
+                                raw_string=raw,
+                                tested_string_raw=str(
+                                    diagnostic.get("tested_string_raw", raw)
+                                ),
+                                tested_string_normalized=str(
+                                    diagnostic.get(
+                                        "tested_string_normalized",
+                                        OCRService.normalize_for_matching(raw),
+                                    )
+                                ),
                                 accepted=False,
                                 rejection_reason=str(
                                     diagnostic.get("rejection_reason", "ocr_rejected")
@@ -141,6 +151,17 @@ class AnalysisService:
                             LogRecord(
                                 timestamp_sec=self.format_timestamp(frame_time),
                                 raw_string=str(decision["raw_string"]),
+                                tested_string_raw=str(
+                                    decision.get("tested_string_raw", decision["raw_string"])
+                                ),
+                                tested_string_normalized=str(
+                                    decision.get(
+                                        "tested_string_normalized",
+                                        OCRService.normalize_for_matching(
+                                            str(decision["raw_string"])
+                                        ),
+                                    )
+                                ),
                                 accepted=False,
                                 rejection_reason=str(decision["rejection_reason"]),
                                 extracted_name="",
@@ -174,6 +195,10 @@ class AnalysisService:
                 LogRecord(
                     timestamp_sec=self.format_timestamp(detection.frame_time_sec),
                     raw_string=detection.raw_ocr_text,
+                    tested_string_raw=detection.raw_ocr_text,
+                    tested_string_normalized=OCRService.normalize_for_matching(
+                        detection.raw_ocr_text
+                    ),
                     accepted=True,
                     rejection_reason="",
                     extracted_name=detection.extracted_name,

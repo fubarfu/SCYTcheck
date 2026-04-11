@@ -20,10 +20,10 @@
 
 **Purpose**: Prepare project-level dependencies, tooling, and release/build baseline.
 
-- [ ] T001 Update runtime dependencies in `requirements.txt`
-- [ ] T002 Align lint/test configuration in `pyproject.toml`
-- [ ] T003 [P] Prepare release bundling baseline in `scripts/release/build.ps1`
-- [ ] T004 [P] Prepare optional signing baseline in `scripts/release/sign.ps1`
+- [X] T001 Update runtime dependencies in `requirements.txt`
+- [X] T002 Align lint/test configuration in `pyproject.toml`
+- [X] T003 [P] Prepare release bundling baseline in `scripts/release/build.ps1`
+- [X] T004 [P] Prepare optional signing baseline in `scripts/release/sign.ps1`
 - [ ] T005 Configure portable build spec defaults in `build-config.spec`
 - [ ] T006 Establish application startup wiring baseline in `src/main.py`
 
@@ -35,7 +35,7 @@
 
 **⚠️ CRITICAL**: No user-story work begins until this phase is complete.
 
-- [ ] T007 Extend core entities (`VideoAnalysis`, `TextDetection`, `AppearanceEvent`, `PlayerSummary`, `LogRecord`) in `src/data/models.py`
+- [X] T007 Extend core entities (`VideoAnalysis`, `TextDetection`, `AppearanceEvent`, `PlayerSummary`, `LogRecord`) in `src/data/models.py`
 - [ ] T008 Implement deterministic settings path resolution (`%APPDATA%` fallback local) in `src/config.py`
 - [ ] T009 Implement first-launch defaults (patterns, toggles, thresholds, quality) in `src/config.py`
 - [ ] T010 [P] Add timestamp formatter (`HH:MM:SS.mmm`) in `src/services/analysis_service.py`
@@ -44,14 +44,14 @@
 - [ ] T013 Implement quality selection with fallback-to-lower and non-blocking warning in `src/services/video_service.py`
 - [ ] T014 Implement transient frame retrieval retries (max 3 per seek/read) in `src/services/video_service.py`
 - [ ] T015 [P] Implement OCR line aggregation (group Tesseract tokens by line metadata into full-line strings) in `src/services/ocr_service.py`
-- [ ] T016 [P] Implement OCR normalization for matching (remove line breaks, collapse whitespace) in `src/services/ocr_service.py`
-- [ ] T017 [P] Implement fuzzy substring pattern matching utility (best-occurrence scan, configurable threshold default 0.75) in `src/services/ocr_service.py`
-- [ ] T018 [P] Implement boundary-clipped context acceptance utility (2-char overlap or threshold pass) in `src/services/ocr_service.py`
-- [ ] T019 [P] Implement single-token extraction helpers for after-only (last token before marker), before-only (first token after marker), and both-boundary (first token between markers) modes in `src/services/ocr_service.py`
+- [X] T016 [P] Implement OCR normalization for matching (remove line breaks, collapse whitespace) in `src/services/ocr_service.py`
+- [X] T017 [P] Implement fuzzy substring pattern matching utility (best-occurrence scan, configurable threshold default 0.75) in `src/services/ocr_service.py`
+- [X] T018 [P] Implement boundary-clipped context acceptance utility (2-char overlap or threshold pass) in `src/services/ocr_service.py`
+- [X] T019 [P] Implement single-token extraction helpers for after-only (last token before marker), before-only (first token after marker), and both-boundary (first token between markers) modes in `src/services/ocr_service.py`
 - [ ] T020 Implement normalized-name utility (lowercase + trim + collapse internal spaces) in `src/services/analysis_service.py`
 - [ ] T021 Implement appearance-event merge utility (max gap default 1.0 s) in `src/services/analysis_service.py`
 - [ ] T022 Implement summary CSV writer with exact header order `PlayerName,StartTimestamp` in `src/services/export_service.py`
-- [ ] T023 Implement sidecar log writer with fixed FR-049 schema including `TestedStringRaw` and `TestedStringNormalized` in `src/services/logging.py`
+- [X] T023 Implement sidecar log writer with fixed FR-049 schema including `TestedStringRaw` and `TestedStringNormalized` in `src/services/logging.py`
 - [ ] T024 [P] Add foundational settings, default persistence, and URL/retry unit tests in `tests/unit/test_config.py` and `tests/unit/test_video_service.py`
 
 **Checkpoint**: Foundation complete; user stories can proceed in parallel.
@@ -69,16 +69,16 @@
 - [ ] T025 [P] [US1] Add integration test for valid URL analysis producing deduplicated summary CSV in `tests/integration/test_us1_workflow.py`
 - [ ] T026 [P] [US1] Add integration test for invalid URL rejection with distinct error classification in `tests/integration/test_us1_workflow.py`
 - [ ] T027 [P] [US1] Add integration test for header-only summary CSV when no text is detected in `tests/integration/test_us1_workflow.py`
-- [ ] T028 [P] [US1] Add OCR line aggregation and normalization behavior tests in `tests/unit/test_ocr_service.py`
-- [ ] T029 [P] [US1] Add fuzzy substring matching tests (threshold, best-occurrence scan) in `tests/unit/test_ocr_service.py`
-- [ ] T030 [P] [US1] Add boundary-clipped matching tests (2-char overlap and threshold pass cases) in `tests/unit/test_ocr_service.py`
-- [ ] T031 [P] [US1] Add single-token extraction boundary tests for after-only, before-only, and both modes in `tests/unit/test_ocr_service.py`
+- [X] T028 [P] [US1] Add OCR line aggregation and normalization behavior tests in `tests/unit/test_ocr_service.py`
+- [X] T029 [P] [US1] Add fuzzy substring matching tests (threshold, best-occurrence scan) in `tests/unit/test_ocr_service.py`
+- [X] T030 [P] [US1] Add boundary-clipped matching tests (2-char overlap and threshold pass cases) in `tests/unit/test_ocr_service.py`
+- [X] T031 [P] [US1] Add single-token extraction boundary tests for after-only, before-only, and both modes in `tests/unit/test_ocr_service.py`
 - [ ] T032 [P] [US1] Add deterministic multi-pattern tie-break tests (longest span, earliest start, pattern order) per FR-041 in `tests/unit/test_ocr_service.py`
 - [ ] T033 [P] [US1] Add recall-first context-matched candidate preservation tests per FR-034 in `tests/unit/test_analysis_service.py`
-- [ ] T034 [P] [US1] Add deduplication plus on-screen display-name selection tests per FR-028/FR-005 in `tests/unit/test_analysis_service.py`
+- [X] T034 [P] [US1] Add deduplication plus on-screen display-name selection tests per FR-028/FR-005 in `tests/unit/test_analysis_service.py`
 - [ ] T035 [P] [US1] Add appearance-event gap merge tests per FR-030 in `tests/unit/test_analysis_service.py`
 - [ ] T036 [P] [US1] Add summary CSV schema and `HH:MM:SS.mmm` timestamp format tests per SC-004/SC-005 in `tests/unit/test_export_service.py`
-- [ ] T037 [P] [US1] Add sidecar log schema tests verifying `TestedStringRaw` and `TestedStringNormalized` on accepted and rejected rows in `tests/integration/test_log_schema_fr049.py`
+- [X] T037 [P] [US1] Add sidecar log schema tests verifying `TestedStringRaw` and `TestedStringNormalized` on accepted and rejected rows in `tests/integration/test_log_schema_fr049.py`
 - [ ] T038 [P] [US1] Add analysis progress and completion feedback integration test in `tests/integration/test_us1_workflow.py`
 - [ ] T039 [P] [US1] Add export-retry without re-analysis integration test per FR-039 in `tests/integration/test_us1_workflow.py`
 - [ ] T040 [P] [US1] Add no-confirmed-region analysis abort integration test per FR-040 in `tests/integration/test_us1_workflow.py`
@@ -93,7 +93,7 @@
 - [ ] T046 [US1] Preserve every non-empty context-matched candidate through collection before aggregation per FR-034 in `src/services/analysis_service.py`
 - [ ] T047 [US1] Implement normalized-key grouping with earliest on-screen `PlayerName` selection per FR-028/FR-005 in `src/services/analysis_service.py`
 - [ ] T048 [US1] Build and export summary CSV rows with correct schema in `src/services/export_service.py`
-- [ ] T049 [US1] Build sidecar log records with `TestedStringRaw` and `TestedStringNormalized` diagnostics fields in `src/services/logging.py`
+- [X] T049 [US1] Build sidecar log records with `TestedStringRaw` and `TestedStringNormalized` diagnostics fields in `src/services/logging.py`
 - [ ] T050 [US1] Preserve in-memory analysis results on export failure and support retry action without re-running detection per FR-039 in `src/main.py`
 - [ ] T051 [US1] Enforce analysis abort and non-blocking message when no regions are confirmed per FR-040 in `src/main.py`
 - [ ] T052 [US1] Wire full-duration analysis window (`start=0.0`, `end=get_video_info duration`), timed frame iteration, and 3-retry behavior in `src/services/video_service.py` and `src/main.py`

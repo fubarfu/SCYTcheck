@@ -5,6 +5,7 @@ import re
 import cv2
 import numpy as np
 import pytesseract
+from thefuzz import fuzz as _fuzz
 
 from src.data.models import ContextPattern
 
@@ -65,11 +66,14 @@ class OCRService:
         line_entries = self._build_line_entries(data)
 
         for line_text, avg_conf in line_entries:
+            norm = OCRService.normalize_for_matching(line_text)
             if avg_conf >= self.confidence_threshold:
                 tokens.append(line_text)
                 diagnostics.append(
                     {
                         "raw_string": line_text,
+                        "tested_string_raw": line_text,
+                        "tested_string_normalized": norm,
                         "accepted": True,
                         "rejection_reason": "",
                         "extracted_name": line_text,
@@ -80,6 +84,8 @@ class OCRService:
                 diagnostics.append(
                     {
                         "raw_string": line_text,
+                        "tested_string_raw": line_text,
+                        "tested_string_normalized": norm,
                         "accepted": False,
                         "rejection_reason": "low_confidence",
                         "extracted_name": "",
@@ -91,6 +97,8 @@ class OCRService:
             diagnostics.append(
                 {
                     "raw_string": "",
+                    "tested_string_raw": "",
+                    "tested_string_normalized": "",
                     "accepted": False,
                     "rejection_reason": "no_ocr_output",
                     "extracted_name": "",
@@ -168,74 +176,133 @@ class OCRService:
             raise PatternValidationError("Pattern must define before_text and/or after_text.")
 
     @staticmethod
+    def normalize_for_matching(text: str) -> str:
+        """Normalize OCR text for pattern matching: remove newlines, collapse whitespace."""
+        text = (text or "").replace("\n", " ").replace("\r", " ")
+        return re.sub(r"\s+", " ", text).strip()
+
+    @staticmethod
+    def _find_in_text(
+        pattern: str,
+        text: str,
+        threshold: float = 0.75,
+    ) -> tuple[int, int] | None:
+        """Locate pattern in text: exact match first, then fuzzy scan, then boundary-clipped.
+
+        Returns (start, end) char positions within text, or None if not found at threshold.
+        """
+        if not pattern or not text:
+            return None
+
+        p_lower = pattern.lower()
+        t_lower = text.lower()
+        p_len = len(p_lower)
+        t_len = len(t_lower)
+
+        # 1. Exact case-insensitive substring match.
+        pos = t_lower.find(p_lower)
+        if pos >= 0:
+            return pos, pos + p_len
+
+        # 2. Fuzzy sliding-window scan.
+        if p_len <= t_len:
+            best_score = 0.0
+            best_pos = -1
+            for i in range(t_len - p_len + 1):
+                window = t_lower[i : i + p_len]
+                score = _fuzz.ratio(p_lower, window) / 100.0
+                if score > best_score:
+                    best_score = score
+                    best_pos = i
+            if best_score >= threshold:
+                return best_pos, best_pos + p_len
+
+        # 3. Boundary-clipped: ≥2 contiguous chars of pattern overlap at OCR region edge.
+        if p_len >= 2:
+            # Pattern's tail at the start of OCR text (region clipped pattern's beginning).
+            for overlap in range(p_len, 1, -1):
+                if t_lower.startswith(p_lower[-overlap:]):
+                    return 0, overlap
+            # Pattern's head at the end of OCR text (region clipped pattern's end).
+            for overlap in range(p_len, 1, -1):
+                if t_lower.endswith(p_lower[:overlap]):
+                    return t_len - overlap, t_len
+
+        return None
+
+    @staticmethod
     def extract_with_boundaries(
         line: str,
         before_text: str | None = None,
         after_text: str | None = None,
+        threshold: float = 0.75,
     ) -> str | None:
-        """Extract name from an OCR line using before/after/both boundary rules."""
-        OCRService.validate_pattern(before_text, after_text)
-        source = line or ""
-
-        before = before_text.strip() if before_text else None
-        after = after_text.strip() if after_text else None
-
-        if before and after:
-            pattern = rf"{re.escape(before)}\s*(.*?)\s*{re.escape(after)}"
-            match = re.search(pattern, source, flags=re.IGNORECASE)
-            return match.group(1).strip() if match and match.group(1).strip() else None
-
-        if before:
-            pattern = rf"{re.escape(before)}\s*(.*)$"
-            match = re.search(pattern, source, flags=re.IGNORECASE)
-            return match.group(1).strip() if match and match.group(1).strip() else None
-
-        pattern = rf"^(.*?)\s*{re.escape(after or '')}"
-        match = re.search(pattern, source, flags=re.IGNORECASE)
-        return match.group(1).strip() if match and match.group(1).strip() else None
+        """Extract single player-name token using before/after/both boundary rules."""
+        result = OCRService._extract_with_boundaries_meta(
+            line, before_text=before_text, after_text=after_text, threshold=threshold
+        )
+        return result[0] if result else None
 
     @staticmethod
     def _extract_with_boundaries_meta(
         line: str,
         before_text: str | None = None,
         after_text: str | None = None,
+        threshold: float = 0.75,
     ) -> tuple[str, int, int] | None:
+        """Find marker positions fuzzily and extract single player-name token.
+
+        Returns (token, name_start_pos, full_span_len) for tie-break purposes,
+        where full_span_len is the pre-tokenisation span to preserve tie-break
+        correctness, or None if no match.
+        """
         OCRService.validate_pattern(before_text, after_text)
-        source = line or ""
+        norm = OCRService.normalize_for_matching(line)
         before = before_text.strip() if before_text else None
         after = after_text.strip() if after_text else None
 
         if before and after:
-            pattern = rf"{re.escape(before)}\s*(.*?)\s*{re.escape(after)}"
-            match = re.search(pattern, source, flags=re.IGNORECASE)
-            if not match:
+            b_range = OCRService._find_in_text(before, norm, threshold)
+            if not b_range:
                 return None
-            extracted = (match.group(1) or "").strip()
-            if not extracted:
+            remaining = norm[b_range[1]:]
+            a_range = OCRService._find_in_text(after, remaining, threshold)
+            if not a_range:
                 return None
-            start, end = match.span(1)
-            return extracted, start, max(0, end - start)
+            span_text = remaining[: a_range[0]].strip()
+            if not span_text:
+                return None
+            tokens = span_text.split()
+            token = tokens[0] if tokens else ""  # both-boundary: first token between markers
+            if not token:
+                return None
+            return token, b_range[1], len(span_text)
 
         if before:
-            pattern = rf"{re.escape(before)}\s*(.*)$"
-            match = re.search(pattern, source, flags=re.IGNORECASE)
-            if not match:
+            b_range = OCRService._find_in_text(before, norm, threshold)
+            if not b_range:
                 return None
-            extracted = (match.group(1) or "").strip()
-            if not extracted:
+            span_text = norm[b_range[1] :].strip()
+            if not span_text:
                 return None
-            start, end = match.span(1)
-            return extracted, start, max(0, end - start)
+            tokens = span_text.split()
+            token = tokens[0] if tokens else ""  # before-only: first token after marker
+            if not token:
+                return None
+            return token, b_range[1], len(span_text)
 
-        pattern = rf"^(.*?)\s*{re.escape(after or '')}"
-        match = re.search(pattern, source, flags=re.IGNORECASE)
-        if not match:
+        # after-only
+        a_range = OCRService._find_in_text(after or "", norm, threshold)
+        if not a_range:
             return None
-        extracted = (match.group(1) or "").strip()
-        if not extracted:
+        span_text = norm[: a_range[0]].strip()
+        if not span_text:
             return None
-        start, end = match.span(1)
-        return extracted, start, max(0, end - start)
+        tokens = span_text.split()
+        token = tokens[-1] if tokens else ""  # after-only: last token before marker
+        if not token:
+            return None
+        return token, 0, len(span_text)
 
     def extract_candidates(
         self,
@@ -266,8 +333,8 @@ class OCRService:
     ) -> list[dict[str, object]]:
         """Evaluate OCR lines and return accept/reject decisions with reasons.
 
-        Each decision includes: raw_string, accepted, rejection_reason,
-        extracted_name, matched_pattern.
+        Each decision includes: raw_string, tested_string_raw, tested_string_normalized,
+        accepted, rejection_reason, extracted_name, matched_pattern.
         """
         active_patterns = [pattern for pattern in (patterns or []) if pattern.enabled]
         decisions: list[dict[str, object]] = []
@@ -277,13 +344,17 @@ class OCRService:
             if not source:
                 continue
 
+            tested_normalized = OCRService.normalize_for_matching(source)
+
             matched_candidates: list[tuple[str, str, int, int, int]] = []
             for pattern_index, pattern in enumerate(active_patterns):
+                threshold = getattr(pattern, "similarity_threshold", 0.75)
                 try:
                     meta = self._extract_with_boundaries_meta(
                         source,
                         before_text=pattern.before_text,
                         after_text=pattern.after_text,
+                        threshold=threshold,
                     )
                 except PatternValidationError:
                     continue
@@ -304,6 +375,8 @@ class OCRService:
                 decisions.append(
                     {
                         "raw_string": source,
+                        "tested_string_raw": source,
+                        "tested_string_normalized": tested_normalized,
                         "accepted": True,
                         "rejection_reason": "",
                         "extracted_name": extracted_name,
@@ -314,6 +387,8 @@ class OCRService:
                 decisions.append(
                     {
                         "raw_string": source,
+                        "tested_string_raw": source,
+                        "tested_string_normalized": tested_normalized,
                         "accepted": True,
                         "rejection_reason": "",
                         "extracted_name": source,
@@ -324,6 +399,8 @@ class OCRService:
                 decisions.append(
                     {
                         "raw_string": source,
+                        "tested_string_raw": source,
+                        "tested_string_normalized": tested_normalized,
                         "accepted": False,
                         "rejection_reason": "no_pattern_match",
                         "extracted_name": "",

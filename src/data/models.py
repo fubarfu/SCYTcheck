@@ -29,6 +29,7 @@ class ContextPattern:
     before_text: str | None = None
     after_text: str | None = None
     enabled: bool = True
+    similarity_threshold: float = 0.75
 
 
 @dataclass
@@ -71,6 +72,8 @@ class PlayerSummary:
 class LogRecord:
     timestamp_sec: str
     raw_string: str
+    tested_string_raw: str
+    tested_string_normalized: str
     accepted: bool
     rejection_reason: str
     extracted_name: str

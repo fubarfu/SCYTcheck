@@ -12,6 +12,8 @@ def test_fr049_sidecar_log_uses_fixed_expanded_schema(tmp_path) -> None:
             LogRecord(
                 timestamp_sec="00:00:01.234",
                 raw_string="Player: Alice",
+                tested_string_raw="Player: Alice",
+                tested_string_normalized="Player: Alice",
                 accepted=True,
                 rejection_reason="",
                 extracted_name="Alice",
@@ -31,7 +33,7 @@ def test_fr049_sidecar_log_uses_fixed_expanded_schema(tmp_path) -> None:
     assert (
         lines[1]
         == (
-            "00:00:01.234,Player: Alice,true,,Alice,region-1,pattern-1,"
+            "00:00:01.234,Player: Alice,Player: Alice,Player: Alice,true,,Alice,region-1,pattern-1,"
             "alice,1,00:00:01.234,00:00:03.000,10:20:100:50"
         )
     )

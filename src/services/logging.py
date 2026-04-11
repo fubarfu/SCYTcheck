@@ -33,6 +33,8 @@ def configure_logging(log_level: str = "INFO", log_file: str | None = None) -> l
 LOG_HEADERS = [
     "TimestampSec",
     "RawString",
+    "TestedStringRaw",
+    "TestedStringNormalized",
     "Accepted",
     "RejectionReason",
     "ExtractedName",
@@ -64,6 +66,8 @@ def write_sidecar_log(output_folder: str, summary_filename: str, records: list[L
                 [
                     record.timestamp_sec,
                     record.raw_string,
+                    record.tested_string_raw,
+                    record.tested_string_normalized,
                     str(record.accepted).lower(),
                     record.rejection_reason,
                     record.extracted_name,

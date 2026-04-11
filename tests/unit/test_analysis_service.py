@@ -193,3 +193,51 @@ def test_analyze_records_low_confidence_rejection_when_logging_enabled() -> None
     assert analysis.player_summaries == []
     assert len(analysis.log_records) == 1
     assert analysis.log_records[0].rejection_reason == "low_confidence"
+
+
+# ---------------------------------------------------------------------------
+# T034 – On-screen display-name selection (FR-005/FR-028)
+# ---------------------------------------------------------------------------
+
+
+def test_build_player_summaries_selects_earliest_on_screen_player_name() -> None:
+    """The earliest-seen extracted_name (stripped) is used as the display player_name."""
+    detections = [
+        TextDetection(
+            raw_ocr_text="Player: Alice",
+            extracted_name="Alice",
+            normalized_name="alice",
+            region_id="r1",
+            frame_time_sec=1.0,
+        ),
+        TextDetection(
+            raw_ocr_text="Player: ALICE",
+            extracted_name="ALICE",
+            normalized_name="alice",
+            region_id="r1",
+            frame_time_sec=3.0,
+        ),
+    ]
+
+    summaries = AnalysisService.build_player_summaries(detections, gap_threshold_sec=5.0)
+
+    assert len(summaries) == 1
+    # First-seen form (t=1.0) "Alice" must be chosen, not the later "ALICE"
+    assert summaries[0].player_name == "Alice"
+
+
+def test_build_player_summaries_display_name_is_stripped() -> None:
+    """Surrounding whitespace in extracted_name is stripped for the display name."""
+    detections = [
+        TextDetection(
+            raw_ocr_text="Player:  Bob ",
+            extracted_name="  Bob ",
+            normalized_name="bob",
+            region_id="r1",
+            frame_time_sec=2.0,
+        ),
+    ]
+
+    summaries = AnalysisService.build_player_summaries(detections, gap_threshold_sec=1.0)
+
+    assert summaries[0].player_name == "Bob"
