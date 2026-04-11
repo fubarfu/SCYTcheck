@@ -1,36 +1,36 @@
 # Implementation Plan: YouTube Text Analyzer
 
-**Branch**: `001-youtube-text-analyzer` | **Date**: April 11, 2026 | **Spec**: [specs/001-youtube-text-analyzer/spec.md](spec.md)
+**Branch**: `002-youtube-text-analyzer` | **Date**: April 11, 2026 | **Spec**: [specs/001-youtube-text-analyzer/spec.md](spec.md)
 **Input**: Feature specification from `/specs/001-youtube-text-analyzer/spec.md`
 
 ## Summary
 
-Deliver a Windows desktop app that analyzes on-demand YouTube video frames inside user-defined regions, extracts player names using configurable context patterns, and exports a fixed-schema deduplicated CSV summary. The system must validate URL format and accessibility before analysis, aggregate repeated detections into appearance events with a default 1.0s merge threshold, and support portable signed distribution bundles for x64/x86.
+Deliver a Windows desktop app that analyzes on-demand YouTube frames within user-defined regions, extracts player names using configurable context patterns, and exports fixed-schema deduplicated CSV summaries. The workflow includes two-stage URL validation, event-based occurrence aggregation with default 1.0-second merge threshold, and portable signed packaging for x64 and x86 distributions.
 
 ## Technical Context
 
 **Language/Version**: Python 3.11  
 **Primary Dependencies**: opencv-python, pytesseract, yt-dlp, tkinter  
-**Storage**: CSV files + local JSON settings file (`scytcheck_settings.json`)  
+**Storage**: CSV output files + local JSON settings file (`scytcheck_settings.json`)  
 **Testing**: pytest (unit + integration)  
 **Target Platform**: Windows x64 and x86  
 **Project Type**: Desktop GUI application  
-**Performance Goals**: Analyze a 10-minute video in under 5 minutes while keeping dedup memory bounded by unique normalized names  
-**Constraints**: Portable bundled runtime with FFmpeg/Tesseract data, no required external installs, code-signing for releases  
-**Scale/Scope**: Single-window UI with region selector, advanced settings (context patterns + filtering + gap threshold), deduplicated summary export
+**Performance Goals**: Analyze a 10-minute video in under 5 minutes (SC-001) while keeping memory bounded by unique normalized-name aggregates  
+**Constraints**: No full video download required, portable bundled runtime, bundled FFmpeg/Tesseract assets, signed release artifacts  
+**Scale/Scope**: Single desktop application with region selector, advanced settings, OCR/aggregation pipeline, and CSV export
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 Pre-Phase 0 assessment:
-1. PASS - Simple and Modular Architecture: extends existing `components/services/data` layering.
-2. PASS - Readability Over Cleverness: business rules are explicit (pattern matching, normalization, event merge).
-3. PASS - Testing for Business Logic: plan includes unit/integration validation for extraction and aggregation logic.
-4. PASS - Minimal Dependencies: no new external dependency required for clarified functionality.
-5. PASS - No Secrets in Repository: settings file stores non-secret preferences only.
-6. PASS - Windows-Friendly Development: requirements and release steps target Windows explicitly.
-7. PASS - Incremental Changes and Working State: phased rollout preserves independent user-story checkpoints.
+1. PASS - Simple and Modular Architecture: retains existing `components/services/data` layering.
+2. PASS - Readability Over Cleverness: business rules are explicit (normalization, extraction boundaries, event merging).
+3. PASS - Testing for Business Logic: plan/tasks include unit and integration tests for OCR extraction and aggregation behavior.
+4. PASS - Minimal Dependencies: no additional dependencies beyond approved stack.
+5. PASS - No Secrets in Repository: persisted settings contain only non-sensitive preferences.
+6. PASS - Windows-Friendly Development: implementation and packaging targets remain Windows-first.
+7. PASS - Incremental Changes and Working State: phased execution supports independent story validation.
 
 **Gate Result**: PASS
 
@@ -76,23 +76,23 @@ tests/
 └── integration/
 ```
 
-**Structure Decision**: Keep the single-project desktop structure and add clarified behavior in existing modules (`analysis_service`, `ocr_service`, `video_service`, `main_window`, and `export_service`) without introducing new top-level subsystems.
+**Structure Decision**: Keep the current single-project desktop layout and extend behavior in existing modules rather than introducing new top-level subsystems.
 
 ## Phase 0: Research & Resolution
 
-All major unknowns are resolved in [specs/001-youtube-text-analyzer/research.md](research.md):
-- On-demand frame retrieval from YouTube (no full download requirement)
-- URL preflight accessibility validation strategy
-- Context-pattern extraction and compound matching behavior
-- Deduplication and fixed CSV schema for `PlayerSummary`
-- Event-based occurrence aggregation with configurable threshold (default 1.0s)
-- Windows packaging, signing, and dependency bundling strategy
+Research artifacts in [specs/001-youtube-text-analyzer/research.md](research.md) resolve all technical unknowns:
+- On-demand frame retrieval strategy via yt-dlp/ffmpeg semantics
+- Two-stage YouTube URL validation approach
+- Context-pattern matching and extraction-boundary behavior
+- Deduplication model and event-based occurrence semantics
+- Fixed CSV schema and no-text export behavior
+- Windows packaging/signing strategy including bundled FFmpeg and Tesseract assets
 
-No `NEEDS CLARIFICATION` items remain.
+No open `NEEDS CLARIFICATION` items remain.
 
 ## Phase 1: Design & Contracts
 
-Design artifacts aligned with FR-001 through FR-032:
+Design artifacts are complete and aligned to FR-001 through FR-032:
 - [specs/001-youtube-text-analyzer/data-model.md](data-model.md)
 - [specs/001-youtube-text-analyzer/contracts/ocr_service.md](contracts/ocr_service.md)
 - [specs/001-youtube-text-analyzer/contracts/video_streaming.md](contracts/video_streaming.md)
@@ -102,8 +102,8 @@ Design artifacts aligned with FR-001 through FR-032:
 
 1. PASS - Architecture remains modular and incremental.
 2. PASS - Core business logic is explicit and testable.
-3. PASS - Dependency surface remains minimal.
-4. PASS - Windows distribution requirements remain first-class.
+3. PASS - Dependency surface remains minimal and justified.
+4. PASS - Windows distribution and release requirements remain first-class.
 
 **Gate Result**: PASS
 
