@@ -241,3 +241,119 @@ def test_build_player_summaries_display_name_is_stripped() -> None:
     summaries = AnalysisService.build_player_summaries(detections, gap_threshold_sec=1.0)
 
     assert summaries[0].player_name == "Bob"
+
+
+# ---------------------------------------------------------------------------
+# T033 – Recall-first context-matched candidate preservation (FR-034)
+# ---------------------------------------------------------------------------
+
+
+def test_merge_appearance_events_preserves_all_context_matched_candidates() -> None:
+    """All non-empty candidates are preserved through event merging, not just patterns."""
+    # Simulate detections where some candidates are pattern-matched, others are fallback
+    detections = [
+        TextDetection(
+            raw_ocr_text="Player: Alice",
+            extracted_name="Alice",
+            normalized_name="alice",
+            region_id="r1",
+            frame_time_sec=1.0,
+            matched_pattern_id="player",  # Pattern-matched
+        ),
+        TextDetection(
+            raw_ocr_text="Random: Text: Here",
+            extracted_name="Random: Text: Here",  # No pattern match, fallback
+            normalized_name="random: text: here",
+            region_id="r2",
+            frame_time_sec=2.0,
+            matched_pattern_id=None,
+        ),
+    ]
+
+    # When we build summaries, all detections should be preserved
+    summaries = AnalysisService.build_player_summaries(detections, gap_threshold_sec=1.0)
+
+    # Should have 2 distinct entries (different normalized names)
+    assert len(summaries) == 2
+    normalized_names = {s.normalized_name for s in summaries}
+    assert "alice" in normalized_names
+    assert "random: text: here" in normalized_names
+
+
+# ---------------------------------------------------------------------------
+# T035 – Appearance-event gap merge tests (FR-030)
+# ---------------------------------------------------------------------------
+
+
+def test_merge_appearance_events_merges_detections_within_gap_threshold() -> None:
+    """Detections of the same name within gap_threshold_sec are merged into one event."""
+    detections = [
+        ("alice", 1.0, "r1"),   # First detection
+        ("alice", 1.5, "r1"),   # Within 1.0 sec gap
+        ("alice", 4.2, "r2"),   # Outside 1.0 sec gap - new event
+    ]
+
+    events = AnalysisService.merge_appearance_events(detections, gap_threshold_sec=1.0)
+
+    assert len(events) == 2
+    # Event 1: 1.0 - 1.5
+    assert events[0].start_time_sec == 1.0
+    assert events[0].end_time_sec == 1.5
+    assert events[0].region_ids == {"r1"}
+    # Event 2: 4.2 - 4.2
+    assert events[1].start_time_sec == 4.2
+    assert events[1].end_time_sec == 4.2
+    assert events[1].region_ids == {"r2"}
+
+
+def test_merge_appearance_events_different_names_separate_events() -> None:
+    """Different normalized names always generate separate events regardless of time."""
+    detections = [
+        ("alice", 1.0, "r1"),
+        ("bob", 1.1, "r1"),   # Different name, very close in time
+        ("alice", 2.0, "r2"),
+    ]
+
+    events = AnalysisService.merge_appearance_events(detections, gap_threshold_sec=10.0)
+
+    # Alice detections (1.0 and 2.0) merge into ONE event (within gap)
+    # Bob is separate → total 2 events
+    assert len(events) == 2
+    # Find alice and bob events
+    alice_events = [e for e in events if e.normalized_name == "alice"]
+    bob_events = [e for e in events if e.normalized_name == "bob"]
+    assert len(alice_events) == 1
+    assert len(bob_events) == 1
+    # Alice spans 1.0-2.0
+    assert alice_events[0].start_time_sec == 1.0
+    assert alice_events[0].end_time_sec == 2.0
+
+
+def test_merge_appearance_events_gap_exactly_at_threshold() -> None:
+    """Detections exactly at gap_threshold_sec are considered within threshold (<=)."""
+    detections = [
+        ("alice", 1.0, "r1"),
+        ("alice", 3.0, "r1"),  # Exactly 2.0 sec gap
+    ]
+
+    events = AnalysisService.merge_appearance_events(detections, gap_threshold_sec=2.0)
+
+    # Should be merged (time_diff <= threshold)
+    assert len(events) == 1
+    assert events[0].start_time_sec == 1.0
+    assert events[0].end_time_sec == 3.0
+
+
+def test_merge_appearance_events_gap_just_beyond_threshold() -> None:
+    """Detections just beyond gap_threshold_sec cause separation into new events."""
+    detections = [
+        ("alice", 1.0, "r1"),
+        ("alice", 3.01, "r1"),  # 2.01 sec gap (just over 2.0 threshold)
+    ]
+
+    events = AnalysisService.merge_appearance_events(detections, gap_threshold_sec=2.0)
+
+    # Should be separated into 2 events
+    assert len(events) == 2
+    assert events[0].end_time_sec == 1.0
+    assert events[1].start_time_sec == 3.01

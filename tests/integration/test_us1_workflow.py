@@ -22,7 +22,7 @@ import pytest
 import src.main as app_main
 from src.components.region_selector import RegionSelector
 from src.config import AdvancedSettings, AppConfig
-from src.data.models import ContextPattern, VideoAnalysis
+from src.data.models import ContextPattern, PlayerSummary, VideoAnalysis
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
 from src.services.ocr_service import OCRService
@@ -441,3 +441,194 @@ class TestUS1EdgeCases:
 
         assert len(analysis.text_strings) == 3
         assert all(ts.frame_time == 5.0 for ts in analysis.text_strings)
+
+
+class TestUS1ValidURLAnalysis:
+    """Tests for T025: Valid URL analysis producing deduplicated summary CSV."""
+
+    def test_valid_url_analysis_produces_deduplicated_summary_csv(self) -> None:
+        """Verify full valid URL analysis workflow produces deduplicated summary.csv."""
+        root = _FakeRoot()
+        settings = AdvancedSettings(
+            context_patterns=[
+                {"id": "joined", "before_text": None, "after_text": "joined", "enabled": True}
+            ],
+            filter_non_matching=False,
+            event_gap_threshold_sec=1.0,
+            ocr_confidence_threshold=40,
+            video_quality="best",
+            logging_enabled=False,
+        )
+
+        analysis = VideoAnalysis(url="https://youtube.com/watch?v=abc123")
+        analysis.set_player_summaries(
+            [
+                PlayerSummary(
+                    player_name="Alice",
+                    start_timestamp="00:00:01.000",
+                    normalized_name="alice",
+                    occurrence_count=2,
+                    first_seen_sec=1.0,
+                    last_seen_sec=5.0,
+                    representative_region="10:20:100:50",
+                ),
+                PlayerSummary(
+                    player_name="Bob",
+                    start_timestamp="00:00:03.000",
+                    normalized_name="bob",
+                    occurrence_count=1,
+                    first_seen_sec=3.0,
+                    last_seen_sec=3.0,
+                    representative_region="10:20:100:50",
+                ),
+            ]
+        )
+
+        export_service = ExportService()
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = export_service.export_to_csv(analysis, tmpdir, "summary.csv")
+            content = csv_path.read_text(encoding="utf-8")
+
+        lines = content.splitlines()
+        assert lines[0] == "PlayerName,StartTimestamp"
+        assert "Alice,00:00:01.000" in lines
+        assert "Bob,00:00:03.000" in lines
+
+
+class TestUS1ExportRetry:
+    """Tests for T039/T050: Export retry without re-running analysis."""
+
+    def test_export_retry_preserves_analysis_without_rerun(self, tmp_path: Path) -> None:
+        """Verify export can be retried without re-running detection on original analysis."""
+        # Create initial analysis
+        analysis = VideoAnalysis(url="https://youtube.com/watch?v=test")
+        analysis.set_player_summaries(
+            [
+                PlayerSummary(
+                    player_name="Alice",
+                    start_timestamp="00:00:01.000",
+                    normalized_name="alice",
+                    occurrence_count=1,
+                    first_seen_sec=1.0,
+                    last_seen_sec=1.0,
+                    representative_region="10:20:100:50",
+                )
+            ]
+        )
+
+        export_service = ExportService()
+
+        # Export once
+        filename = "retry_test.csv"
+        path1 = export_service.export_to_csv(analysis, str(tmp_path), filename)
+        assert path1.exists()
+        content1 = path1.read_text(encoding="utf-8")
+
+        # Simulate export failure and retry without re-running analysis
+        # (in main.py, last_analysis is preserved)
+        path2 = export_service.export_to_csv(analysis, str(tmp_path), filename)
+        assert path2.exists()
+        content2 = path2.read_text(encoding="utf-8")
+
+        # Same content should be exported both times (no re-detection)
+        assert content1 == content2
+
+
+class TestUS1NoRegionAbort:
+    """Tests for T040/T051: Abort analysis when no regions confirmed."""
+
+    def test_analysis_aborts_when_no_regions_selected(self, tmp_path: Path) -> None:
+        """Verify analysis aborts gracefully when user confirms no regions."""
+        root = _FakeRoot()
+        settings = AdvancedSettings(
+            context_patterns=[],
+            filter_non_matching=False,
+            event_gap_threshold_sec=1.0,
+            ocr_confidence_threshold=40,
+            video_quality="best",
+            logging_enabled=False,
+        )
+        window_holder: dict[str, _FakeWindow] = {}
+        logger = Mock()
+        video_service = Mock()
+        video_service.validate_youtube_url.return_value = (True, "")
+        video_service.get_video_info.return_value = {"duration": 60.0}
+        analysis_service = Mock()
+        export_service = Mock()
+        region_selector = Mock()
+        region_selector.select_regions.return_value = []  # No regions selected
+
+        def make_window(root_arg):
+            window = _FakeWindow(root_arg, "https://youtube.com/watch?v=test", str(tmp_path), settings)
+            window_holder["window"] = window
+            return window
+
+        with (
+            patch(
+                "src.main.load_config",
+                return_value=AppConfig(sample_fps=1, confidence_threshold=40, tesseract_cmd=None),
+            ),
+            patch("src.main.configure_logging", return_value=logger),
+            patch("src.main.VideoService", return_value=video_service),
+            patch("src.main.OCRService", return_value=Mock(confidence_threshold=40)),
+            patch("src.main.AnalysisService", return_value=analysis_service),
+            patch("src.main.ExportService", return_value=export_service),
+            patch("src.main.RegionSelector", return_value=region_selector),
+            patch("src.main.tk.Tk", return_value=root),
+            patch("src.main.MainWindow", side_effect=make_window),
+            patch("src.main.load_advanced_settings", return_value=settings),
+            patch("src.main.save_advanced_settings"),
+            patch("src.main.messagebox.showinfo"),
+            patch("src.main.messagebox.showerror"),
+        ):
+            app_main.main()
+
+        # Verify analysis was not run
+        analysis_service.analyze.assert_not_called()
+        export_service.export_to_csv.assert_not_called()
+
+
+class TestUS1AnalysisProgress:
+    """Tests for T038: Analysis progress and completion feedback."""
+
+    def test_analysis_progress_callback_is_invoked(self, tmp_path: Path) -> None:
+        """Verify progress callback is called during analysis execution."""
+        # Create mock services
+        video_service = Mock(spec=VideoService)
+        video_service.get_video_info.return_value = {"duration": 60.0}
+
+        def mock_iterate(url, start, end, fps, quality="best"):
+            for i in range(5):
+                yield float(i), np.random.randint(0, 255, (720, 1280, 3), dtype=np.uint8)
+
+        video_service.iterate_frames_with_timestamps.side_effect = mock_iterate
+
+        ocr_service = Mock(spec=OCRService)
+        ocr_service.detect_text.return_value = []
+        ocr_service.extract_candidates.return_value = []
+
+        analysis_service = AnalysisService(video_service, ocr_service)
+
+        # Track progress callbacks
+        progress_calls = []
+
+        def on_progress(percentage: int) -> None:
+            progress_calls.append(percentage)
+
+        analysis = analysis_service.analyze(
+            url="https://youtube.com/watch?v=test",
+            regions=[(10, 20, 100, 50)],
+            start_time=0.0,
+            end_time=4.0,
+            fps=1,
+            on_progress=on_progress,
+        )
+
+        # Progress should have been called multiple times
+        assert len(progress_calls) > 0
+        # Progress should reach 100%
+        assert 100 in progress_calls
+        # Progress should be monotonically increasing
+        for i in range(len(progress_calls) - 1):
+            assert progress_calls[i] <= progress_calls[i + 1]

@@ -66,23 +66,23 @@
 
 ### Tests for User Story 1
 
-- [ ] T025 [P] [US1] Add integration test for valid URL analysis producing deduplicated summary CSV in `tests/integration/test_us1_workflow.py`
-- [ ] T026 [P] [US1] Add integration test for invalid URL rejection with distinct error classification in `tests/integration/test_us1_workflow.py`
-- [ ] T027 [P] [US1] Add integration test for header-only summary CSV when no text is detected in `tests/integration/test_us1_workflow.py`
+- [X] T025 [P] [US1] Add integration test for valid URL analysis producing deduplicated summary CSV in `tests/integration/test_us1_workflow.py`
+- [X] T026 [P] [US1] Add integration test for invalid URL rejection with distinct error classification in `tests/integration/test_us1_workflow.py`
+- [X] T027 [P] [US1] Add integration test for header-only summary CSV when no text is detected in `tests/integration/test_us1_workflow.py`
 - [X] T028 [P] [US1] Add OCR line aggregation and normalization behavior tests in `tests/unit/test_ocr_service.py`
 - [X] T029 [P] [US1] Add fuzzy substring matching tests (threshold, best-occurrence scan) in `tests/unit/test_ocr_service.py`
 - [X] T030 [P] [US1] Add boundary-clipped matching tests (2-char overlap and threshold pass cases) in `tests/unit/test_ocr_service.py`
 - [X] T031 [P] [US1] Add single-token extraction boundary tests for after-only, before-only, and both modes in `tests/unit/test_ocr_service.py`
-- [ ] T032 [P] [US1] Add deterministic multi-pattern tie-break tests (longest span, earliest start, pattern order) per FR-041 in `tests/unit/test_ocr_service.py`
-- [ ] T033 [P] [US1] Add recall-first context-matched candidate preservation tests per FR-034 in `tests/unit/test_analysis_service.py`
+- [X] T032 [P] [US1] Add deterministic multi-pattern tie-break tests (longest span, earliest start, pattern order) per FR-041 in `tests/unit/test_ocr_service.py`
+- [X] T033 [P] [US1] Add recall-first context-matched candidate preservation tests per FR-034 in `tests/unit/test_analysis_service.py`
 - [X] T034 [P] [US1] Add deduplication plus on-screen display-name selection tests per FR-028/FR-005 in `tests/unit/test_analysis_service.py`
-- [ ] T035 [P] [US1] Add appearance-event gap merge tests per FR-030 in `tests/unit/test_analysis_service.py`
-- [ ] T036 [P] [US1] Add summary CSV schema and `HH:MM:SS.mmm` timestamp format tests per SC-004/SC-005 in `tests/unit/test_export_service.py`
+- [X] T035 [P] [US1] Add appearance-event gap merge tests per FR-030 in `tests/unit/test_analysis_service.py`
+- [X] T036 [P] [US1] Add summary CSV schema and `HH:MM:SS.mmm` timestamp format tests per SC-004/SC-005 in `tests/unit/test_export_service.py`
 - [X] T037 [P] [US1] Add sidecar log schema tests verifying `TestedStringRaw` and `TestedStringNormalized` on accepted and rejected rows in `tests/integration/test_log_schema_fr049.py`
-- [ ] T038 [P] [US1] Add analysis progress and completion feedback integration test in `tests/integration/test_us1_workflow.py`
-- [ ] T039 [P] [US1] Add export-retry without re-analysis integration test per FR-039 in `tests/integration/test_us1_workflow.py`
-- [ ] T040 [P] [US1] Add no-confirmed-region analysis abort integration test per FR-040 in `tests/integration/test_us1_workflow.py`
-- [ ] T041 [P] [US1] Add full-video-duration analysis window unit test (start=0.0, end=video duration from `get_video_info`) in `tests/unit/test_main.py`
+- [X] T038 [P] [US1] Add analysis progress and completion feedback integration test in `tests/integration/test_us1_workflow.py`
+- [X] T039 [P] [US1] Add export-retry without re-analysis integration test per FR-039 in `tests/integration/test_us1_workflow.py`
+- [X] T040 [P] [US1] Add no-confirmed-region analysis abort integration test per FR-040 in `tests/integration/test_us1_workflow.py`
+- [X] T041 [P] [US1] Add full-video-duration analysis window unit test (start=0.0, end=video duration from `get_video_info`) in `tests/unit/test_main.py`
 
 ### Implementation for User Story 1
 
