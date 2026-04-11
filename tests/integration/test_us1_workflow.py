@@ -77,7 +77,7 @@ class TestUS1FullWorkflow:
         }
         
         # Return test frames
-        def get_frame_at_time(url: str, time_seconds: float) -> np.ndarray:
+        def get_frame_at_time(url: str, time_seconds: float, quality: str = "best") -> np.ndarray:
             frame = np.random.randint(50, 200, (720, 1280, 3), dtype=np.uint8)
             return frame
         
@@ -92,7 +92,7 @@ class TestUS1FullWorkflow:
         
         video_service.get_frames_in_range.side_effect = get_frames_in_range
         video_service.iterate_frames_with_timestamps.side_effect = (
-            lambda url, start_time, end_time, fps: (
+            lambda url, start_time, end_time, fps, quality="best": (
                 (start_time + i, frame)
                 for i, frame in enumerate(get_frames_in_range(url, start_time, end_time, fps))
             )
@@ -260,7 +260,7 @@ class TestUS1FullWorkflow:
             np.zeros((720, 1280, 3), dtype=np.uint8),
         ]
 
-        def iterate_frames_with_timestamps(url: str, start_time: float, end_time: float, fps: int):
+        def iterate_frames_with_timestamps(url: str, start_time: float, end_time: float, fps: int, quality: str = "best"):
             for ts, frame in zip([1.0, 1.5, 4.2], frames):
                 yield ts, frame
 

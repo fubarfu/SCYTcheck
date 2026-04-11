@@ -34,12 +34,23 @@
 
 ## Decision: OCR and Context-Pattern Extraction
 
-**Chosen**: Case-insensitive substring matching with optional `before_text` / `after_text` pattern boundaries; resolve collisions deterministically per FR-041.
+**Chosen**: Case-insensitive fuzzy matching over normalized OCR text with configurable similarity threshold (default `0.75`), combined with optional `before_text` / `after_text` extraction boundaries and deterministic collision resolution per FR-041.
 
-**Rationale**: Deterministic extraction is testable and robust against OCR casing variance.
+**Rationale**: Reduces false negatives from OCR noise and spacing/line-break artifacts while preserving deterministic extraction behavior.
 
 **Alternatives considered**:
-- Regex-first pattern system: adds complexity for the target UX.
+- Strict substring-only matching: too brittle for noisy OCR text.
+- Regex-first pattern system: adds complexity for target users.
+
+## Decision: OCR Normalization and Boundary-Clipped Matches
+
+**Chosen**: Normalize OCR text for matching by removing line breaks and collapsing repeated whitespace runs. If context text is clipped by region boundaries, accept match when either boundary overlap has at least two contiguous characters or fuzzy similarity meets threshold.
+
+**Rationale**: Aligns with recall-first requirement and supports realistic region-cropping/OCR fragmentation behavior.
+
+**Alternatives considered**:
+- Require full context text visibility: increases missed detections.
+- Single-character boundary overlap acceptance: too permissive.
 
 ## Decision: Recall-First Candidate Preservation
 
@@ -92,11 +103,12 @@ with `TimestampSec`, `StartTimestamp`, and `EndTimestamp` formatted as `HH:MM:SS
 
 ## Decision: Packaging and Distribution
 
-**Chosen**: Portable ZIP bundles for x64/x86 with bundled FFmpeg and Tesseract language data, signed executables/packages.
+**Chosen**: Portable ZIP bundles for x64/x86 with bundled FFmpeg and Tesseract language data; release packaging does not require signing certificates. Optional signing is a post-build enhancement when a certificate is available.
 
-**Rationale**: Directly supports FR-010 to FR-014 and Windows-friendly usage.
+**Rationale**: Meets FR-010 to FR-014 after clarification to support unsigned portable releases by default.
 
 **Alternatives considered**:
+- Mandatory code-signing in release path: rejected due to certificate acquisition burden.
 - Installer-only distribution: not requested.
 - Unbundled runtime dependencies: violates portability requirements.
 

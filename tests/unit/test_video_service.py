@@ -49,3 +49,18 @@ def test_validate_youtube_url_handles_unreachable_video() -> None:
 
     assert not is_valid
     assert "could not be accessed" in error
+
+
+def test_build_ydl_opts_selects_format_based_on_quality() -> None:
+    opts_best = VideoService._build_ydl_opts("best")
+    assert "height" not in opts_best["format"]
+
+    opts_720 = VideoService._build_ydl_opts("720p")
+    assert "720" in opts_720["format"]
+    assert "height<=720" in opts_720["format"]
+
+    opts_480 = VideoService._build_ydl_opts("480p")
+    assert "height<=480" in opts_480["format"]
+
+    opts_unknown = VideoService._build_ydl_opts("9999p")
+    assert opts_unknown["format"] == opts_best["format"]

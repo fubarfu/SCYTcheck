@@ -43,7 +43,8 @@
 
 1. Run `powershell -ExecutionPolicy Bypass -File scripts/release/build.ps1 -Architecture x64 -BundleOnly` to stage a portable bundle layout.
 2. Confirm the script creates `dist/release/x64/SCYTcheck` and `dist/release/SCYTcheck-x64.zip`.
-3. If a signing certificate is available, run `powershell -ExecutionPolicy Bypass -File scripts/release/sign.ps1 -InputPath dist/release/x64/SCYTcheck -CertificatePath <certificate.pfx>`.
+3. Packaging is valid without signing; no certificate is required for portable bundle output.
+4. Optional: if a signing certificate is available, run `powershell -ExecutionPolicy Bypass -File scripts/release/sign.ps1 -InputPath dist/release/x64/SCYTcheck -CertificatePath <certificate.pfx>`.
 
 ## Development
 

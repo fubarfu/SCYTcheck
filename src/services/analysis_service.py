@@ -35,18 +35,11 @@ class AnalysisService:
             video_quality=video_quality,
             logging_enabled=logging_enabled,
         )
-        if video_quality == "best":
-            frames = list(self.video_service.iterate_frames_with_timestamps(url, start_time, end_time, fps))
-        else:
-            frames = list(
-                self.video_service.iterate_frames_with_timestamps(
-                    url,
-                    start_time,
-                    end_time,
-                    fps,
-                    quality=video_quality,
-                )
+        frames = list(
+            self.video_service.iterate_frames_with_timestamps(
+                url, start_time, end_time, fps, quality=video_quality
             )
+        )
         total_frames = len(frames)
 
         if total_frames == 0:

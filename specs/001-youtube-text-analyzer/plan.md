@@ -5,35 +5,33 @@
 
 ## Summary
 
-Build a Windows desktop app that analyzes on-demand YouTube frames in user-defined regions, extracts player names via OCR and context patterns, and exports a minimal summary CSV containing `PlayerName` and `StartTimestamp`. Advanced settings provide quality selection (default best, no auto-downgrade), OCR sensitivity controls, and optional sidecar logging with a deterministic schema. When logging is disabled, analysis proceeds without warning prompts.
+Deliver a Windows desktop analyzer that processes YouTube video frames on-demand, extracts player names from user-defined regions using fuzzy context matching, and exports a minimal deduplicated CSV (`PlayerName`, `StartTimestamp`). The implementation prioritizes recall for context-matched names, includes optional detailed logging, and produces portable x64/x86 ZIP bundles without requiring signing certificates (optional signing remains supported when available).
 
 ## Technical Context
 
 **Language/Version**: Python 3.11  
-**Primary Dependencies**: opencv-python, pytesseract, yt-dlp, tkinter, numpy  
-**Storage**: CSV output files + local JSON settings file (`%APPDATA%/SCYTcheck/scytcheck_settings.json` fallback to local file)  
-**Testing**: pytest (unit + integration), ruff check  
+**Primary Dependencies**: `opencv-python`, `pytesseract`, `yt-dlp`, `tkinter`, `numpy`  
+**Storage**: CSV outputs + local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json` fallback to local file)  
+**Testing**: `pytest` for unit/integration; `ruff` for lint checks  
 **Target Platform**: Windows desktop (x64 and x86 release bundles)  
 **Project Type**: Desktop application  
-**Performance Goals**: Complete 10-minute video analysis in under 5 minutes under representative conditions  
-**Constraints**: On-demand retrieval only, no full download, retry transient retrieval up to 3 times, bounded memory streaming, keyboard-operable core flow, deterministic summary/log schemas, no warning/prompt when logging is disabled  
-**Scale/Scope**: Single-user local analysis sessions, one video per run
+**Performance Goals**: SC-001: 10-minute video analyzed in under 5 minutes under representative conditions  
+**Constraints**: On-demand retrieval only (no full pre-download), no automatic quality downgrade, stream processing memory behavior, deterministic CSV schemas, packaging must not require signing certificate  
+**Scale/Scope**: Single-user local analysis sessions for game-session videos; multiple regions per run; videos may exceed 1 hour
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-Pre-Phase-0 gate check:
-- Principle I (Simple and Modular Architecture): PASS.
-- Principle II (Readability Over Cleverness): PASS.
-- Principle III (Testing for Business Logic): PASS.
-- Principle IV (Minimal Dependencies): PASS.
-- Principle V (No Secrets in Repository): PASS.
-- Principle VI (Windows-Friendly Development): PASS.
-- Principle VII (Incremental Changes and Working State): PASS.
+- **I. Simple and Modular Architecture**: PASS. Changes remain in existing `services`, `components`, and `data` modules.
+- **II. Readability Over Cleverness**: PASS. Deterministic matching and export rules are explicit and test-backed.
+- **III. Testing for Business Logic**: PASS. Existing task set includes unit and integration coverage for OCR, aggregation, export, and packaging behavior.
+- **IV. Minimal Dependencies**: PASS. Reuses existing stack; no additional runtime dependencies required.
+- **V. No Secrets in Repository**: PASS. Optional signing uses external certificate path/password; no secrets committed.
+- **VI. Windows-Friendly Development**: PASS. PowerShell scripts and portable bundles target Windows.
+- **VII. Incremental Changes and Working State**: PASS. Clarifications and artifacts updated incrementally.
 
-Post-Phase-1 re-check:
-- PASS. Updated artifacts remain modular, deterministic, and testable.
+Post-design re-check: PASS. Phase 1 artifacts stay aligned with all seven principles.
 
 ## Project Structure
 
@@ -55,29 +53,35 @@ specs/001-youtube-text-analyzer/
 
 ```text
 src/
-├── main.py
-├── config.py
 ├── components/
-│   ├── main_window.py
-│   ├── region_selector.py
-│   ├── file_selector.py
-│   ├── url_input.py
-│   └── progress_display.py
 ├── data/
-│   └── models.py
-└── services/
-    ├── analysis_service.py
-    ├── video_service.py
-    ├── ocr_service.py
-    ├── export_service.py
-    └── logging.py
+├── services/
+├── config.py
+└── main.py
 
 tests/
 ├── integration/
 └── unit/
+
+scripts/
+└── release/
 ```
 
-**Structure Decision**: Keep the existing single-project desktop layout and extend current component/service modules for quality selection, minimal summary export, and optional detailed sidecar logging.
+**Structure Decision**: Keep the existing single-project desktop layout. Service-layer behavior changes (OCR matching, aggregation, export/logging, video retrieval) remain under `src/services`, UI behavior under `src/components`, and release behavior under `scripts/release`.
+
+## Phase 0: Research Output
+
+`research.md` captures resolved technical decisions for:
+- fuzzy context matching and OCR normalization
+- boundary-clipped context acceptance rule
+- optional logging schema and timestamp contracts
+- unsigned-by-default portable packaging with optional signing step
+
+## Phase 1: Design Output
+
+- `data-model.md` defines entities, validation rules, and flow updates for fuzzy matching and optional signing-independent release behavior.
+- `contracts/ocr_service.md` and `contracts/video_streaming.md` define service interfaces and guarantees aligned with current FR set.
+- `quickstart.md` documents run/build/release flow, including unsigned release as default and optional signing.
 
 ## Complexity Tracking
 

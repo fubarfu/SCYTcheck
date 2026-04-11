@@ -29,12 +29,22 @@ class VideoService:
             or "youtu.be/" in lowered
         )
 
+    # Map UI quality labels to yt-dlp format selectors.
+    # Prefer mp4 for OpenCV compatibility; fall through to any format as a last resort.
+    _QUALITY_FORMAT_MAP: dict[str, str] = {
+        "best": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "720p": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]/best",
+        "480p": "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best[height<=480]/best",
+        "360p": "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best[height<=360]/best",
+    }
+
     @staticmethod
-    def _build_ydl_opts() -> dict[str, object]:
+    def _build_ydl_opts(quality: str = "best") -> dict[str, object]:
+        fmt = VideoService._QUALITY_FORMAT_MAP.get(quality, VideoService._QUALITY_FORMAT_MAP["best"])
         ydl_opts: dict[str, object] = {
             "quiet": True,
             "skip_download": True,
-            "format": "best[ext=mp4]/best",
+            "format": fmt,
         }
 
         # yt-dlp >= 2026 expects js_runtimes as {runtime: {config}} dict
@@ -79,10 +89,16 @@ class VideoService:
         if cache_key in self._stream_cache:
             return self._stream_cache[cache_key]
 
-        with YoutubeDL(self._build_ydl_opts()) as ydl:
+        with YoutubeDL(self._build_ydl_opts(quality)) as ydl:
             info = ydl.extract_info(url, download=False)
 
         stream_url = info.get("url")
+        if not stream_url:
+            # Merged formats (e.g. bestvideo+bestaudio) store the URL inside requested_formats.
+            for fmt in (info.get("requested_formats") or []):
+                if fmt.get("url"):
+                    stream_url = fmt["url"]
+                    break
         if not stream_url:
             raise VideoAccessError("No playable stream URL found for this video.")
 

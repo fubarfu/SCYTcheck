@@ -21,6 +21,7 @@ class RegionSelector:
         self.start_y = 0
         self.rect_id: int | None = None
         self.url: str = ""
+        self.quality: str = "best"
         self.pending_region: tuple[int, int, int, int] | None = None
         self.supports_frame_stepping = False
         self.overlay_font_scale = 0.7
@@ -33,6 +34,7 @@ class RegionSelector:
         self,
         url: str,
         frame_time_seconds: float = 0.0,
+        quality: str = "best",
     ) -> list[tuple[int, int, int, int]]:
         """
         Select analysis regions from video frames.
@@ -40,13 +42,15 @@ class RegionSelector:
         Args:
             url: YouTube video URL
             frame_time_seconds: Initial frame time to display
+            quality: Stream quality matching the UI selector (e.g. "best", "720p")
             
         Returns:
             List of (x, y, width, height) tuples for selected regions
         """
-        self.load_video(url)
+        self.quality = quality
+        self.load_video(url, quality=quality)
         self.current_frame_time = max(0.0, frame_time_seconds)
-        self.current_frame = self.get_frame_at_time(url, self.current_frame_time)
+        self.current_frame = self.get_frame_at_time(url, self.current_frame_time, quality=quality)
         self.selected_regions = []
 
         window_name = "Region Selector"
@@ -59,7 +63,7 @@ class RegionSelector:
         cv2.createTrackbar(trackbar_name, window_name, trackbar_value, max_seconds, lambda _: None)
 
         # Open a persistent stream connection so slider seeks don't re-authenticate with yt-dlp.
-        cap = self.video_service.open_stream(url)
+        cap = self.video_service.open_stream(url, quality=self.quality)
 
         last_trackbar = trackbar_value
         # Debounce: only fetch a new frame after the slider has been stable for this many
@@ -81,7 +85,7 @@ class RegionSelector:
                         try:
                             self.current_frame = self.video_service.get_frame_from_cap(cap, pending_time)
                         except Exception:
-                            self.current_frame = self.get_frame_at_time(url, pending_time)
+                            self.current_frame = self.get_frame_at_time(url, pending_time, quality=self.quality)
                         self.current_frame_time = pending_time
                         pending_time = None
                         stable_cycles = 0
@@ -243,21 +247,22 @@ class RegionSelector:
         except Exception:
             return
 
-    def get_frame_at_time(self, url: str, time_seconds: float) -> np.ndarray:
+    def get_frame_at_time(self, url: str, time_seconds: float, quality: str = "best") -> np.ndarray:
         """Get a video frame at specific time (supports seek-to-time)."""
-        return self.video_service.get_frame_at_time(url, time_seconds)
+        return self.video_service.get_frame_at_time(url, time_seconds, quality=quality)
     
     def get_video_duration(self, url: str) -> float:
         """Get video duration in seconds."""
         info = self.video_service.get_video_info(url)
         return info.get("duration", 0.0)
 
-    def load_video(self, url: str) -> None:
+    def load_video(self, url: str, quality: str = "best") -> None:
         """Load video metadata for scrollbar-based navigation."""
         self.url = url
+        self.quality = quality
         self.video_duration = self.get_video_duration(url)
         self.current_frame_time = 0.0
-        self.current_frame = self.get_frame_at_time(url, 0.0)
+        self.current_frame = self.get_frame_at_time(url, 0.0, quality=quality)
 
     def seek_by_scrollbar(self, scrollbar_value: float) -> np.ndarray:
         """Navigate by horizontal scrollbar position in [0, 100]."""
@@ -271,7 +276,7 @@ class RegionSelector:
             target_time = (bounded / 100.0) * self.video_duration
 
         self.current_frame_time = target_time
-        self.current_frame = self.get_frame_at_time(self.url, target_time)
+        self.current_frame = self.get_frame_at_time(self.url, target_time, quality=self.quality)
         return self.current_frame
 
     def start_region(self, x: int, y: int) -> None:

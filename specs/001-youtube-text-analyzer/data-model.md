@@ -59,10 +59,13 @@ Represents a user-defined surrounding-text extraction rule.
 - `before_text` (string | null)
 - `after_text` (string | null)
 - `enabled` (bool)
+- `similarity_threshold` (float): default `0.75` for fuzzy matching
 
 **Validation Rules**:
 - At least one of `before_text` or `after_text` must be present
-- Matching is case-insensitive substring
+- Matching is case-insensitive fuzzy comparison on normalized OCR text
+- OCR normalization for matching removes line breaks and collapses repeated whitespace to single spaces
+- Boundary-clipped context can match when at least two contiguous boundary characters overlap or fuzzy similarity meets threshold
 
 ### TextDetection
 Represents one extracted candidate player detection from an analyzed frame.

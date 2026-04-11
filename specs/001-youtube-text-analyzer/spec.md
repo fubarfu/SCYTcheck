@@ -17,7 +17,7 @@
 - Q: Which Windows architectures must bundled builds support? → A: Separate x64 and x86 packages
 - Q: How should OCR language data be provisioned? → A: Bundle English and German language data
 - Q: How should video decoding dependencies be provided? → A: Bundle FFmpeg binaries
-- Q: Should distributed bundles be code-signed? → A: Yes, sign bundled executables/packages
+- Q: Should distributed bundles require code-signing certificates? → A: No; packaging must work without signing certificates and produce portable unsigned bundles
 - Q: What filename scheme should the app use when creating CSV files in the selected folder? → A: scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv
 - Q: How much control should users have over output filenames? → A: Folder-only selection with automatic filename generation
 - Q: What should happen if the selected output folder is missing or not writable? → A: Abort export and show a clear error
@@ -27,7 +27,7 @@
 - Q: How should OCR accuracy (SC-002) be measured? → A: No formal measurement; 80% accuracy target is aspirational only
 - Q: How should usability success (SC-003) be validated? → A: Aspirational target only; no formal user testing planned
 - Q: How should the app handle text appearing in varying positions across frames? → A: Known limitation; display UI tooltip: "Define region where text appears consistently"
-- Q: What matching mode should context patterns use against OCR text? → A: Case-insensitive substring match (e.g., "joined" matches "Joined", "JOINED", "PlayerName Joined the party")
+- Q: What matching mode should context patterns use against OCR text? → A: Case-insensitive fuzzy matching on normalized OCR text with configurable threshold (default 0.75)
 - Q: Can a single context pattern rule specify both a before-text and after-text marker? → A: Yes; each pattern optionally defines before-text and/or after-text; when both are set, both must match (compound AND rule)
 - Q: How should the app determine what text to extract as the player name when a context pattern matches? → A: Extract all trimmed text before the after-text marker, or after the before-text marker; when both are set, extract trimmed text between them
 - Q: Does the context pattern filter toggle apply globally or per region? → A: Global toggle in Advanced Settings applies uniformly to all regions in the session
@@ -37,9 +37,8 @@
 - Q: How should occurrence count be calculated for deduplicated output? → A: Count appearance events by merging contiguous frame runs, not raw frame matches
 - Q: How should event boundaries be determined when OCR misses intermittent frames? → A: Use a maximum detection-gap threshold so nearby detections are merged into one event
 - Q: What should the default detection-gap threshold be for event merging? → A: 1.0 seconds
-- Q: What should be the canonical CSV output model? → A: Deduplicated player-summary rows (one per normalized player name) with event-based occurrence metadata
+- Q: What should be the canonical CSV output model? → A: Deduplicated player-summary rows with `PlayerName` and earliest `StartTimestamp`; detailed occurrence/context metadata is written only to optional log output
 - Q: How should YouTube URL validation be performed before analysis? → A: Validate format first, then run a preflight accessibility check for public/reachable video
-- Q: What CSV summary columns should be required and fixed? → A: PlayerName, NormalizedName, OccurrenceCount, FirstSeenSec, LastSeenSec, RepresentativeRegion
 - Q: How explicit should region selection interaction behavior be in requirements? → A: Add explicit requirement for creating, adjusting, and confirming one or more rectangular regions before analysis
 - Q: What should be the default state of the global context-pattern filter toggle? → A: Enabled by default on first launch so only names with at least one matching context pattern are kept
 - Q: How should labels be laid out relative to input and display fields in the UI? → A: Labels must not overlap input fields or display fields at supported window sizes
@@ -52,6 +51,9 @@
 - Q: What format should log `TimestampSec` use? → A: `HH:MM:SS.mmm` formatted string
 - Q: For the simplified output CSV, which exact schema should be required? → A: `PlayerName, StartTimestamp` with `StartTimestamp` formatted as `HH:MM:SS.mmm`
 - Q: When summary output only contains `PlayerName` and `StartTimestamp`, what should happen if logging is disabled? → A: Proceed normally with no warning or prompt
+- Q: How should OCR text be normalized before fuzzy context matching? → A: Remove line breaks and collapse whitespace runs before comparison
+- Q: How should boundary-clipped context text be matched when OCR region cuts off parts of the pattern? → A: Match if either at least 2 contiguous boundary characters overlap or fuzzy score passes threshold on normalized text
+- Q: Should release packaging require signing certificates? → A: No; release packaging must support unsigned portable bundles by default
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -116,7 +118,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-011**: The release process MUST produce separate portable ZIP bundles for Windows x64 and Windows x86.
 - **FR-012**: Bundled packages MUST include OCR language data for English and German so OCR works without first-run downloads.
 - **FR-013**: Bundled packages MUST include FFmpeg binaries required for on-demand video frame retrieval/decoding so analysis works without external installs.
-- **FR-014**: Distributed executables and packages MUST be code-signed to reduce Windows trust warnings and improve user safety.
+- **FR-014**: Release packaging MUST NOT require a signing certificate. The build/release flow MUST produce portable unsigned bundles when no certificate is provided. Optional signing MAY be supported as an additional post-build step when a certificate is available.
 - **FR-015**: The app MUST create CSV filenames using the pattern `scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv` to ensure unambiguous output naming.
 - **FR-016**: The output workflow MUST allow users to select only an output folder; the CSV filename MUST be generated automatically by the app.
 - **FR-017**: If the selected output folder does not exist or is not writable, the app MUST abort export and show a clear error message that includes: (a) failure reason, (b) affected path, and (c) a user-actionable next step.
@@ -124,7 +126,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-019**: Region selection navigation MUST be implemented with the time scrollbar only; no additional frame-step or fixed-time-step controls are required.
 - **FR-020**: The region selection UI MUST display a tooltip or helper text informing the user: "Define your region where text appears consistently across the video." to communicate the fixed-region limitation. The helper text MUST be visible immediately when the selector opens and remain visible until selector close or explicit user dismissal.
 - **FR-021**: The app MUST allow users to define multiple context patterns in an Advanced Settings section of the UI; each pattern optionally specifies a before-text string, an after-text string, or both. When both are provided, both must match (compound AND rule) for the name to be extracted.
-- **FR-022**: Context pattern matching MUST use case-insensitive substring matching against the full OCR text detected in the region.
+- **FR-022**: Context pattern matching MUST use case-insensitive fuzzy matching against normalized OCR text detected in the region. For matching, OCR text normalization MUST remove line breaks and collapse repeated whitespace runs to single spaces before comparison. Matching MUST support a configurable similarity threshold with default `0.75`. If context text is clipped at a region boundary, a match MUST still be accepted when either (a) at least two contiguous boundary characters overlap at the start or end of the context text, or (b) fuzzy similarity against normalized text meets the configured threshold.
 - **FR-023**: The Advanced Settings section MUST provide a global toggle "Only extract names matching a context pattern"; when enabled, OCR text from all regions that does not match any defined context pattern MUST be excluded from the output. On first launch, this toggle MUST default to enabled.
 - **FR-024**: The app MUST pre-configure two default context patterns on first launch: "joined" (position: after) and "connected" (position: after).
 - **FR-025**: The Advanced Settings section MUST be accessible from the main UI as a distinct collapsible or separate settings area, separate from the primary workflow controls.

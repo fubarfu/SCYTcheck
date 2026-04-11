@@ -27,7 +27,7 @@ def mock_video_service() -> Mock:
     }
     
     # Mock frame at time
-    def get_frame_at_time_mock(url: str, time_seconds: float) -> np.ndarray:
+    def get_frame_at_time_mock(url: str, time_seconds: float, quality: str = "best") -> np.ndarray:
         # Return a mock frame (all black)
         frame = np.zeros((720, 1280, 3), dtype=np.uint8)
         return frame
@@ -276,3 +276,44 @@ class TestRegionSelectorOverlayAndFocus:
 
         create_trackbar.assert_called_once()
         assert create_trackbar.call_args.args[0] == "Time (s)"
+
+
+class TestRegionSelectorQualityPropagation:
+    """Test that stream quality is passed through to VideoService calls."""
+
+    def test_select_regions_opens_stream_with_specified_quality(
+        self, region_selector: RegionSelector, mock_video_service: Mock
+    ) -> None:
+        with patch("src.components.region_selector.cv2.namedWindow"), patch(
+            "src.components.region_selector.cv2.createTrackbar"
+        ), patch("src.components.region_selector.cv2.getTrackbarPos", return_value=0), patch(
+            "src.components.region_selector.cv2.imshow"
+        ), patch("src.components.region_selector.cv2.waitKey", return_value=13), patch(
+            "src.components.region_selector.cv2.destroyWindow"
+        ), patch("src.components.region_selector.cv2.setWindowProperty"):
+            region_selector.select_regions("https://youtube.com/watch?v=test", quality="720p")
+
+        mock_video_service.open_stream.assert_called_once_with(
+            "https://youtube.com/watch?v=test", quality="720p"
+        )
+
+    def test_select_regions_fetches_initial_frame_with_specified_quality(
+        self, region_selector: RegionSelector, mock_video_service: Mock
+    ) -> None:
+        with patch("src.components.region_selector.cv2.namedWindow"), patch(
+            "src.components.region_selector.cv2.createTrackbar"
+        ), patch("src.components.region_selector.cv2.getTrackbarPos", return_value=0), patch(
+            "src.components.region_selector.cv2.imshow"
+        ), patch("src.components.region_selector.cv2.waitKey", return_value=13), patch(
+            "src.components.region_selector.cv2.destroyWindow"
+        ), patch("src.components.region_selector.cv2.setWindowProperty"):
+            region_selector.select_regions("https://youtube.com/watch?v=test", quality="480p")
+
+        # get_frame_at_time is called by load_video (0.0) and then again for the initial frame
+        calls = mock_video_service.get_frame_at_time.call_args_list
+        for call in calls:
+            assert call.kwargs.get("quality") == "480p" or (len(call.args) >= 3 and call.args[2] == "480p")
+
+    def test_load_video_stores_quality(self, region_selector: RegionSelector) -> None:
+        region_selector.load_video("https://youtube.com/watch?v=test", quality="360p")
+        assert region_selector.quality == "360p"

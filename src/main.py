@@ -101,7 +101,7 @@ def main() -> None:
             ]
 
             window.set_status("Selecting regions...")
-            regions = region_selector.select_regions(url, frame_time_seconds=0.0)
+            regions = region_selector.select_regions(url, frame_time_seconds=0.0, quality=advanced.video_quality)
             if not regions:
                 window.set_status("No regions selected")
                 return

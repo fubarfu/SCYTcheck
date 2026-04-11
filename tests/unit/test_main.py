@@ -242,3 +242,16 @@ def test_main_uses_selected_region_time_as_analysis_start(tmp_path: Path) -> Non
 
     assert kwargs["start_time"] == 185.0
     assert kwargs["end_time"] == 245.0
+
+
+def test_main_passes_video_quality_to_region_selector_and_analysis(tmp_path) -> None:
+    analysis = VideoAnalysis(url="https://youtube.com/watch?v=test")
+
+    result = _run_main_once(tmp_path, analysis)
+    # Default settings use video_quality="best"
+    sel_call = result["region_selector"].select_regions.call_args
+    assert sel_call.kwargs.get("quality") == "best" or (
+        len(sel_call.args) >= 3 and sel_call.args[2] == "best"
+    )
+    analyze_kwargs = result["analysis_service"].analyze.call_args.kwargs
+    assert analyze_kwargs["video_quality"] == "best"
