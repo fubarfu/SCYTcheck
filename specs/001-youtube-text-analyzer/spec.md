@@ -20,6 +20,8 @@
 - Q: What filename scheme should the app use when creating CSV files in the selected folder? → A: scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv
 - Q: How much control should users have over output filenames? → A: Folder-only selection with automatic filename generation
 - Q: What should happen if the selected output folder is missing or not writable? → A: Abort export and show a clear error
+- Q: What type of scrollbar should be used to navigate video frames for region selection? → A: Time-based horizontal scrollbar in seconds
+- Q: Are additional fine-step navigation controls required during region selection? → A: No, scrollbar only
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -84,6 +86,8 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-015**: The app MUST create CSV filenames using the pattern `scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv` to ensure unambiguous output naming.
 - **FR-016**: The output workflow MUST allow users to select only an output folder; the CSV filename MUST be generated automatically by the app.
 - **FR-017**: If the selected output folder does not exist or is not writable, the app MUST abort export and show a clear error message.
+- **FR-018**: During region selection, the app MUST provide a horizontal time scrollbar in seconds across the full video duration to let users navigate to a representative frame before drawing regions.
+- **FR-019**: Region selection navigation MUST be implemented with the time scrollbar only; no additional frame-step or fixed-time-step controls are required.
 
 ### Key Entities *(include if feature involves data)*
 
