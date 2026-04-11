@@ -32,9 +32,10 @@
 9. Optional: Enable analysis logging (default is off) to generate a sidecar `<output_base>_log.csv` file.
 10. Select only an output folder (filename is auto-generated).
 11. Start analysis and wait for completion.
-12. Open summary CSV output: one row per normalized player name with event-based occurrence count.
+12. Open summary CSV output and verify exact headers:
+	`PlayerName, StartTimestamp`.
 13. If logging was enabled, open sidecar log CSV and verify columns are:
-	`TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`.
+	`TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`.
 
 ## Development
 

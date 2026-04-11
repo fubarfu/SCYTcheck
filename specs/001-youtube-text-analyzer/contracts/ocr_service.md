@@ -32,5 +32,5 @@
 - If `filter_non_matching` is true, lines that match no enabled pattern are excluded.
 - For lines that do match configured patterns, extraction is recall-first and avoids additional suppression that would drop plausible context-matched names.
 - Returned detections include `raw_ocr_text`, `extracted_name`, and `normalized_name`.
-- Log row schema is deterministic when logging is enabled: `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`.
-- `TimestampSec` is formatted as `HH:MM:SS.mmm`.
+- Log row schema is deterministic when logging is enabled: `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`.
+- `TimestampSec`, `StartTimestamp`, and `EndTimestamp` are formatted as `HH:MM:SS.mmm`.

@@ -115,9 +115,14 @@ Represents one audit row written to the sidecar log CSV.
 - `extracted_name` (string)
 - `region_id` (string)
 - `matched_pattern` (string)
+- `normalized_name` (string)
+- `occurrence_count` (int)
+- `start_timestamp` (string): `HH:MM:SS.mmm`
+- `end_timestamp` (string): `HH:MM:SS.mmm`
+- `representative_region` (string)
 
 **Validation Rules**:
-- Column order is fixed: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`
+- Column order is fixed: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`, `NormalizedName`, `OccurrenceCount`, `StartTimestamp`, `EndTimestamp`, `RepresentativeRegion`
 - `rejection_reason` must be non-empty when `accepted=false`
 - `extracted_name` must be non-empty when `accepted=true`
 
@@ -126,11 +131,7 @@ Represents one deduplicated output row.
 
 **Attributes**:
 - `player_name` (string)
-- `normalized_name` (string)
-- `occurrence_count` (int): Number of merged appearance events
-- `first_seen_sec` (float)
-- `last_seen_sec` (float)
-- `representative_region` (string)
+- `start_timestamp` (string): `HH:MM:SS.mmm`
 
 ## Data Flow
 
@@ -139,6 +140,6 @@ Represents one deduplicated output row.
 3. Frames are analyzed and OCR text is matched against active patterns (recall-first for context-matched names)
 4. Candidate detections are normalized and grouped by normalized name
 5. Detections are merged into appearance events using gap threshold (default 1.0s)
-6. Player summaries are emitted with one row per normalized name and event-based occurrence count
+6. Player summaries are emitted with one row per normalized name and earliest merged event start as `StartTimestamp`
 7. Summary CSV is exported to selected folder using auto-generated filename
-8. If logging is enabled, sidecar log CSV is written in fixed schema with one row per candidate
+8. If logging is enabled, sidecar log CSV is written in fixed schema with one row per candidate plus aggregation context fields

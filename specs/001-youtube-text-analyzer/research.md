@@ -81,8 +81,8 @@
 ## Decision: Log CSV Schema and Timestamp Format
 
 **Chosen**: Fixed ordered headers:
-`TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`
-with `TimestampSec` formatted as `HH:MM:SS.mmm`.
+`TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`
+with `TimestampSec`, `StartTimestamp`, and `EndTimestamp` formatted as `HH:MM:SS.mmm`.
 
 **Rationale**: Deterministic schema simplifies tests and troubleshooting.
 
@@ -102,4 +102,4 @@ with `TimestampSec` formatted as `HH:MM:SS.mmm`.
 
 ## Summary
 
-All technical clarifications are resolved with concrete implementation choices. No open `NEEDS CLARIFICATION` items remain.
+All technical clarifications are resolved with concrete implementation choices. Summary output is intentionally minimal (`PlayerName`, `StartTimestamp`) while detailed diagnostics and aggregation metadata are captured in optional sidecar logs. No open `NEEDS CLARIFICATION` items remain.
