@@ -28,11 +28,12 @@
 **Dependencies**: pytesseract, opencv-python
 
 **Behavioral Guarantees**:
-- Pattern matching is case-insensitive fuzzy matching on normalized OCR text with configurable threshold (default `0.75`).
+- Pattern matching is case-insensitive fuzzy substring matching on normalized OCR text with configurable threshold (default `0.75`), scanning for the best matching occurrence anywhere in the normalized text rather than performing a whole-block comparison.
 - OCR text normalization for matching removes line breaks and collapses repeated whitespace runs to single spaces.
 - If context text is clipped by region boundaries, matches are accepted when at least two contiguous boundary characters overlap or fuzzy similarity meets threshold.
 - If `filter_non_matching` is true, lines that match no enabled pattern are excluded.
 - For lines that do match configured patterns, extraction is recall-first and avoids additional suppression that would drop plausible context-matched names.
 - Returned detections include `raw_ocr_text`, `extracted_name`, and `normalized_name`.
-- Log row schema is deterministic when logging is enabled: `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`.
+- Log row schema is deterministic when logging is enabled: `TimestampSec, RawString, TestedStringRaw, TestedStringNormalized, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`.
+- `TestedStringRaw` and `TestedStringNormalized` are populated for accepted and rejected candidate rows to support false-negative debugging.
 - `TimestampSec`, `StartTimestamp`, and `EndTimestamp` are formatted as `HH:MM:SS.mmm`.

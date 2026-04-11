@@ -42,7 +42,7 @@ PlayerName,StartTimestamp
 When logging is enabled, the sidecar log uses this schema:
 
 ```text
-TimestampSec,RawString,Accepted,RejectionReason,ExtractedName,RegionId,MatchedPattern,NormalizedName,OccurrenceCount,StartTimestamp,EndTimestamp,RepresentativeRegion
+TimestampSec,RawString,TestedStringRaw,TestedStringNormalized,Accepted,RejectionReason,ExtractedName,RegionId,MatchedPattern,NormalizedName,OccurrenceCount,StartTimestamp,EndTimestamp,RepresentativeRegion
 ```
 
 If export fails after analysis, use the `Retry Export` button to write the files again without rerunning video detection.
@@ -74,3 +74,9 @@ pytest
 ruff check .
 black --check .
 ```
+
+## Latest Validation
+
+- Date: 2026-04-12
+- `pytest`: 115 passed
+- `ruff check .`: all checks passed

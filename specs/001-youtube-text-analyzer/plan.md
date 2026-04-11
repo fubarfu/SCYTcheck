@@ -5,19 +5,19 @@
 
 ## Summary
 
-Build a portable Windows desktop app (tkinter) that accepts a YouTube URL, lets users draw one or more rectangular regions on a live video frame preview, then streams frames on-demand via yt-dlp + OpenCV to extract player names via Tesseract OCR. Extracted names are matched against configurable context patterns using **fuzzy substring search** on line-break-free normalized text (default similarity threshold 0.75), deduplicated by normalized name, merged into appearance events (default gap 1.0 s), and written to a fixed-schema CSV. An optional sidecar log CSV captures per-candidate audit rows. The app is distributed as a portable unsigned ZIP (x64 + x86) bundling FFmpeg and Tesseract language data.
+Deliver a portable Windows desktop application that analyzes YouTube video frames in user-selected regions, extracts player names via OCR, and exports a simplified summary CSV (`PlayerName`, `StartTimestamp`). Context matching is recall-oriented using fuzzy substring search over normalized region text. Optional sidecar logging captures per-candidate diagnostics including both raw and normalized tested strings to support false-negative debugging. Distribution targets unsigned x64/x86 portable ZIP bundles with bundled runtime dependencies.
 
 ## Technical Context
 
 **Language/Version**: Python 3.11  
-**Primary Dependencies**: `opencv-python`, `pytesseract`, `yt-dlp`, `tkinter` (stdlib), `numpy`, `thefuzz` (fuzzy substring matching), `Pillow`  
-**Storage**: CSV outputs + local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, fallback to local file)  
-**Testing**: `pytest` (unit + integration)  
-**Target Platform**: Windows 10+ (x64 and x86 portable bundles)  
-**Project Type**: Desktop app (single-process, no server)  
-**Performance Goals**: 10-minute video analyzed in under 5 minutes from analysis start to CSV write (SC-001)  
-**Constraints**: No full-video download; stream frames on-demand; no code-signing required; no external install by user  
-**Scale/Scope**: Single-user local tool; one analysis session at a time; videos up to 1+ hour supported
+**Primary Dependencies**: `opencv-python`, `pytesseract`, `yt-dlp`, `tkinter` (stdlib), `numpy`, `thefuzz`, `Pillow`  
+**Storage**: CSV output files plus persisted local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, fallback to local file)  
+**Testing**: `pytest` (unit and integration), `ruff` linting  
+**Target Platform**: Windows 10+ (x64 and x86)  
+**Project Type**: Desktop app (single process, GUI)  
+**Performance Goals**: SC-001 (10-minute analysis under 5 minutes under representative conditions)  
+**Constraints**: On-demand frame retrieval (no full pre-download), deterministic CSV schemas, optional logging without prompts when disabled, unsigned release flow supported  
+**Scale/Scope**: Single local-user analysis workflow, one session at a time, videos may exceed 1 hour
 
 ## Constitution Check
 
@@ -25,17 +25,17 @@ Build a portable Windows desktop app (tkinter) that accepts a YouTube URL, lets 
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| I. Simple and Modular Architecture | PASS | Flat `src/` with `services/`, `components/`, `data/` — no nested layers or frameworks |
-| II. Readability Over Cleverness | PASS | Services have single responsibilities; fuzzy matching uses a well-known library (`thefuzz`) |
-| III. Testing for Business Logic | PASS | All services (OCR, analysis, export, video) covered by unit + integration tests |
-| IV. Minimal Dependencies | PASS | 6–7 runtime libraries; all directly required by stated features |
-| V. No Secrets in Repository | PASS | No API keys or credentials; YouTube access is anonymous public streaming |
-| VI. Windows-Friendly Development | PASS | tkinter stdlib, Windows path handling, `%APPDATA%` config fallback |
-| VII. Incremental Changes and Working State | PASS | Each service is independently testable; analysis pipeline stages are separable |
+| I. Simple and Modular Architecture | PASS | Existing `src/components`, `src/services`, `src/data` layout remains intact |
+| II. Readability Over Cleverness | PASS | Clarified deterministic matching/logging rules and explicit schema guarantees |
+| III. Testing for Business Logic | PASS | Task plan includes FR/SC traceability and unit/integration coverage |
+| IV. Minimal Dependencies | PASS | Dependencies remain unchanged and feature-justified |
+| V. No Secrets in Repository | PASS | No secret-bearing services introduced |
+| VI. Windows-Friendly Development | PASS | Windows launcher/build scripts and `%APPDATA%` config behavior retained |
+| VII. Incremental Changes and Working State | PASS | Changes scoped to service logic plus schema/documentation updates |
 
-**Constitution Check Result**: All gates PASS. No violations to justify.
+**Constitution Check Result**: PASS (no unjustified violations).
 
-**Post-Design Re-check**: PASS — data model entities are small, focused, and directly map to spec requirements without added abstractions.
+**Post-Design Re-check**: PASS (design artifacts remain consistent and testable).
 
 ## Project Structure
 
@@ -43,43 +43,38 @@ Build a portable Windows desktop app (tkinter) that accepts a YouTube URL, lets 
 
 ```text
 specs/001-youtube-text-analyzer/
-├── plan.md              # This file
-├── research.md          # Phase 0 output
-├── data-model.md        # Phase 1 output
-├── quickstart.md        # Phase 1 output
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
 ├── contracts/
 │   ├── ocr_service.md
 │   └── video_streaming.md
-└── tasks.md             # Phase 2 output (/speckit.tasks — not created by /speckit.plan)
+└── tasks.md
 ```
 
 ### Source Code (repository root)
 
 ```text
 src/
-├── __init__.py
-├── config.py                        # Settings load/save, APPDATA path resolution
-├── main.py                          # App entry point
+├── config.py
+├── main.py
 ├── components/
-│   ├── __init__.py
-│   ├── file_selector.py             # Output folder selection widget
-│   ├── main_window.py               # Primary workflow UI
-│   ├── progress_display.py          # Analysis progress feedback
-│   ├── region_selector.py           # Foreground region-drawing popup
-│   └── url_input.py                 # URL entry + two-stage validation
+│   ├── file_selector.py
+│   ├── main_window.py
+│   ├── progress_display.py
+│   ├── region_selector.py
+│   └── url_input.py
 ├── data/
-│   ├── __init__.py
-│   └── models.py                    # VideoAnalysis, TextDetection, PlayerSummary, ContextPattern, etc.
+│   └── models.py
 └── services/
-    ├── __init__.py
-    ├── analysis_service.py          # Frame loop, OCR dispatch, fuzzy-substring matching, event merging
-    ├── export_service.py            # Summary CSV + sidecar log CSV writing
-    ├── logging.py                   # Internal diagnostic logging (not user-facing log CSV)
-    ├── ocr_service.py               # Tesseract OCR wrapper, region crop, normalization
-    └── video_service.py             # yt-dlp stream resolution, OpenCV frame seek, quality fallback
+    ├── analysis_service.py
+    ├── export_service.py
+    ├── logging.py
+    ├── ocr_service.py
+    └── video_service.py
 
 tests/
-├── conftest.py
 ├── integration/
 │   ├── test_log_schema_fr049.py
 │   ├── test_output_schema_sc004_sc005.py
@@ -101,4 +96,8 @@ tests/
     └── test_video_service.py
 ```
 
-**Structure Decision**: Single-project layout under `src/`. Components (UI), services (business logic), and data (models) are cleanly separated. No additional project roots needed.
+**Structure Decision**: Single-project desktop architecture with domain/service/UI separation; no additional project roots required.
+
+## Complexity Tracking
+
+No constitution violations requiring complexity exemptions.

@@ -47,7 +47,7 @@
 - Q: How should video retrieval quality be handled? → A: User-selectable quality with default best quality; if selected quality is unavailable, fall through to next lower available quality and show a non-blocking warning with requested vs actual quality used
 - Q: What log file format and naming should be required when Advanced Settings logging is enabled? → A: Create a sidecar CSV log named like output with `_log.csv` suffix
 - Q: Where should region-selector explanatory text be displayed relative to the video preview? → A: In a separate area below the video; it must not cover the video preview
-- Q: When logging is enabled, what fixed log CSV schema should be required? → A: Fixed column order `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`
+- Q: When logging is enabled, what fixed log CSV schema should be required? → A: Fixed column order `TimestampSec, RawString, TestedStringRaw, TestedStringNormalized, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`
 - Q: What format should log `TimestampSec` use? → A: `HH:MM:SS.mmm` formatted string
 - Q: For the simplified output CSV, which exact schema should be required? → A: `PlayerName, StartTimestamp` with `StartTimestamp` formatted as `HH:MM:SS.mmm`
 - Q: When summary output only contains `PlayerName` and `StartTimestamp`, what should happen if logging is disabled? → A: Proceed normally with no warning or prompt
@@ -58,6 +58,7 @@
 - Q: Should the spec enumerate the exact quality levels users can choose, or describe them as a minimum set? → A: Enumerate exactly: `best`, `720p`, `480p`, `360p` as the fixed supported set
 - Q: When the user-selected quality level is unavailable from yt-dlp for a specific video, what should the app do? → A: Fall through to next lower available quality and show a non-blocking warning message
 - Q: How should the fuzzy matching algorithm locate a context pattern within the normalized OCR region text? → A: Fuzzy substring search — scan the normalized OCR text for the best matching occurrence of the pattern appearing anywhere within it
+- Q: Which diagnostic values should be logged to debug false negatives in context-pattern matching? → A: Log both the raw tested string and the normalized tested string used for matching for every candidate row
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -159,7 +160,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-046**: The app MUST provide a video-quality selector for YouTube retrieval with exactly four supported levels: `best`, `720p`, `480p`, `360p`. The default MUST be `best`. The selected quality MUST be used consistently for both region-selector preview frames and analysis frame retrieval in the current run. If the selected quality level is unavailable for a given video, the app MUST fall through to the next lower available quality level and display a non-blocking warning message identifying the requested and actual quality used.
 - **FR-047**: Advanced Settings MUST provide a toggle to enable/disable analysis logging. The default state MUST be disabled (off).
 - **FR-048**: When logging is enabled, the app MUST create a sidecar CSV log file in the same folder as the output CSV using the same base filename with `_log.csv` suffix.
-- **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST use this exact header order: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`, `NormalizedName`, `OccurrenceCount`, `StartTimestamp`, `EndTimestamp`, `RepresentativeRegion`. `TimestampSec`, `StartTimestamp`, and `EndTimestamp` MUST be strings formatted as `HH:MM:SS.mmm`. `RejectionReason` MUST be non-empty when `Accepted=false`. `ExtractedName` MUST be non-empty when `Accepted=true`.
+- **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST use this exact header order: `TimestampSec`, `RawString`, `TestedStringRaw`, `TestedStringNormalized`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`, `NormalizedName`, `OccurrenceCount`, `StartTimestamp`, `EndTimestamp`, `RepresentativeRegion`. `TimestampSec`, `StartTimestamp`, and `EndTimestamp` MUST be strings formatted as `HH:MM:SS.mmm`. `TestedStringRaw` and `TestedStringNormalized` MUST be populated for both accepted and rejected candidate rows. `RejectionReason` MUST be non-empty when `Accepted=false`. `ExtractedName` MUST be non-empty when `Accepted=true`.
 - **FR-050**: When logging is disabled, the app MUST NOT create a log file.
 - **FR-052**: When logging is disabled, analysis and export MUST proceed without any additional warning, confirmation dialog, or informational prompt about omitted detailed logging data.
 

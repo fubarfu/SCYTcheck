@@ -23,7 +23,7 @@
 - Time seeks are best-effort and monotonic for increasing requests.
 - Returned timestamps are within a practical decode tolerance of requested times.
 - Service supports on-demand frame retrieval without full video download.
-- Requested quality is respected for retrieval attempts in the current run; no automatic quality downgrade is applied.
+- Requested quality is respected for retrieval attempts in the current run; if unavailable for a video, retrieval falls through to the next lower available quality and reports requested vs actual quality used.
 - Validation method distinguishes malformed URL and unreachable/private video conditions.
 - Region-selection popup is raised to foreground when launched.
 - Selector instructions are shown in a dedicated area below the video preview and do not overlay video content.

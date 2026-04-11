@@ -15,12 +15,12 @@
 
 ## Decision: Video Quality Selection Behavior
 
-**Chosen**: Expose user-selectable video quality with default to best available quality; no automatic downgrade.
+**Chosen**: Expose user-selectable video quality with default to best available quality. If a selected quality is unavailable, fall through to the next lower available quality and show a non-blocking warning indicating requested and actual quality.
 
-**Rationale**: Satisfies FR-046 and preserves user control over OCR tradeoffs.
+**Rationale**: Satisfies FR-046 while preserving user control and improving run robustness against per-video format availability differences.
 
 **Alternatives considered**:
-- Automatic fallback: conflicts with explicit no-auto-downgrade clarification.
+- No fallback: causes avoidable run failures when a selected quality is absent.
 - Fixed best-only: reduces flexibility for constrained networks.
 
 ## Decision: URL Validation and Error Classification
@@ -93,12 +93,13 @@
 ## Decision: Log CSV Schema and Timestamp Format
 
 **Chosen**: Fixed ordered headers:
-`TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`
+`TimestampSec, RawString, TestedStringRaw, TestedStringNormalized, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`
 with `TimestampSec`, `StartTimestamp`, and `EndTimestamp` formatted as `HH:MM:SS.mmm`.
 
-**Rationale**: Deterministic schema simplifies tests and troubleshooting.
+**Rationale**: Deterministic schema simplifies tests and troubleshooting while the added tested-string diagnostics improve false-negative debugging for context-pattern matching.
 
 **Alternatives considered**:
+- Logging only one tested-string representation: insufficient visibility into normalization effects.
 - Flexible headers: harder validation and parsing.
 - Numeric seconds format: acceptable but not selected.
 

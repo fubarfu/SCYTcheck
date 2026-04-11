@@ -113,6 +113,8 @@ Represents one audit row written to the sidecar log CSV.
 **Attributes**:
 - `timestamp_sec` (string): `HH:MM:SS.mmm`
 - `raw_string` (string)
+- `tested_string_raw` (string): Exact raw string value passed into pattern matching for this candidate
+- `tested_string_normalized` (string): Normalized tested string used for fuzzy comparison
 - `accepted` (bool)
 - `rejection_reason` (string)
 - `extracted_name` (string)
@@ -125,7 +127,8 @@ Represents one audit row written to the sidecar log CSV.
 - `representative_region` (string)
 
 **Validation Rules**:
-- Column order is fixed: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`, `NormalizedName`, `OccurrenceCount`, `StartTimestamp`, `EndTimestamp`, `RepresentativeRegion`
+- Column order is fixed: `TimestampSec`, `RawString`, `TestedStringRaw`, `TestedStringNormalized`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`, `NormalizedName`, `OccurrenceCount`, `StartTimestamp`, `EndTimestamp`, `RepresentativeRegion`
+- `tested_string_raw` and `tested_string_normalized` must be present for accepted and rejected rows
 - `rejection_reason` must be non-empty when `accepted=false`
 - `extracted_name` must be non-empty when `accepted=true`
 

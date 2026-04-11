@@ -37,7 +37,7 @@
 	`PlayerName, StartTimestamp`.
 
 14. If logging was enabled, open sidecar log CSV and verify columns are:
-	`TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`.
+	`TimestampSec, RawString, TestedStringRaw, TestedStringNormalized, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`.
 
 ## Release Smoke Check
 
