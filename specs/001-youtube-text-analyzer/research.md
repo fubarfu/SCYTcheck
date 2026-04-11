@@ -1,6 +1,6 @@
 # Research Findings: YouTube Text Analyzer
 
-**Date**: April 11, 2026  
+**Date**: April 12, 2026  
 **Feature**: `specs/001-youtube-text-analyzer/spec.md`
 
 ## Decision: On-Demand YouTube Frame Retrieval
@@ -34,14 +34,34 @@
 
 ## Decision: OCR and Context-Pattern Extraction
 
-**Chosen**: Case-insensitive fuzzy **substring search** over normalized OCR text with configurable similarity threshold (default `0.75`), combined with optional `before_text` / `after_text` extraction boundaries and deterministic collision resolution per FR-041. The algorithm scans the full normalized OCR region text (all line breaks removed, whitespace collapsed) for the best matching occurrence of the pattern anywhere within it — not a whole-block comparison.
+**Chosen**: Case-insensitive fuzzy **substring search** over normalized OCR text with configurable similarity threshold (default `0.75`), combined with optional `before_text` / `after_text` extraction boundaries and deterministic collision resolution per FR-041. The algorithm scans the full normalized OCR region text (all line breaks removed, whitespace collapsed) for the best matching occurrence of the pattern anywhere within it.
 
-**Rationale**: Reduces false negatives from OCR noise and spacing/line-break artifacts while preserving deterministic extraction behavior. Whole-block comparison would score very low similarity when the pattern (e.g. `"joined"`) is short relative to the full OCR block, causing missed matches even when the text is visibly present.
+**Rationale**: Reduces false negatives from OCR noise and spacing/line-break artifacts while preserving deterministic extraction behavior.
 
 **Alternatives considered**:
 - Whole-block fuzzy comparison: causes systematic misses when context pattern is a short marker inside a longer OCR string.
 - Strict substring-only matching: too brittle for noisy OCR text.
 - Regex-first pattern system: adds complexity for target users.
+
+## Decision: Single-Token Name Extraction
+
+**Chosen**: After a boundary match, keep one token only for `ExtractedName`: after-only patterns keep the last token before the marker; before-only and both-boundary patterns keep the first token in the extracted span.
+
+**Rationale**: Implements clarified domain constraint that player names do not contain blanks while preserving deterministic extraction semantics.
+
+**Alternatives considered**:
+- Preserve full extracted span: captures extra context words and increases false positives.
+- Reject whitespace-containing extractions: drops potentially recoverable names and reduces recall.
+
+## Decision: Output Display Name vs Deduplication Key
+
+**Chosen**: Deduplicate by normalized key, but export `PlayerName` as the first accepted on-screen extracted form observed at the earliest timestamp for that normalized group.
+
+**Rationale**: Keeps grouping robust to OCR variation while preserving user-visible output in on-screen form.
+
+**Alternatives considered**:
+- Export normalized lowercase names: easier grouping but loses user-expected presentation.
+- Most-frequent form selection: more volatile under noisy OCR and harder to reason about.
 
 ## Decision: OCR Normalization and Boundary-Clipped Matches
 
@@ -55,7 +75,7 @@
 
 ## Decision: Recall-First Candidate Preservation
 
-**Chosen**: Preserve every non-empty context-matched candidate through candidate collection (FR-034), then apply normalization and event aggregation.
+**Chosen**: Preserve every non-empty context-matched candidate through candidate collection (FR-034), then apply normalization-key grouping and event aggregation.
 
 **Rationale**: Prioritizes not missing valid player names in low-quality video scenarios.
 
@@ -96,18 +116,17 @@
 `TimestampSec, RawString, TestedStringRaw, TestedStringNormalized, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`
 with `TimestampSec`, `StartTimestamp`, and `EndTimestamp` formatted as `HH:MM:SS.mmm`.
 
-**Rationale**: Deterministic schema simplifies tests and troubleshooting while the added tested-string diagnostics improve false-negative debugging for context-pattern matching.
+**Rationale**: Deterministic schema simplifies tests and troubleshooting while tested-string diagnostics improve false-negative debugging for context-pattern matching.
 
 **Alternatives considered**:
 - Logging only one tested-string representation: insufficient visibility into normalization effects.
 - Flexible headers: harder validation and parsing.
-- Numeric seconds format: acceptable but not selected.
 
 ## Decision: Packaging and Distribution
 
 **Chosen**: Portable ZIP bundles for x64/x86 with bundled FFmpeg and Tesseract language data; release packaging does not require signing certificates. Optional signing is a post-build enhancement when a certificate is available.
 
-**Rationale**: Meets FR-010 to FR-014 after clarification to support unsigned portable releases by default.
+**Rationale**: Meets FR-010 to FR-014 and supports unsigned portable releases by default.
 
 **Alternatives considered**:
 - Mandatory code-signing in release path: rejected due to certificate acquisition burden.
@@ -116,4 +135,4 @@ with `TimestampSec`, `StartTimestamp`, and `EndTimestamp` formatted as `HH:MM:SS
 
 ## Summary
 
-All technical clarifications are resolved with concrete implementation choices. Summary output is intentionally minimal (`PlayerName`, `StartTimestamp`) while detailed diagnostics and aggregation metadata are captured in optional sidecar logs. No open `NEEDS CLARIFICATION` items remain.
+All technical clarifications are resolved with concrete implementation choices. Summary output remains intentionally minimal (`PlayerName`, `StartTimestamp`) while detailed diagnostics and aggregation metadata are captured in optional sidecar logs.

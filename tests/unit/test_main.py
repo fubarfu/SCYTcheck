@@ -67,6 +67,7 @@ def _run_main_once(
     logger = Mock()
     video_service = Mock()
     video_service.validate_youtube_url.return_value = (True, "")
+    video_service.get_video_info.return_value = {"duration": 480.0}
     ocr_service = Mock()
     ocr_service.confidence_threshold = 40
     analysis_service = Mock()
@@ -232,7 +233,7 @@ def test_main_retries_export_without_rerunning_analysis(tmp_path: Path) -> None:
     )
 
 
-def test_main_uses_selected_region_time_as_analysis_start(tmp_path: Path) -> None:
+def test_main_uses_full_video_duration_for_analysis_window(tmp_path: Path) -> None:
     analysis = VideoAnalysis(url="https://youtube.com/watch?v=test")
     analysis.set_player_summaries(
         [
@@ -251,8 +252,8 @@ def test_main_uses_selected_region_time_as_analysis_start(tmp_path: Path) -> Non
     result = _run_main_once(tmp_path, analysis, selected_region_times=[185.0])
     kwargs = result["analysis_service"].analyze.call_args.kwargs
 
-    assert kwargs["start_time"] == 185.0
-    assert kwargs["end_time"] == 245.0
+    assert kwargs["start_time"] == 0.0
+    assert kwargs["end_time"] == 480.0
 
 
 def test_main_passes_video_quality_to_region_selector_and_analysis(tmp_path) -> None:

@@ -116,20 +116,17 @@ def main() -> None:
                 window.set_status("No regions selected")
                 return
 
+            # Analyze across the full video timeline. Region selection time is only
+            # for choosing representative ROIs, not for clipping analysis duration.
             analysis_start_time = 0.0
-            selected_regions_with_time = getattr(region_selector, "selected_regions", None)
-            if isinstance(selected_regions_with_time, list) and selected_regions_with_time:
-                selected_times: list[float] = []
-                for selected_region in selected_regions_with_time:
-                    if not isinstance(selected_region, tuple) or len(selected_region) < 5:
-                        continue
-                    try:
-                        selected_times.append(float(selected_region[4]))
-                    except Exception:
-                        continue
-                if selected_times:
-                    analysis_start_time = max(0.0, min(selected_times))
-            analysis_end_time = analysis_start_time + 60.0
+            video_info = video_service.get_video_info(url)
+            duration_value = video_info.get("duration", 0.0)
+            try:
+                analysis_end_time = float(duration_value)
+            except (TypeError, ValueError):
+                analysis_end_time = 0.0
+            if analysis_end_time <= analysis_start_time:
+                analysis_end_time = analysis_start_time + 60.0
 
             window.progress.set_stage("Detect")
             window.set_status("Analyzing video...")

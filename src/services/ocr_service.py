@@ -62,32 +62,24 @@ class OCRService:
 
         tokens: list[str] = []
         diagnostics: list[dict[str, object]] = []
-        saw_non_empty = False
-        for index, text in enumerate(data.get("text", [])):
-            value = text.strip()
-            if not value:
-                continue
-            saw_non_empty = True
-            conf_raw = data.get("conf", ["0"])[index]
-            try:
-                conf = int(float(conf_raw))
-            except ValueError:
-                conf = 0
-            if conf >= self.confidence_threshold:
-                tokens.append(value)
+        line_entries = self._build_line_entries(data)
+
+        for line_text, avg_conf in line_entries:
+            if avg_conf >= self.confidence_threshold:
+                tokens.append(line_text)
                 diagnostics.append(
                     {
-                        "raw_string": value,
+                        "raw_string": line_text,
                         "accepted": True,
                         "rejection_reason": "",
-                        "extracted_name": value,
+                        "extracted_name": line_text,
                         "matched_pattern": None,
                     }
                 )
             else:
                 diagnostics.append(
                     {
-                        "raw_string": value,
+                        "raw_string": line_text,
                         "accepted": False,
                         "rejection_reason": "low_confidence",
                         "extracted_name": "",
@@ -95,7 +87,7 @@ class OCRService:
                     }
                 )
 
-        if not saw_non_empty:
+        if not line_entries:
             diagnostics.append(
                 {
                     "raw_string": "",
@@ -107,6 +99,67 @@ class OCRService:
             )
 
         return tokens, diagnostics
+
+    @staticmethod
+    def _build_line_entries(data: dict[str, object]) -> list[tuple[str, int]]:
+        """Build OCR line strings with average confidence.
+
+        Prefer grouping by Tesseract line metadata when available. If line metadata is
+        missing, fall back to token-level entries to preserve current behavior in tests
+        and simplified OCR outputs.
+        """
+        texts = list(data.get("text", []) if isinstance(data, dict) else [])
+        confs = list(data.get("conf", []) if isinstance(data, dict) else [])
+        block_nums = data.get("block_num")
+        par_nums = data.get("par_num")
+        line_nums = data.get("line_num")
+
+        line_meta_available = isinstance(block_nums, list) and isinstance(par_nums, list) and isinstance(line_nums, list)
+
+        def parse_conf(raw: object) -> int:
+            try:
+                return int(float(str(raw)))
+            except ValueError:
+                return 0
+
+        if line_meta_available:
+            grouped: dict[tuple[int, int, int], list[tuple[int, str, int]]] = {}
+            for index, text in enumerate(texts):
+                value = str(text).strip()
+                if not value:
+                    continue
+                try:
+                    key = (
+                        int(block_nums[index]),
+                        int(par_nums[index]),
+                        int(line_nums[index]),
+                    )
+                except (IndexError, TypeError, ValueError):
+                    # If metadata is inconsistent, fall back to token-level output.
+                    line_meta_available = False
+                    break
+                conf = parse_conf(confs[index] if index < len(confs) else "0")
+                grouped.setdefault(key, []).append((index, value, conf))
+
+            if line_meta_available:
+                lines: list[tuple[str, int]] = []
+                for key in sorted(grouped.keys()):
+                    ordered_tokens = sorted(grouped[key], key=lambda item: item[0])
+                    line_text = " ".join(token for _, token, _ in ordered_tokens).strip()
+                    if not line_text:
+                        continue
+                    avg_conf = int(round(sum(conf for _, _, conf in ordered_tokens) / len(ordered_tokens)))
+                    lines.append((line_text, avg_conf))
+                return lines
+
+        fallback_lines: list[tuple[str, int]] = []
+        for index, text in enumerate(texts):
+            value = str(text).strip()
+            if not value:
+                continue
+            conf = parse_conf(confs[index] if index < len(confs) else "0")
+            fallback_lines.append((value, conf))
+        return fallback_lines
 
     @staticmethod
     def validate_pattern(before_text: str | None, after_text: str | None) -> None:

@@ -1,11 +1,11 @@
 # Implementation Plan: YouTube Text Analyzer
 
-**Branch**: `001-youtube-text-analyzer` | **Date**: 2026-04-11 | **Spec**: [spec.md](spec.md)
+**Branch**: `001-youtube-text-analyzer` | **Date**: 2026-04-12 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `specs/001-youtube-text-analyzer/spec.md`
 
 ## Summary
 
-Deliver a portable Windows desktop application that analyzes YouTube video frames in user-selected regions, extracts player names via OCR, and exports a simplified summary CSV (`PlayerName`, `StartTimestamp`). Context matching is recall-oriented using fuzzy substring search over normalized region text. Optional sidecar logging captures per-candidate diagnostics including both raw and normalized tested strings to support false-negative debugging. Distribution targets unsigned x64/x86 portable ZIP bundles with bundled runtime dependencies.
+Deliver a portable Windows desktop application that analyzes YouTube video frames in user-selected regions, extracts player names via OCR, and exports a simplified summary CSV (`PlayerName`, `StartTimestamp`). Context matching is recall-oriented using fuzzy substring search over normalized OCR text, boundary-clipped acceptance, and single-token extraction rules for player names. Deduplication remains normalization-key-based while exported `PlayerName` preserves the earliest accepted on-screen extracted form for each normalized group. Optional sidecar logging captures per-candidate diagnostics including raw and normalized tested strings.
 
 ## Technical Context
 
@@ -25,13 +25,13 @@ Deliver a portable Windows desktop application that analyzes YouTube video frame
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| I. Simple and Modular Architecture | PASS | Existing `src/components`, `src/services`, `src/data` layout remains intact |
-| II. Readability Over Cleverness | PASS | Clarified deterministic matching/logging rules and explicit schema guarantees |
-| III. Testing for Business Logic | PASS | Task plan includes FR/SC traceability and unit/integration coverage |
-| IV. Minimal Dependencies | PASS | Dependencies remain unchanged and feature-justified |
-| V. No Secrets in Repository | PASS | No secret-bearing services introduced |
-| VI. Windows-Friendly Development | PASS | Windows launcher/build scripts and `%APPDATA%` config behavior retained |
-| VII. Incremental Changes and Working State | PASS | Changes scoped to service logic plus schema/documentation updates |
+| I. Simple and Modular Architecture | PASS | Existing `src/components`, `src/services`, `src/data` separation retained |
+| II. Readability Over Cleverness | PASS | Clarified extraction/output rules are explicit and deterministic |
+| III. Testing for Business Logic | PASS | Plan/task/test updates cover extraction, output-display, and schema behavior |
+| IV. Minimal Dependencies | PASS | No additional dependencies required |
+| V. No Secrets in Repository | PASS | No secrets introduced |
+| VI. Windows-Friendly Development | PASS | `%APPDATA%` behavior, launcher scripts, and Windows packaging preserved |
+| VII. Incremental Changes and Working State | PASS | Changes scoped to extraction/output behavior plus supporting docs/tests |
 
 **Constitution Check Result**: PASS (no unjustified violations).
 

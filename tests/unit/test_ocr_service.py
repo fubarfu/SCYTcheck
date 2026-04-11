@@ -134,3 +134,24 @@ def test_detect_text_with_diagnostics_reports_low_confidence() -> None:
         and row["rejection_reason"] == "low_confidence"
         for row in diagnostics
     )
+
+
+def test_detect_text_with_diagnostics_aggregates_tokens_to_lines() -> None:
+    service = OCRService(confidence_threshold=40)
+    image = np.zeros((16, 16, 3), dtype=np.uint8)
+
+    with patch("src.services.ocr_service.pytesseract.image_to_data") as image_to_data:
+        image_to_data.return_value = {
+            "text": ["Alice", "joined", "Bob", "left"],
+            "conf": ["80", "80", "80", "80"],
+            "block_num": [1, 1, 1, 1],
+            "par_num": [1, 1, 1, 1],
+            "line_num": [1, 1, 2, 2],
+        }
+        tokens, diagnostics = service.detect_text_with_diagnostics(image, (0, 0, 16, 16))
+
+    assert tokens == ["Alice joined", "Bob left"]
+    assert [row["raw_string"] for row in diagnostics if row["accepted"]] == [
+        "Alice joined",
+        "Bob left",
+    ]
