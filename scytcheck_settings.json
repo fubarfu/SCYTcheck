@@ -1,0 +1,18 @@
+{
+  "context_patterns": [
+    {
+      "id": "default-joined",
+      "before_text": null,
+      "after_text": "joined",
+      "enabled": true
+    },
+    {
+      "id": "default-connected",
+      "before_text": null,
+      "after_text": "connected",
+      "enabled": true
+    }
+  ],
+  "filter_non_matching": false,
+  "event_gap_threshold_sec": 1.0
+}

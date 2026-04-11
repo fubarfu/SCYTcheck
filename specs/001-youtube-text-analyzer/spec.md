@@ -62,11 +62,11 @@ As a user, I want to input a YouTube video URL and have the app analyze the vide
 
 ### User Story 2 - Easy Input and Output Handling (Priority: P2)
 
-As a user, I want a simple interface to enter the YouTube URL and specify the output file location, so the tool is easy to use without complex setup.
+As a user, I want a simple interface to enter the YouTube URL and select an output folder while the app auto-generates the CSV filename, so the tool is easy to use without complex setup.
 
 **Why this priority**: Enhances usability, making the tool accessible to non-technical users.
 
-**Independent Test**: Can be tested by verifying the UI allows URL input and file path selection, and the app processes them correctly.
+**Independent Test**: Can be tested by verifying the UI accepts a URL, validates a selected output folder, and auto-generates an export filename.
 
 **Acceptance Scenarios**:
 
@@ -92,7 +92,7 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-002**: The app MUST validate the input URL in two stages before analysis starts: (1) format validation for a supported YouTube URL pattern, and (2) preflight accessibility validation that confirms the video is publicly reachable.
 - **FR-003**: The app MUST download and process YouTube video frames on-demand for real-time analysis without requiring users to download the full video.
 - **FR-004**: The app MUST analyze video frames to detect text strings appearing in user-defined regions.
-- **FR-005**: The app MUST group similar text strings based on user-defined regions and content.
+- **FR-005**: After detection, the app MUST aggregate extracted text detections into grouped results using normalized player-name matching and region context for deduplicated reporting.
 - **FR-006**: The app MUST output a CSV file containing deduplicated player-summary rows (one row per normalized player name) with event-based occurrence metadata in a user-selected output folder.
 - **FR-007**: The app MUST provide feedback on analysis progress and completion.
 - **FR-008**: The app MUST handle errors gracefully (e.g., invalid URL, network issues).
@@ -116,8 +116,8 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-026**: When a context pattern matches, the app MUST extract the player name as follows: if only after-text is set, extract all trimmed OCR text preceding the after-text match; if only before-text is set, extract all trimmed OCR text following the before-text match; if both are set, extract all trimmed text between the before-text match end and the after-text match start.
 - **FR-027**: The app MUST persist Advanced Settings (context patterns and filter toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) MUST only be applied on first launch when no config file exists.
 - **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name, including an occurrence count representing appearance events (contiguous frame runs merged), not raw frame matches.
-- **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
 - **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
+- **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
 - **FR-031**: Deduplicated CSV output schema MUST be fixed with the following required columns in order: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`.
 - **FR-032**: Before analysis starts, users MUST be able to create, adjust, and confirm one or more rectangular regions in the region selector.
 
@@ -135,7 +135,7 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **SC-001**: Users can complete video analysis for a 10-minute video in under 5 minutes.
 - **SC-002**: *(Aspirational)* The app is expected to achieve at least 80% accuracy in detecting text strings in standard video resolutions. No formal measurement methodology is defined; this target guides implementation quality but is not a hard acceptance gate.
 - **SC-003**: *(Aspirational)* 95% of users can successfully input a URL and initiate analysis without assistance. No formal user testing is planned; this target guides UX decisions but is not a hard acceptance gate.
-- **SC-004**: The output CSV file is easily readable and contains one deduplicated row per normalized player name with event-based occurrence metadata.
+- **SC-004**: Output CSV MUST be UTF-8 encoded, comma-delimited, include headers in this exact order (`PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`), and contain exactly one deduplicated row per normalized player name with event-based occurrence metadata.
 
 ## Assumptions
 
