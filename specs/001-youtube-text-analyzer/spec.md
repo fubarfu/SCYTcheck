@@ -47,6 +47,7 @@
 - Q: How should the video-area selection popup behave and present instructions? → A: The popup must open in the foreground and explanatory text must remain clearly legible while selecting regions
 - Q: How should video retrieval quality be handled? → A: User-selectable quality with default best quality; no automatic fallback
 - Q: What log file format and naming should be required when Advanced Settings logging is enabled? → A: Create a sidecar CSV log named like output with `_log.csv` suffix
+- Q: Where should region-selector explanatory text be displayed relative to the video preview? → A: In a separate area below the video; it must not cover the video preview
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -135,6 +136,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-035**: The app MUST inform users that lower video quality can reduce OCR reliability and MUST provide adjustable OCR sensitivity controls so users can tune detection to reduce missed context-matched player names.
 - **FR-036**: The video-area (region) selection popup/window MUST open in the foreground and retain focus visibility when launched from the main workflow so it is not hidden behind the main application window.
 - **FR-037**: Explanatory/instruction text shown in the region-selection popup MUST be clearly legible during selection interactions by meeting all of the following: minimum effective font size of 14 px, contrast ratio of at least 4.5:1 against its local background (or equivalent outlined/backplate rendering), and no overlap with active selection rectangles or required selector controls.
+- **FR-051**: Region-selector explanatory text MUST be rendered in a dedicated layout area below the video preview/canvas and MUST NOT overlay or obscure any part of the video display area.
 - **FR-038**: If transient frame retrieval fails during analysis (for example network interruption), the app MUST retry retrieval up to 3 times per seek/read operation before marking the interval as failed and continuing with remaining intervals where possible.
 - **FR-039**: If export fails after analysis has completed, the app MUST preserve in-memory analysis results for the current session and allow retrying export without re-running detection.
 - **FR-040**: If the user closes region selection without confirming at least one valid region, the app MUST abort analysis start and display a non-blocking message instructing the user to confirm one or more regions.
