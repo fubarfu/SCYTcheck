@@ -47,6 +47,36 @@
 - Adjacent-token extraction only: Breaks multi-word names.
 - Heuristic NLP extraction: unnecessary complexity.
 
+## Decision: Recall-First Context-Matched Extraction
+
+**Chosen**: Prioritize recall for context-pattern-matched names by avoiding overly strict post-filters that could discard valid candidates once a pattern match exists.
+
+**Rationale**: FR-034 requires reducing missed valid player names when contextual evidence is present; this is more important than aggressive precision-only filtering for the defined workflow.
+
+**Alternatives Considered**:
+- Precision-first hard filtering: Lowers false positives but increases missed true names.
+- No contextual prioritization: Conflicts with clarified business goal.
+
+## Decision: OCR Sensitivity Tuning for Video Quality Variance
+
+**Chosen**: Expose adjustable OCR sensitivity (confidence threshold) and pair it with user guidance that low-quality video can reduce reliability.
+
+**Rationale**: FR-035 requires user-tunable behavior to reduce misses on degraded footage and explicit communication of quality-dependent OCR limits.
+
+**Alternatives Considered**:
+- Fixed confidence threshold only: Too rigid across varying quality conditions.
+- Fully automatic quality adaptation: Higher complexity and less predictable user control.
+
+## Decision: Region Selector Foreground Behavior and Instruction Legibility
+
+**Chosen**: Open region-selection popup in foreground/focus context and render guidance text with clear contrast, readable size, and non-overlapping placement.
+
+**Rationale**: FR-036 and FR-037 explicitly require discoverable popup visibility and readable in-context instructions during region selection.
+
+**Alternatives Considered**:
+- Background popup launch: Can hide workflow-critical interaction surface.
+- Minimal/default overlay styling: Risks unreadable instructions depending on frame content.
+
 ## Decision: Deduplication and Occurrence Semantics
 
 **Chosen**: Deduplicate by normalized player-name key across the entire video and output one CSV row per normalized name. Occurrence count is event-based, not frame-based.

@@ -10,6 +10,8 @@
 - `get_frames_in_range(url: str, start_time: float, end_time: float, fps: int) -> Iterator[np.ndarray]`: Yields frames in time range
 - `iter_frames_with_timestamps(url: str, start_time: float, end_time: float, fps: int) -> Iterator[tuple[float, np.ndarray]]`
 	- Yields `(frame_time_sec, frame)` tuples to support event merging and first/last seen tracking.
+- `open_region_selector(url: str, initial_time_sec: float) -> tuple[list[tuple[int, int, int, int]], bool]`
+	- Opens region-selection popup in foreground and returns selected regions plus a confirmation flag.
 
 **Exceptions**:
 - `VideoAccessError`: When video cannot be accessed
@@ -22,3 +24,5 @@
 - Returned timestamps are within a practical decode tolerance of requested times.
 - Service supports on-demand frame retrieval without full video download.
 - Validation method distinguishes malformed URL and unreachable/private video conditions.
+- Region-selection popup is raised to foreground when launched.
+- Selector instruction overlay is readable over typical gameplay frames (non-overlapping and legible).

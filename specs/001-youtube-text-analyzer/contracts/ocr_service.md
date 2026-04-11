@@ -5,6 +5,8 @@
 **Methods**:
 - `detect_text(image: np.ndarray, region: tuple[int, int, int, int]) -> list[str]`
 	- Detect text lines from one ROI.
+- `set_confidence_threshold(value: int) -> None`
+	- Updates OCR sensitivity used during detection.
 - `preprocess_image(image: np.ndarray) -> np.ndarray`
 	- Applies OCR preprocessing pipeline.
 - `extract_player_name(line: str, pattern: ContextPattern) -> str | None`
@@ -26,4 +28,5 @@
 **Behavioral Guarantees**:
 - Pattern matching is case-insensitive substring.
 - If `filter_non_matching` is true, lines that match no enabled pattern are excluded.
+- For lines that do match configured patterns, extraction is recall-first and avoids additional suppression that would drop plausible context-matched names.
 - Returned detections include `raw_ocr_text`, `extracted_name`, and `normalized_name`.

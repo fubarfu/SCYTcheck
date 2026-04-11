@@ -44,6 +44,7 @@
 - Q: What should be the default state of the global context-pattern filter toggle? → A: Enabled by default on first launch so only names with at least one matching context pattern are kept
 - Q: How should labels be laid out relative to input and display fields in the UI? → A: Labels must not overlap input fields or display fields at supported window sizes
 - Q: What is the priority for capturing player names when context patterns are configured, especially with lower video quality? → A: Prioritize recall to avoid missing context-matched player names, and account for reduced OCR reliability on lower-quality video by warning users and allowing sensitivity adjustment
+- Q: How should the video-area selection popup behave and present instructions? → A: The popup must open in the foreground and explanatory text must remain clearly legible while selecting regions
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -126,6 +127,8 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-033**: UI labels MUST be positioned and sized so they do not overlap associated input controls or display fields in the primary workflow and Advanced Settings at the supported minimum window size.
 - **FR-034**: For OCR extraction under configured context-pattern rules, the analysis workflow MUST prioritize not missing context-matched player names (recall-first behavior) over aggressive filtering that could suppress valid names.
 - **FR-035**: The app MUST inform users that lower video quality can reduce OCR reliability and MUST provide adjustable OCR sensitivity controls so users can tune detection to reduce missed context-matched player names.
+- **FR-036**: The video-area (region) selection popup/window MUST open in the foreground and retain focus visibility when launched from the main workflow so it is not hidden behind the main application window.
+- **FR-037**: Explanatory/instruction text shown in the region-selection popup MUST be clearly legible (sufficient contrast, readable size, and non-overlapping placement) during selection interactions.
 
 ### Key Entities *(include if feature involves data)*
 

@@ -19,16 +19,17 @@
 
 ## Usage
 
-1. Run `python src/main.py`.
+1. Run `python -m src.main`.
 2. Enter a YouTube URL and confirm validation (format + accessibility preflight).
-3. Use the time scrollbar to pick a representative frame, create one or more regions, adjust as needed, and confirm the final set.
-4. Open Advanced Settings and review context patterns:
+3. Launch region selection and verify the popup opens in the foreground with clearly readable instruction text.
+4. Use the time scrollbar to pick a representative frame, create one or more regions, adjust as needed, and confirm the final set.
+5. Open Advanced Settings and review context patterns:
 	- default `after_text`: `joined`
 	- default `after_text`: `connected`
-5. Optional: Add additional before/after pattern rules, toggle pattern-only output filtering, and adjust event-gap threshold (default 1.0 sec).
-6. Select only an output folder (filename is auto-generated).
-7. Start analysis and wait for completion.
-8. Open CSV output: one row per normalized player name with event-based occurrence count.
+6. Optional: Add additional before/after pattern rules, toggle pattern-only output filtering, adjust OCR sensitivity for lower-quality video, and tune event-gap threshold (default 1.0 sec).
+7. Select only an output folder (filename is auto-generated).
+8. Start analysis and wait for completion.
+9. Open CSV output: one row per normalized player name with event-based occurrence count.
 
 ## Development
 

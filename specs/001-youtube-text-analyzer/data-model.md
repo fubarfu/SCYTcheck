@@ -14,6 +14,7 @@ Represents a single video analysis session.
 - `regions` (list[Region]): User-selected regions of interest
 - `context_patterns` (list[ContextPattern]): Active extraction rules
 - `filter_non_matching` (bool): Global toggle for pattern-only output filtering
+- `ocr_confidence_threshold` (int): Active OCR sensitivity setting used during detection
 - `event_gap_threshold_sec` (float): Max OCR miss gap used to merge one appearance event
 - `detections` (list[TextDetection]): Raw or pre-aggregated detections
 - `player_summaries` (list[PlayerSummary]): Deduplicated output rows
@@ -30,6 +31,19 @@ Represents an ROI rectangle selected by the user.
 - `y` (int)
 - `width` (int)
 - `height` (int)
+
+### RegionSelectorPresentation
+Represents display and focus behavior of the region-selection popup.
+
+**Attributes**:
+- `open_in_foreground` (bool): Popup is raised and visible over main window at launch
+- `instruction_text` (string): Guidance text displayed in selection view
+- `instruction_contrast_mode` (string): Contrast strategy for legibility over video content
+- `instruction_font_scale` (float): Effective text scaling for readability
+
+**Validation Rules**:
+- `open_in_foreground` must be true for workflow launch
+- Instruction text placement must avoid overlap with selection controls and active selection rectangles
 
 ### ContextPattern
 Represents a user-defined surrounding-text extraction rule.
@@ -87,8 +101,9 @@ Represents one deduplicated output row.
 ## Data Flow
 
 1. User inputs URL and regions, configures optional context patterns in Advanced Settings
-2. Frames are analyzed and OCR text is matched against active patterns
-3. Candidate detections are normalized and grouped by normalized name
-4. Detections are merged into appearance events using gap threshold (default 1.0s)
-5. Player summaries are emitted with one row per normalized name and event-based occurrence count
-6. CSV is exported to selected folder using auto-generated filename
+2. User adjusts OCR sensitivity when needed for lower-quality videos and receives reliability guidance
+3. Frames are analyzed and OCR text is matched against active patterns (recall-first for context-matched names)
+4. Candidate detections are normalized and grouped by normalized name
+5. Detections are merged into appearance events using gap threshold (default 1.0s)
+6. Player summaries are emitted with one row per normalized name and event-based occurrence count
+7. CSV is exported to selected folder using auto-generated filename
