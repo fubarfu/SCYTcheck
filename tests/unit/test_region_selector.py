@@ -133,6 +133,26 @@ class TestRegionSelectorRegionTracking:
         last_frame = region_selector.get_frame_at_time(url, duration - 1.0)
         assert last_frame is not None
 
+    def test_create_adjust_confirm_region_flow(self, region_selector: RegionSelector) -> None:
+        url = "https://youtube.com/watch?v=test"
+        region_selector.load_video(url)
+        region_selector.current_frame_time = 12.0
+
+        region_selector.start_region(10, 15)
+        region_selector.update_region(70, 65)
+        region = region_selector.confirm_region()
+
+        assert region == (10, 15, 60, 50)
+        assert len(region_selector.selected_regions) == 1
+        assert region_selector.selected_regions[0] == (10, 15, 60, 50, 12.0)
+
+    def test_confirm_region_requires_valid_box(self, region_selector: RegionSelector) -> None:
+        region_selector.start_region(20, 20)
+        region_selector.update_region(20, 20)
+
+        assert region_selector.confirm_region() is None
+        assert region_selector.selected_regions == []
+
 
 class TestRegionSelectorScrollbarMapping:
     """Test scrollbar to frame time conversion."""
@@ -165,3 +185,15 @@ class TestRegionSelectorScrollbarMapping:
         for pos, expected_time in zip(positions, expected_times):
             actual_time = (pos / 100.0) * duration
             assert abs(actual_time - expected_time) < 0.01  # Within 10ms
+
+    def test_scrollbar_navigation_updates_current_frame(self, region_selector: RegionSelector) -> None:
+        url = "https://youtube.com/watch?v=test"
+        region_selector.load_video(url)
+
+        region_selector.seek_by_scrollbar(50.0)
+
+        assert region_selector.current_frame is not None
+        assert region_selector.current_frame_time == 300.0
+
+    def test_frame_stepping_is_disabled(self, region_selector: RegionSelector) -> None:
+        assert region_selector.supports_frame_stepping is False

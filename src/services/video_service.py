@@ -15,8 +15,30 @@ class InvalidURLError(ValueError):
 
 
 class VideoService:
+    @staticmethod
+    def _is_supported_youtube_url(url: str) -> bool:
+        lowered = url.lower().strip()
+        return (
+            "youtube.com/watch?v=" in lowered
+            or "youtu.be/" in lowered
+        )
+
+    def validate_youtube_url(self, url: str) -> tuple[bool, str]:
+        """Validate URL format and accessibility before analysis starts."""
+        if not url or not self._is_supported_youtube_url(url):
+            return False, "Please provide a valid YouTube video URL."
+
+        try:
+            self._extract_media_url(url)
+        except InvalidURLError as exc:
+            return False, str(exc)
+        except Exception:
+            return False, "Video is not publicly reachable or could not be accessed."
+
+        return True, ""
+
     def _extract_media_url(self, url: str) -> tuple[str, dict]:
-        if not url or "youtube" not in url.lower() and "youtu.be" not in url.lower():
+        if not url or not self._is_supported_youtube_url(url):
             raise InvalidURLError("Please provide a valid YouTube URL.")
 
         ydl_opts = {
@@ -62,6 +84,16 @@ class VideoService:
     def get_frames_in_range(
         self, url: str, start_time: float, end_time: float, fps: int
     ) -> Iterator:
+        for _, frame in self.iterate_frames_with_timestamps(url, start_time, end_time, fps):
+            yield frame
+
+    def iterate_frames_with_timestamps(
+        self,
+        url: str,
+        start_time: float,
+        end_time: float,
+        fps: int,
+    ) -> Iterator[tuple[float, object]]:
         stream_url, _ = self._extract_media_url(url)
         cap = cv2.VideoCapture(stream_url)
         if not cap.isOpened():
@@ -80,7 +112,8 @@ class VideoService:
             ok, frame = cap.read()
             if not ok:
                 break
-            yield frame
+            timestamp_sec = current / native_fps
+            yield timestamp_sec, frame
             current += step
 
         cap.release()

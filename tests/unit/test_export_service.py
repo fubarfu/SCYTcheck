@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
-from src.data.models import VideoAnalysis
+from src.data.models import PlayerSummary, VideoAnalysis
 from src.services.export_service import ExportService
 
 
@@ -85,4 +85,27 @@ def test_generate_filename_uses_current_time_when_not_specified() -> None:
     timestamp_part = parts[-1]
     assert len(timestamp_part) == 15  # YYYYMMDD-HHMMSS
     assert timestamp_part[8] == "-"
+
+
+def test_export_player_summary_schema_order(tmp_path: Path) -> None:
+    analysis = VideoAnalysis(url="https://youtube.com/watch?v=abc")
+    analysis.set_player_summaries(
+        [
+            PlayerSummary(
+                player_name="Alice",
+                normalized_name="alice",
+                occurrence_count=3,
+                first_seen_sec=1.0,
+                last_seen_sec=9.5,
+                representative_region="r1",
+            )
+        ]
+    )
+
+    service = ExportService()
+    exported = service.export_to_csv(analysis, str(tmp_path), "summary.csv")
+    lines = exported.read_text(encoding="utf-8").splitlines()
+
+    assert lines[0] == "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion"
+    assert lines[1] == "Alice,alice,3,1.0,9.5,r1"
 

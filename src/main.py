@@ -5,7 +5,8 @@ from tkinter import messagebox
 
 from src.components.main_window import MainWindow
 from src.components.region_selector import RegionSelector
-from src.config import load_config
+from src.config import load_advanced_settings, load_config
+from src.data.models import ContextPattern
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
 from src.services.logging import configure_logging
@@ -31,23 +32,41 @@ def main() -> None:
 
     def run_analysis() -> None:
         url = window.url_input.get()
-        output_path = window.file_selector.get()
+        output_folder = window.file_selector.get()
 
         if not url:
             messagebox.showerror("Missing URL", "Please enter a YouTube URL.")
             return
 
-        if not output_path:
-            messagebox.showerror("Missing Output Path", "Please choose a CSV output path.")
+        if not output_folder:
+            messagebox.showerror("Missing Output Folder", "Please choose an output folder.")
             return
 
         try:
+            is_valid, validation_error = video_service.validate_youtube_url(url)
+            if not is_valid:
+                window.set_status("Invalid URL")
+                messagebox.showerror("Invalid URL", validation_error)
+                return
+
+            advanced = load_advanced_settings()
+            context_patterns = [
+                ContextPattern(
+                    id=str(item.get("id", f"pattern-{index}")),
+                    before_text=str(item["before_text"]) if item.get("before_text") is not None else None,
+                    after_text=str(item["after_text"]) if item.get("after_text") is not None else None,
+                    enabled=bool(item.get("enabled", True)),
+                )
+                for index, item in enumerate(advanced.context_patterns)
+            ]
+
             window.set_status("Selecting regions...")
             regions = region_selector.select_regions(url, frame_time_seconds=0.0)
             if not regions:
                 window.set_status("No regions selected")
                 return
 
+            window.progress.set_stage("Detect")
             window.set_status("Analyzing video...")
             analysis = analysis_service.analyze(
                 url=url,
@@ -56,11 +75,26 @@ def main() -> None:
                 end_time=60,
                 fps=config.sample_fps,
                 on_progress=window.progress.set_progress,
+                context_patterns=context_patterns,
+                filter_non_matching=advanced.filter_non_matching,
+                event_gap_threshold_sec=advanced.event_gap_threshold_sec,
             )
 
-            exported = export_service.export_to_csv(analysis, output_path)
+            window.progress.set_stage("Aggregate")
+            window.progress.set_progress(100)
+
+            filename = export_service.generate_filename(url)
+            window.progress.set_stage("Export")
+            exported = export_service.export_to_csv(analysis, output_folder, filename)
             window.set_status(f"Completed: {exported}")
-            messagebox.showinfo("Analysis Complete", f"CSV exported to:\n{exported}")
+            if not analysis.player_summaries:
+                messagebox.showinfo(
+                    "Analysis Complete",
+                    "No matching text was detected. A header-only CSV was exported to:\n"
+                    f"{exported}",
+                )
+            else:
+                messagebox.showinfo("Analysis Complete", f"CSV exported to:\n{exported}")
 
         except InvalidURLError as exc:
             logger.exception("Invalid YouTube URL")

@@ -11,11 +11,11 @@
 
 **Purpose**: Prepare environment, tooling, and release-script baseline.
 
-- [ ] T001 Update dependency pins and runtime notes in `requirements.txt`
-- [ ] T002 Update project metadata and test tool config in `pyproject.toml`
-- [ ] T003 [P] Add Windows release build scaffold in `scripts/release/build.ps1`
-- [ ] T004 [P] Add Windows signing scaffold in `scripts/release/sign.ps1`
-- [ ] T005 Run current baseline unit suite in `tests/unit/`
+- [X] T001 Update dependency pins and runtime notes in `requirements.txt`
+- [X] T002 Update project metadata and test tool config in `pyproject.toml`
+- [X] T003 [P] Add Windows release build scaffold in `scripts/release/build.ps1`
+- [X] T004 [P] Add Windows signing scaffold in `scripts/release/sign.ps1`
+- [X] T005 Run current baseline unit suite in `tests/unit/`
 
 ---
 
@@ -25,15 +25,15 @@
 
 **⚠️ CRITICAL**: User-story implementation starts only after this phase.
 
-- [ ] T006 Extend entities for `ContextPattern`, `TextDetection`, `AppearanceEvent`, and `PlayerSummary` in `src/data/models.py`
-- [ ] T007 [P] Add settings persistence for `scytcheck_settings.json` in `src/config.py`
-- [ ] T008 [P] Add URL format + preflight accessibility validation helper in `src/services/video_service.py`
-- [ ] T009 Add normalization utility (lowercase/trim/collapse spaces) in `src/services/analysis_service.py`
-- [ ] T010 Add event-merging utility with configurable threshold defaulting to 1.0s in `src/services/analysis_service.py`
-- [ ] T011 [P] Add pattern-rule validation and extraction boundaries in `src/services/ocr_service.py`
-- [ ] T012 Add fixed CSV schema mapping (`PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`) in `src/services/export_service.py`
-- [ ] T013 [P] Add URL validation unit tests in `tests/unit/test_video_service.py`
-- [ ] T014 [P] Add normalization/event-merging unit tests in `tests/unit/test_analysis_service.py`
+- [X] T006 Extend entities for `ContextPattern`, `TextDetection`, `AppearanceEvent`, and `PlayerSummary` in `src/data/models.py`
+- [X] T007 [P] Add settings persistence for `scytcheck_settings.json` in `src/config.py`
+- [X] T008 [P] Add URL format + preflight accessibility validation helper in `src/services/video_service.py`
+- [X] T009 Add normalization utility (lowercase/trim/collapse spaces) in `src/services/analysis_service.py`
+- [X] T010 Add event-merging utility with configurable threshold defaulting to 1.0s in `src/services/analysis_service.py`
+- [X] T011 [P] Add pattern-rule validation and extraction boundaries in `src/services/ocr_service.py`
+- [X] T012 Add fixed CSV schema mapping (`PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`) in `src/services/export_service.py`
+- [X] T013 [P] Add URL validation unit tests in `tests/unit/test_video_service.py`
+- [X] T014 [P] Add normalization/event-merging unit tests in `tests/unit/test_analysis_service.py`
 
 **Checkpoint**: Foundation complete; stories can proceed.
 
@@ -51,27 +51,27 @@
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add unit tests for before/after/both extraction behavior in `tests/unit/test_ocr_service.py`
-- [ ] T016 [P] [US1] Add unit tests for dedup summary generation in `tests/unit/test_analysis_service.py`
-- [ ] T017 [P] [US1] Add unit tests for fixed export schema columns and order in `tests/unit/test_export_service.py`
-- [ ] T018 [P] [US1] Add unit tests for region selector create/adjust/confirm behavior in `tests/unit/test_region_selector.py`
-- [ ] T019 [P] [US1] Add unit tests for scrollbar-only navigation constraints in `tests/unit/test_region_selector.py`
-- [ ] T020 [US1] Add integration test for end-to-end deduplicated analysis flow in `tests/integration/test_us1_workflow.py`
+- [X] T015 [P] [US1] Add unit tests for before/after/both extraction behavior in `tests/unit/test_ocr_service.py`
+- [X] T016 [P] [US1] Add unit tests for dedup summary generation in `tests/unit/test_analysis_service.py`
+- [X] T017 [P] [US1] Add unit tests for fixed export schema columns and order in `tests/unit/test_export_service.py`
+- [X] T018 [P] [US1] Add unit tests for region selector create/adjust/confirm behavior in `tests/unit/test_region_selector.py`
+- [X] T019 [P] [US1] Add unit tests for scrollbar-only navigation constraints in `tests/unit/test_region_selector.py`
+- [X] T020 [US1] Add integration test for end-to-end deduplicated analysis flow in `tests/integration/test_us1_workflow.py`
 
 ### Implementation for User Story 1
 
-- [ ] T021 [P] [US1] Implement OCR candidate extraction API with context pattern matching in `src/services/ocr_service.py`
-- [ ] T022 [P] [US1] Implement timestamped frame iteration for analysis pipeline in `src/services/video_service.py`
-- [ ] T023 [US1] Integrate URL two-stage validation before analysis start in `src/main.py`
-- [ ] T024 [US1] Implement region selector create/adjust/confirm interaction flow in `src/components/region_selector.py`
-- [ ] T025 [US1] Implement horizontal time scrollbar navigation in seconds in `src/components/region_selector.py`
-- [ ] T026 [US1] Enforce scrollbar-only navigation (no frame-step controls) in `src/components/region_selector.py`
-- [ ] T027 [US1] Integrate detection collection and dedup aggregation in `src/services/analysis_service.py`
-- [ ] T028 [US1] Integrate event-based occurrence computation in `src/services/analysis_service.py`
-- [ ] T029 [US1] Export fixed-schema deduplicated `PlayerSummary` rows in `src/services/export_service.py`
-- [ ] T030 [US1] Preserve no-text behavior (header-only CSV + user message) in `src/services/export_service.py`
-- [ ] T031 [US1] Wire updated analysis and export flow into controller in `src/main.py`
-- [ ] T032 [US1] Update progress stages for detect/aggregate/export in `src/components/progress_display.py`
+- [X] T021 [P] [US1] Implement OCR candidate extraction API with context pattern matching in `src/services/ocr_service.py`
+- [X] T022 [P] [US1] Implement timestamped frame iteration for analysis pipeline in `src/services/video_service.py`
+- [X] T023 [US1] Integrate URL two-stage validation before analysis start in `src/main.py`
+- [X] T024 [US1] Implement region selector create/adjust/confirm interaction flow in `src/components/region_selector.py`
+- [X] T025 [US1] Implement horizontal time scrollbar navigation in seconds in `src/components/region_selector.py`
+- [X] T026 [US1] Enforce scrollbar-only navigation (no frame-step controls) in `src/components/region_selector.py`
+- [X] T027 [US1] Integrate detection collection and dedup aggregation in `src/services/analysis_service.py`
+- [X] T028 [US1] Integrate event-based occurrence computation in `src/services/analysis_service.py`
+- [X] T029 [US1] Export fixed-schema deduplicated `PlayerSummary` rows in `src/services/export_service.py`
+- [X] T030 [US1] Preserve no-text behavior (header-only CSV + user message) in `src/services/export_service.py`
+- [X] T031 [US1] Wire updated analysis and export flow into controller in `src/main.py`
+- [X] T032 [US1] Update progress stages for detect/aggregate/export in `src/components/progress_display.py`
 
 **Checkpoint**: US1 is fully functional and testable independently.
 

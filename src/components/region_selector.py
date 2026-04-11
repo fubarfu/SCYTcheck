@@ -24,6 +24,8 @@ class RegionSelector:
         self.start_y = 0
         self.rect_id: int | None = None
         self.url: str = ""
+        self.pending_region: tuple[int, int, int, int] | None = None
+        self.supports_frame_stepping = False
 
     def select_regions(
         self,
@@ -74,3 +76,58 @@ class RegionSelector:
         """Get video duration in seconds."""
         info = self.video_service.get_video_info(url)
         return info.get("duration", 0.0)
+
+    def load_video(self, url: str) -> None:
+        """Load video metadata for scrollbar-based navigation."""
+        self.url = url
+        self.video_duration = self.get_video_duration(url)
+        self.current_frame_time = 0.0
+        self.current_frame = self.get_frame_at_time(url, 0.0)
+
+    def seek_by_scrollbar(self, scrollbar_value: float) -> np.ndarray:
+        """Navigate by horizontal scrollbar position in [0, 100]."""
+        if not self.url:
+            raise ValueError("No video loaded. Call load_video first.")
+
+        bounded = max(0.0, min(float(scrollbar_value), 100.0))
+        if self.video_duration <= 0:
+            target_time = 0.0
+        else:
+            target_time = (bounded / 100.0) * self.video_duration
+
+        self.current_frame_time = target_time
+        self.current_frame = self.get_frame_at_time(self.url, target_time)
+        return self.current_frame
+
+    def start_region(self, x: int, y: int) -> None:
+        """Begin creating a selection rectangle at the current frame."""
+        self.start_x = int(x)
+        self.start_y = int(y)
+        self.pending_region = (self.start_x, self.start_y, 0, 0)
+
+    def update_region(self, x: int, y: int) -> None:
+        """Adjust the pending rectangle while dragging."""
+        if self.pending_region is None:
+            return
+
+        current_x = int(x)
+        current_y = int(y)
+        left = min(self.start_x, current_x)
+        top = min(self.start_y, current_y)
+        width = abs(current_x - self.start_x)
+        height = abs(current_y - self.start_y)
+        self.pending_region = (left, top, width, height)
+
+    def confirm_region(self) -> tuple[int, int, int, int] | None:
+        """Confirm current pending region and store it with frame-time context."""
+        if self.pending_region is None:
+            return None
+
+        x, y, width, height = self.pending_region
+        if width <= 0 or height <= 0:
+            self.pending_region = None
+            return None
+
+        self.selected_regions.append((x, y, width, height, self.current_frame_time))
+        self.pending_region = None
+        return (x, y, width, height)

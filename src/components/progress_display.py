@@ -7,7 +7,8 @@ from tkinter import ttk
 class ProgressDisplay:
     def __init__(self, parent: tk.Widget) -> None:
         self.variable = tk.IntVar(value=0)
-        self.label = ttk.Label(parent, text="Progress: 0%")
+        self.stage = "Detect"
+        self.label = ttk.Label(parent, text="Detect: 0%")
         self.bar = ttk.Progressbar(parent, orient="horizontal", mode="determinate", maximum=100)
         self.bar.configure(variable=self.variable)
 
@@ -18,5 +19,10 @@ class ProgressDisplay:
     def set_progress(self, value: int) -> None:
         bounded = max(0, min(value, 100))
         self.variable.set(bounded)
-        self.label.configure(text=f"Progress: {bounded}%")
+        self.label.configure(text=f"{self.stage}: {bounded}%")
+        self.label.update_idletasks()
+
+    def set_stage(self, stage: str) -> None:
+        self.stage = stage
+        self.label.configure(text=f"{self.stage}: {self.variable.get()}%")
         self.label.update_idletasks()

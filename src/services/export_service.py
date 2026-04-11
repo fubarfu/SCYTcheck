@@ -6,11 +6,30 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from src.data.models import VideoAnalysis
+from src.data.models import PlayerSummary, VideoAnalysis
 
 
 class ExportService:
-    HEADERS = ["Text", "X", "Y", "Width", "Height", "Frequency"]
+    LEGACY_HEADERS = ["Text", "X", "Y", "Width", "Height", "Frequency"]
+    SUMMARY_HEADERS = [
+        "PlayerName",
+        "NormalizedName",
+        "OccurrenceCount",
+        "FirstSeenSec",
+        "LastSeenSec",
+        "RepresentativeRegion",
+    ]
+
+    @staticmethod
+    def player_summary_to_row(summary: PlayerSummary) -> list[str | int | float]:
+        return [
+            summary.player_name,
+            summary.normalized_name,
+            summary.occurrence_count,
+            summary.first_seen_sec,
+            summary.last_seen_sec,
+            summary.representative_region,
+        ]
 
     @staticmethod
     def extract_youtube_video_id(url: str) -> str:
@@ -102,17 +121,29 @@ class ExportService:
         
         with output_path.open("w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            writer.writerow(self.HEADERS)
-            for entry in analysis.text_strings:
-                writer.writerow(
-                    [
-                        entry.content,
-                        entry.x,
-                        entry.y,
-                        entry.width,
-                        entry.height,
-                        entry.frequency,
-                    ]
-                )
+            should_write_summary_schema = bool(
+                analysis.player_summaries
+                or analysis.detections
+                or analysis.context_patterns
+            )
+
+            if should_write_summary_schema:
+                writer.writerow(self.SUMMARY_HEADERS)
+                for summary in analysis.player_summaries:
+                    writer.writerow(self.player_summary_to_row(summary))
+            else:
+                # Backward-compatible export for legacy text-string analyses.
+                writer.writerow(self.LEGACY_HEADERS)
+                for entry in analysis.text_strings:
+                    writer.writerow(
+                        [
+                            entry.content,
+                            entry.x,
+                            entry.y,
+                            entry.width,
+                            entry.height,
+                            entry.frequency,
+                        ]
+                    )
 
         return output_path

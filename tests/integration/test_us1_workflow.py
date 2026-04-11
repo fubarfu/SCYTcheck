@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 
 from src.components.region_selector import RegionSelector
-from src.data.models import VideoAnalysis
+from src.data.models import ContextPattern, VideoAnalysis
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
 from src.services.ocr_service import OCRService
@@ -58,10 +58,19 @@ class TestUS1FullWorkflow:
                 yield np.random.randint(50, 200, (720, 1280, 3), dtype=np.uint8)
         
         video_service.get_frames_in_range.side_effect = get_frames_in_range
+        video_service.iterate_frames_with_timestamps.side_effect = (
+            lambda url, start_time, end_time, fps: (
+                (start_time + i, frame)
+                for i, frame in enumerate(get_frames_in_range(url, start_time, end_time, fps))
+            )
+        )
         
         # Mock OCR service
         ocr_service = Mock(spec=OCRService)
         ocr_service.detect_text.return_value = ["Test", "Text", "Found"]
+        ocr_service.extract_candidates.side_effect = lambda lines, patterns=None, filter_non_matching=False: [
+            (line, None) for line in lines
+        ]
         
         return {
             "video_service": video_service,
@@ -125,7 +134,7 @@ class TestUS1FullWorkflow:
         
         assert csv_path.exists()
         content = csv_path.read_text(encoding="utf-8")
-        assert "Text,X,Y,Width,Height,Frequency" in content
+        assert "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion" in content
     
     def test_scrollbar_time_navigation_workflow(self, mock_services: dict) -> None:
         """Test scrollbar-based time navigation specific to US1."""
@@ -208,6 +217,52 @@ class TestUS1FullWorkflow:
         # Real video processing will take longer but mocks are instant
         assert elapsed < 60.0  # Should be much faster with mocks
         assert analysis.url == url
+
+    def test_deduplicated_analysis_export_flow(self, tmp_path: Path) -> None:
+        video_service = Mock(spec=VideoService)
+
+        frames = [
+            np.zeros((720, 1280, 3), dtype=np.uint8),
+            np.zeros((720, 1280, 3), dtype=np.uint8),
+            np.zeros((720, 1280, 3), dtype=np.uint8),
+        ]
+
+        def iterate_frames_with_timestamps(url: str, start_time: float, end_time: float, fps: int):
+            for ts, frame in zip([1.0, 1.5, 4.2], frames):
+                yield ts, frame
+
+        video_service.iterate_frames_with_timestamps.side_effect = iterate_frames_with_timestamps
+        video_service.get_frames_in_range.return_value = iter(frames)
+
+        ocr_service = Mock(spec=OCRService)
+        ocr_service.extract_candidates.side_effect = [
+            [("Alice", "pattern-1")],
+            [("alice", "pattern-1")],
+            [("Alice", "pattern-1")],
+        ]
+        ocr_service.detect_text.return_value = ["Alice"]
+
+        analysis_service = AnalysisService(video_service, ocr_service)
+        analysis = analysis_service.analyze(
+            url="https://youtube.com/watch?v=testvideo",
+            regions=[(100, 100, 200, 150)],
+            start_time=0.0,
+            end_time=10.0,
+            fps=1,
+            context_patterns=[ContextPattern(id="pattern-1", before_text="Player:")],
+            filter_non_matching=True,
+            event_gap_threshold_sec=1.0,
+        )
+
+        assert len(analysis.player_summaries) == 1
+        assert analysis.player_summaries[0].normalized_name == "alice"
+        assert analysis.player_summaries[0].occurrence_count == 2
+
+        export_service = ExportService()
+        exported = export_service.export_to_csv(analysis, str(tmp_path), "summary.csv")
+        lines = exported.read_text(encoding="utf-8").splitlines()
+        assert lines[0] == "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion"
+        assert lines[1].startswith("Alice,alice,2,")
 
 
 class TestUS1EdgeCases:
