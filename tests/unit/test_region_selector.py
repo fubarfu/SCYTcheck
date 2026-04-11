@@ -197,3 +197,6 @@ class TestRegionSelectorScrollbarMapping:
 
     def test_frame_stepping_is_disabled(self, region_selector: RegionSelector) -> None:
         assert region_selector.supports_frame_stepping is False
+
+    def test_fixed_region_helper_text_is_present(self, region_selector: RegionSelector) -> None:
+        assert "Define your region where text appears consistently" in region_selector.helper_text

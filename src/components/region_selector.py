@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import tkinter as tk
-from tkinter import ttk
-
 import cv2
 import numpy as np
-from PIL import Image, ImageTk
 
 from src.services.video_service import VideoService
 
@@ -16,6 +12,7 @@ class RegionSelector:
     def __init__(self, video_service: VideoService) -> None:
         self.video_service = video_service
         self.selected_regions: list[tuple[int, int, int, int, float]] = []
+        self.helper_text = "Define your region where text appears consistently across the video."
         self.current_frame: np.ndarray | None = None
         self.current_frame_time: float = 0.0
         self.video_duration: float = 0.0
@@ -42,31 +39,74 @@ class RegionSelector:
         Returns:
             List of (x, y, width, height) tuples for selected regions
         """
-        # Use legacy mode for MVP - basic OpenCV region selection
-        # Full scrollbar UI to be implemented in Phase 3+ with enhanced UI
-        frame = self.video_service.get_frame_at_time(url, frame_time_seconds)
-        selected: list[tuple[int, int, int, int]] = []
+        self.load_video(url)
+        self.current_frame_time = max(0.0, frame_time_seconds)
+        self.current_frame = self.get_frame_at_time(url, self.current_frame_time)
+        self.selected_regions = []
 
+        window_name = "Region Selector"
+        trackbar_name = "Time (s)"
+        max_seconds = max(1, int(self.video_duration))
+        trackbar_value = max(0, min(int(self.current_frame_time), max_seconds))
+
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        cv2.createTrackbar(trackbar_name, window_name, trackbar_value, max_seconds, lambda _: None)
+
+        last_trackbar = trackbar_value
         while True:
-            region = cv2.selectROI(
-                "Select Region (ESC to finish)",
-                frame,
-                fromCenter=False,
-                showCrosshair=True,
-            )
-            x, y, width, height = [int(value) for value in region]
-            if width <= 0 or height <= 0:
-                break
-            selected.append((x, y, width, height))
+            current = cv2.getTrackbarPos(trackbar_name, window_name)
+            if current != last_trackbar:
+                self.current_frame = self.get_frame_at_time(url, float(current))
+                self.current_frame_time = float(current)
+                last_trackbar = current
 
-            preview = frame.copy()
-            cv2.rectangle(preview, (x, y), (x + width, y + height), (0, 255, 0), 2)
-            cv2.imshow("Select Region (ESC to finish)", preview)
-            if cv2.waitKey(200) == 27:
+            preview = self._build_preview_frame()
+            cv2.imshow(window_name, preview)
+            key = cv2.waitKey(50) & 0xFF
+
+            # Press A to add a region from the currently shown frame.
+            if key in (ord("a"), ord("A")):
+                region = cv2.selectROI(window_name, self.current_frame, fromCenter=False, showCrosshair=True)
+                x, y, width, height = [int(value) for value in region]
+                if width > 0 and height > 0:
+                    self.selected_regions.append((x, y, width, height, self.current_frame_time))
+
+            # Enter or Q confirms selection; ESC cancels and returns empty selection.
+            if key in (13, ord("q"), ord("Q")):
+                break
+            if key == 27:
+                self.selected_regions = []
                 break
 
-        cv2.destroyAllWindows()
-        return selected
+        cv2.destroyWindow(window_name)
+        return [(x, y, width, height) for x, y, width, height, _ in self.selected_regions]
+
+    def _build_preview_frame(self) -> np.ndarray:
+        frame = self.current_frame.copy() if self.current_frame is not None else np.zeros((480, 640, 3), dtype=np.uint8)
+        for x, y, width, height, _ in self.selected_regions:
+            cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
+
+        cv2.putText(
+            frame,
+            self.helper_text,
+            (10, 28),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            frame,
+            "Use time scrollbar. Press A=add region, Enter/Q=confirm, ESC=cancel",
+            (10, 56),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+        )
+        return frame
 
     def get_frame_at_time(self, url: str, time_seconds: float) -> np.ndarray:
         """Get a video frame at specific time (supports seek-to-time)."""

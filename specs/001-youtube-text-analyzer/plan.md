@@ -1,6 +1,6 @@
 # Implementation Plan: YouTube Text Analyzer
 
-**Branch**: `002-youtube-text-analyzer` | **Date**: April 11, 2026 | **Spec**: [specs/001-youtube-text-analyzer/spec.md](spec.md)
+**Branch**: `001-youtube-text-analyzer` | **Date**: April 11, 2026 | **Spec**: [specs/001-youtube-text-analyzer/spec.md](spec.md)
 **Input**: Feature specification from `/specs/001-youtube-text-analyzer/spec.md`
 
 ## Summary
