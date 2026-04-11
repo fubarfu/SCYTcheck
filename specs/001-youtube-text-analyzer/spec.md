@@ -90,13 +90,17 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 
 ## Requirements *(mandatory)*
 
+### Requirement Traceability Rule
+
+- **RTR-001**: Every functional requirement (`FR-*`) MUST map to at least one test case (unit or integration) in `tasks.md`, and each success criterion (`SC-*`) MUST map to at least one validation task.
+
 ### Functional Requirements
 
 - **FR-001**: The app MUST provide a user interface to input a YouTube video URL.
 - **FR-002**: The app MUST validate the input URL in two stages before analysis starts: (1) format validation for a supported YouTube URL pattern, and (2) preflight accessibility validation that confirms the video is publicly reachable.
-- **FR-003**: The app MUST download and process YouTube video frames on-demand for real-time analysis without requiring users to download the full video.
+- **FR-003**: The app MUST download and process YouTube video frames on-demand for real-time analysis without requiring users to download the full video. On-demand behavior means frame retrieval starts only after user analysis initiation/region confirmation and does not pre-download complete video media.
 - **FR-004**: The app MUST analyze video frames to detect text strings appearing in user-defined regions.
-- **FR-005**: After detection, the app MUST aggregate extracted text detections into grouped results using normalized player-name matching and region context for deduplicated reporting.
+- **FR-005**: After detection, the app MUST aggregate extracted text detections into grouped results using normalized player-name matching and region context for deduplicated reporting. `RepresentativeRegion` MUST be selected deterministically as the most frequent contributing region for that normalized name, with ties broken by earliest first-seen occurrence.
 - **FR-006**: The app MUST output a CSV file containing deduplicated player-summary rows (one row per normalized player name) with event-based occurrence metadata in a user-selected output folder.
 - **FR-007**: The app MUST provide feedback on analysis progress and completion.
 - **FR-008**: The app MUST handle errors gracefully (e.g., invalid URL, network issues).
@@ -108,27 +112,35 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-014**: Distributed executables and packages MUST be code-signed to reduce Windows trust warnings and improve user safety.
 - **FR-015**: The app MUST create CSV filenames using the pattern `scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv` to ensure unambiguous output naming.
 - **FR-016**: The output workflow MUST allow users to select only an output folder; the CSV filename MUST be generated automatically by the app.
-- **FR-017**: If the selected output folder does not exist or is not writable, the app MUST abort export and show a clear error message.
+- **FR-017**: If the selected output folder does not exist or is not writable, the app MUST abort export and show a clear error message that includes: (a) failure reason, (b) affected path, and (c) a user-actionable next step.
 - **FR-018**: During region selection, the app MUST provide a horizontal time scrollbar in seconds across the full video duration to let users navigate to a representative frame before drawing regions.
 - **FR-019**: Region selection navigation MUST be implemented with the time scrollbar only; no additional frame-step or fixed-time-step controls are required.
-- **FR-020**: The region selection UI MUST display a tooltip or helper text informing the user: "Define your region where text appears consistently across the video." to communicate the fixed-region limitation.
+- **FR-020**: The region selection UI MUST display a tooltip or helper text informing the user: "Define your region where text appears consistently across the video." to communicate the fixed-region limitation. The helper text MUST be visible immediately when the selector opens and remain visible until selector close or explicit user dismissal.
 - **FR-021**: The app MUST allow users to define multiple context patterns in an Advanced Settings section of the UI; each pattern optionally specifies a before-text string, an after-text string, or both. When both are provided, both must match (compound AND rule) for the name to be extracted.
 - **FR-022**: Context pattern matching MUST use case-insensitive substring matching against the full OCR text detected in the region.
 - **FR-023**: The Advanced Settings section MUST provide a global toggle "Only extract names matching a context pattern"; when enabled, OCR text from all regions that does not match any defined context pattern MUST be excluded from the output. On first launch, this toggle MUST default to enabled.
 - **FR-024**: The app MUST pre-configure two default context patterns on first launch: "joined" (position: after) and "connected" (position: after).
 - **FR-025**: The Advanced Settings section MUST be accessible from the main UI as a distinct collapsible or separate settings area, separate from the primary workflow controls.
 - **FR-026**: When a context pattern matches, the app MUST extract the player name as follows: if only after-text is set, extract all trimmed OCR text preceding the after-text match; if only before-text is set, extract all trimmed OCR text following the before-text match; if both are set, extract all trimmed text between the before-text match end and the after-text match start.
-- **FR-027**: The app MUST persist Advanced Settings (context patterns and filter toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) and default filter-toggle state (enabled) MUST only be applied on first launch when no config file exists.
+- **FR-027**: The app MUST persist Advanced Settings (context patterns and filter toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) and default filter-toggle state (enabled) MUST only be applied on first launch when no config file exists. Config location MUST be deterministic: `%APPDATA%/SCYTcheck/scytcheck_settings.json` when writable, otherwise local `scytcheck_settings.json` beside the executable.
 - **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name, including an occurrence count representing appearance events (contiguous frame runs merged), not raw frame matches.
 - **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
 - **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
 - **FR-031**: Deduplicated CSV output schema MUST be fixed with the following required columns in order: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`.
 - **FR-032**: Before analysis starts, users MUST be able to create, adjust, and confirm one or more rectangular regions in the region selector.
 - **FR-033**: UI labels MUST be positioned and sized so they do not overlap associated input controls or display fields in the primary workflow and Advanced Settings at the supported minimum window size.
-- **FR-034**: For OCR extraction under configured context-pattern rules, the analysis workflow MUST prioritize not missing context-matched player names (recall-first behavior) over aggressive filtering that could suppress valid names.
+- **FR-034**: For OCR extraction under configured context-pattern rules, the analysis workflow MUST preserve every non-empty context-matched candidate name through candidate-collection output (before deduplication/event aggregation); only empty/whitespace-only strings may be dropped.
 - **FR-035**: The app MUST inform users that lower video quality can reduce OCR reliability and MUST provide adjustable OCR sensitivity controls so users can tune detection to reduce missed context-matched player names.
 - **FR-036**: The video-area (region) selection popup/window MUST open in the foreground and retain focus visibility when launched from the main workflow so it is not hidden behind the main application window.
-- **FR-037**: Explanatory/instruction text shown in the region-selection popup MUST be clearly legible (sufficient contrast, readable size, and non-overlapping placement) during selection interactions.
+- **FR-037**: Explanatory/instruction text shown in the region-selection popup MUST be clearly legible during selection interactions by meeting all of the following: minimum effective font size of 14 px, contrast ratio of at least 4.5:1 against its local background (or equivalent outlined/backplate rendering), and no overlap with active selection rectangles or required selector controls.
+- **FR-038**: If transient frame retrieval fails during analysis (for example network interruption), the app MUST retry retrieval up to 3 times per seek/read operation before marking the interval as failed and continuing with remaining intervals where possible.
+- **FR-039**: If export fails after analysis has completed, the app MUST preserve in-memory analysis results for the current session and allow retrying export without re-running detection.
+- **FR-040**: If the user closes region selection without confirming at least one valid region, the app MUST abort analysis start and display a non-blocking message instructing the user to confirm one or more regions.
+- **FR-041**: If multiple enabled context patterns match the same OCR line and yield different extracted names, the app MUST resolve deterministically by selecting the extraction span with the greatest character length; if still tied, use the earliest match start position; if still tied, use user-defined pattern order.
+- **FR-042**: When global pattern filtering is disabled, non-empty OCR lines without pattern matches MUST still be eligible for output processing under standard normalization/deduplication rules.
+- **FR-043**: Core workflow controls MUST be operable via keyboard-only interaction (including URL entry, output-folder selection trigger, Advanced Settings toggle/fields, analysis start, and region-selection confirmation/cancel shortcuts).
+- **FR-044**: Analysis memory behavior MUST avoid retaining full-frame history; processing MUST stream frames and retain only active-frame buffers plus detection/summary aggregates needed for output.
+- **FR-045**: During network or access failures, user-facing error messaging MUST distinguish malformed URL, unreachable/private video, and transient retrieval interruption outcomes.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -141,10 +153,11 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can complete video analysis for a 10-minute video in under 5 minutes.
+- **SC-001**: Users can complete video analysis for a 10-minute video in under 5 minutes, measured from the moment analysis begins after region confirmation to CSV write completion under representative standard conditions (publicly reachable video, stable network, default settings).
 - **SC-002**: *(Aspirational)* The app is expected to achieve at least 80% accuracy in detecting text strings in standard video resolutions and to favor high recall for context-matched player names. No formal measurement methodology is defined; these targets guide implementation quality but are not hard acceptance gates.
 - **SC-003**: *(Aspirational)* 95% of users can successfully input a URL and initiate analysis without assistance. No formal user testing is planned; this target guides UX decisions but is not a hard acceptance gate.
 - **SC-004**: Output CSV MUST be UTF-8 encoded, comma-delimited, include headers in this exact order (`PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`), and contain exactly one deduplicated row per normalized player name with event-based occurrence metadata.
+- **SC-005**: `FirstSeenSec` and `LastSeenSec` values in CSV output MUST be numeric and formatted to 3 decimal places.
 
 ## Assumptions
 

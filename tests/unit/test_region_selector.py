@@ -200,3 +200,35 @@ class TestRegionSelectorScrollbarMapping:
 
     def test_fixed_region_helper_text_is_present(self, region_selector: RegionSelector) -> None:
         assert "Define your region where text appears consistently" in region_selector.helper_text
+
+
+class TestRegionSelectorOverlayAndFocus:
+    def test_overlay_moves_to_bottom_when_top_overlaps_selected_region(self, region_selector: RegionSelector) -> None:
+        region_selector.selected_regions = [(0, 0, 200, 120, 0.0)]
+
+        y = region_selector._compute_overlay_y(frame_height=480, box_height=80)
+
+        assert y > 300
+
+    def test_overlay_defaults_to_top_when_clear(self, region_selector: RegionSelector) -> None:
+        region_selector.selected_regions = [(0, 250, 200, 120, 0.0)]
+
+        y = region_selector._compute_overlay_y(frame_height=480, box_height=80)
+
+        assert y == 10
+
+    def test_overlay_legibility_constants_are_configured(self, region_selector: RegionSelector) -> None:
+        assert region_selector.overlay_min_effective_font_px >= 14
+        assert region_selector.overlay_thickness >= 2
+
+    def test_select_regions_requests_foreground_window(self, region_selector: RegionSelector) -> None:
+        with patch("src.components.region_selector.cv2.namedWindow"), patch(
+            "src.components.region_selector.cv2.createTrackbar"
+        ), patch("src.components.region_selector.cv2.getTrackbarPos", return_value=0), patch(
+            "src.components.region_selector.cv2.imshow"
+        ), patch("src.components.region_selector.cv2.waitKey", return_value=13), patch(
+            "src.components.region_selector.cv2.destroyWindow"
+        ), patch("src.components.region_selector.cv2.setWindowProperty") as set_topmost:
+            region_selector.select_regions("https://youtube.com/watch?v=test")
+
+        set_topmost.assert_called()

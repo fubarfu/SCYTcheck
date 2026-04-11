@@ -264,6 +264,29 @@ class TestUS1FullWorkflow:
         assert lines[0] == "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion"
         assert lines[1].startswith("Alice,alice,2,")
 
+    def test_region_selector_foreground_and_overlay_workflow(self, mock_services: dict) -> None:
+        video_service = mock_services["video_service"]
+        selector = RegionSelector(video_service)
+        selector.load_video("https://youtube.com/watch?v=test")
+        selector.selected_regions = [(0, 0, 220, 120, 0.0)]
+
+        preview = selector._build_preview_frame()
+        lower_overlay_band = preview[-120:, 0:420]
+
+        assert selector._compute_overlay_y(frame_height=preview.shape[0], box_height=80) >= preview.shape[0] - 100
+        assert np.any(lower_overlay_band != 0)
+
+        with patch("src.components.region_selector.cv2.namedWindow"), patch(
+            "src.components.region_selector.cv2.createTrackbar"
+        ), patch("src.components.region_selector.cv2.getTrackbarPos", return_value=0), patch(
+            "src.components.region_selector.cv2.imshow"
+        ), patch("src.components.region_selector.cv2.waitKey", return_value=13), patch(
+            "src.components.region_selector.cv2.destroyWindow"
+        ), patch("src.components.region_selector.cv2.setWindowProperty") as set_topmost:
+            selector.select_regions("https://youtube.com/watch?v=test")
+
+        set_topmost.assert_called()
+
 
 class TestUS1EdgeCases:
     """Test edge cases for US1 workflow."""

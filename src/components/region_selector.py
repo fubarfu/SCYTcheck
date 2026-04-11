@@ -23,6 +23,11 @@ class RegionSelector:
         self.url: str = ""
         self.pending_region: tuple[int, int, int, int] | None = None
         self.supports_frame_stepping = False
+        self.overlay_font_scale = 0.7
+        self.overlay_thickness = 2
+        self.overlay_padding = 8
+        self.overlay_line_height = 28
+        self.overlay_min_effective_font_px = 14
 
     def select_regions(
         self,
@@ -50,6 +55,7 @@ class RegionSelector:
         trackbar_value = max(0, min(int(self.current_frame_time), max_seconds))
 
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        self._set_window_foreground(window_name)
         cv2.createTrackbar(trackbar_name, window_name, trackbar_value, max_seconds, lambda _: None)
 
         last_trackbar = trackbar_value
@@ -86,27 +92,72 @@ class RegionSelector:
         for x, y, width, height, _ in self.selected_regions:
             cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
 
-        cv2.putText(
-            frame,
+        overlay_lines = [
             self.helper_text,
-            (10, 28),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (0, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            frame,
             "Use time scrollbar. Press A=add region, Enter/Q=confirm, ESC=cancel",
-            (10, 56),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (255, 255, 255),
-            1,
-            cv2.LINE_AA,
-        )
+        ]
+        self._draw_instruction_overlay(frame, overlay_lines)
+
         return frame
+
+    def _draw_instruction_overlay(self, frame: np.ndarray, lines: list[str]) -> None:
+        """Draw a high-contrast overlay that avoids overlap with selected regions."""
+        if not lines:
+            return
+
+        text_sizes = [
+            cv2.getTextSize(
+                text,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                self.overlay_font_scale,
+                self.overlay_thickness,
+            )[0]
+            for text in lines
+        ]
+        max_width = max((size[0] for size in text_sizes), default=0)
+        box_height = (self.overlay_line_height * len(lines)) + (self.overlay_padding * 2)
+        box_width = max_width + (self.overlay_padding * 2)
+
+        frame_height, frame_width = frame.shape[:2]
+        x = 10
+        y = self._compute_overlay_y(frame_height, box_height)
+        box_width = min(box_width, frame_width - x - 10)
+
+        cv2.rectangle(frame, (x, y), (x + box_width, y + box_height), (0, 0, 0), -1)
+        cv2.rectangle(frame, (x, y), (x + box_width, y + box_height), (255, 255, 255), 1)
+
+        for idx, text in enumerate(lines):
+            baseline_y = y + self.overlay_padding + ((idx + 1) * self.overlay_line_height) - 8
+            cv2.putText(
+                frame,
+                text,
+                (x + self.overlay_padding, baseline_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                self.overlay_font_scale,
+                (255, 255, 255),
+                self.overlay_thickness,
+                cv2.LINE_AA,
+            )
+
+    def _compute_overlay_y(self, frame_height: int, box_height: int) -> int:
+        """Keep instructions clear of selected regions by moving overlay to bottom when needed."""
+        top_y = 10
+        top_bottom = top_y + box_height
+        overlaps_top = any(
+            y < top_bottom and (y + height) > top_y
+            for _x, y, _width, height, _time in self.selected_regions
+        )
+        if not overlaps_top:
+            return top_y
+
+        return max(10, frame_height - box_height - 10)
+
+    def _set_window_foreground(self, window_name: str) -> None:
+        """Request region selector popup foreground visibility where backend supports it."""
+        try:
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+        except Exception:
+            return
 
     def get_frame_at_time(self, url: str, time_seconds: float) -> np.ndarray:
         """Get a video frame at specific time (supports seek-to-time)."""

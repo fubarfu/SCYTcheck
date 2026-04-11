@@ -26,8 +26,8 @@ class ExportService:
             summary.player_name,
             summary.normalized_name,
             summary.occurrence_count,
-            summary.first_seen_sec,
-            summary.last_seen_sec,
+            f"{summary.first_seen_sec:.3f}",
+            f"{summary.last_seen_sec:.3f}",
             summary.representative_region,
         ]
 

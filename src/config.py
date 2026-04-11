@@ -19,8 +19,9 @@ class AppConfig:
 @dataclass
 class AdvancedSettings:
     context_patterns: list[dict[str, object]]
-    filter_non_matching: bool = False
+    filter_non_matching: bool = True
     event_gap_threshold_sec: float = 1.0
+    ocr_confidence_threshold: int = 40
 
 
 def _default_advanced_settings() -> AdvancedSettings:
@@ -34,8 +35,9 @@ def _default_advanced_settings() -> AdvancedSettings:
                 "enabled": True,
             },
         ],
-        filter_non_matching=False,
+        filter_non_matching=True,
         event_gap_threshold_sec=1.0,
+        ocr_confidence_threshold=40,
     )
 
 
@@ -71,10 +73,20 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
         save_advanced_settings(defaults, base_dir)
         return defaults
 
+    defaults = _default_advanced_settings()
     return AdvancedSettings(
-        context_patterns=list(payload.get("context_patterns", _default_advanced_settings().context_patterns)),
-        filter_non_matching=bool(payload.get("filter_non_matching", False)),
-        event_gap_threshold_sec=float(payload.get("event_gap_threshold_sec", 1.0)),
+        context_patterns=list(payload.get("context_patterns", defaults.context_patterns)),
+        filter_non_matching=bool(payload.get("filter_non_matching", defaults.filter_non_matching)),
+        event_gap_threshold_sec=float(payload.get("event_gap_threshold_sec", defaults.event_gap_threshold_sec)),
+        ocr_confidence_threshold=int(
+            max(
+                0,
+                min(
+                    int(payload.get("ocr_confidence_threshold", defaults.ocr_confidence_threshold)),
+                    100,
+                ),
+            )
+        ),
     )
 
 
@@ -87,6 +99,7 @@ def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = No
                 "context_patterns": settings.context_patterns,
                 "filter_non_matching": settings.filter_non_matching,
                 "event_gap_threshold_sec": settings.event_gap_threshold_sec,
+                "ocr_confidence_threshold": int(max(0, min(settings.ocr_confidence_threshold, 100))),
             },
             indent=2,
         ),

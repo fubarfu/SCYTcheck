@@ -52,6 +52,7 @@ def main() -> None:
 
             advanced = window.get_advanced_settings()
             save_advanced_settings(advanced)
+            ocr_service.confidence_threshold = int(max(0, min(advanced.ocr_confidence_threshold, 100)))
             context_patterns = [
                 ContextPattern(
                     id=str(item.get("id", f"pattern-{index}")),

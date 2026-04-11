@@ -61,7 +61,7 @@ class MainWindow:
         self.patterns_text = tk.Text(self.advanced_settings_frame, height=5, width=64, wrap="none")
         self.patterns_text.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(4, 8))
 
-        self.filter_non_matching_var = tk.BooleanVar(value=False)
+        self.filter_non_matching_var = tk.BooleanVar(value=True)
         self.filter_non_matching_check = ttk.Checkbutton(
             self.advanced_settings_frame,
             text="Only extract names matching a context pattern",
@@ -82,6 +82,32 @@ class MainWindow:
             width=8,
         )
         self.event_gap_spinbox.grid(row=3, column=1, sticky="w", pady=(8, 0))
+
+        self.ocr_sensitivity_label = ttk.Label(self.advanced_settings_frame, text="OCR sensitivity (confidence 0-100)")
+        self.ocr_sensitivity_label.grid(row=4, column=0, sticky="w", pady=(8, 0))
+
+        self.ocr_confidence_var = tk.IntVar(value=40)
+        self.ocr_sensitivity_spinbox = ttk.Spinbox(
+            self.advanced_settings_frame,
+            from_=0,
+            to=100,
+            increment=1,
+            textvariable=self.ocr_confidence_var,
+            width=8,
+        )
+        self.ocr_sensitivity_spinbox.grid(row=4, column=1, sticky="w", pady=(8, 0))
+
+        self.low_quality_guidance = ttk.Label(
+            self.advanced_settings_frame,
+            text=(
+                "Low-quality videos can reduce OCR reliability. Lower confidence to improve recall, "
+                "or raise it to reduce false positives."
+            ),
+            foreground="gray",
+            wraplength=620,
+            justify="left",
+        )
+        self.low_quality_guidance.grid(row=5, column=0, columnspan=3, sticky="w", pady=(6, 0))
 
         self.progress = ProgressDisplay(container)
         self.progress.grid(row=6, column=0, columnspan=2)
@@ -153,6 +179,7 @@ class MainWindow:
             context_patterns=patterns,
             filter_non_matching=bool(self.filter_non_matching_var.get()),
             event_gap_threshold_sec=float(self.event_gap_var.get()),
+            ocr_confidence_threshold=int(max(0, min(int(self.ocr_confidence_var.get()), 100))),
         )
 
     def apply_advanced_settings(self, settings: AdvancedSettings) -> None:
@@ -167,6 +194,7 @@ class MainWindow:
         self.patterns_text.insert("1.0", "\n".join(lines))
         self.filter_non_matching_var.set(bool(settings.filter_non_matching))
         self.event_gap_var.set(float(settings.event_gap_threshold_sec))
+        self.ocr_confidence_var.set(int(max(0, min(int(settings.ocr_confidence_threshold), 100))))
 
     def _on_url_changed(self, _event: object | None = None) -> None:
         self.update_filename_display()
