@@ -24,8 +24,8 @@
 - [X] T002 Align lint/test configuration in `pyproject.toml`
 - [X] T003 [P] Prepare release bundling baseline in `scripts/release/build.ps1`
 - [X] T004 [P] Prepare optional signing baseline in `scripts/release/sign.ps1`
-- [ ] T005 Configure portable build spec defaults in `build-config.spec`
-- [ ] T006 Establish application startup wiring baseline in `src/main.py`
+- [X] T005 Configure portable build spec defaults in `build-config.spec`
+- [X] T006 Establish application startup wiring baseline in `src/main.py`
 
 ---
 
@@ -36,23 +36,23 @@
 **⚠️ CRITICAL**: No user-story work begins until this phase is complete.
 
 - [X] T007 Extend core entities (`VideoAnalysis`, `TextDetection`, `AppearanceEvent`, `PlayerSummary`, `LogRecord`) in `src/data/models.py`
-- [ ] T008 Implement deterministic settings path resolution (`%APPDATA%` fallback local) in `src/config.py`
-- [ ] T009 Implement first-launch defaults (patterns, toggles, thresholds, quality) in `src/config.py`
-- [ ] T010 [P] Add timestamp formatter (`HH:MM:SS.mmm`) in `src/services/analysis_service.py`
-- [ ] T011 Implement deterministic output filename generation (`scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv`) in `src/services/export_service.py`
-- [ ] T012 Implement two-stage YouTube URL validation (format + accessibility preflight) in `src/services/video_service.py`
-- [ ] T013 Implement quality selection with fallback-to-lower and non-blocking warning in `src/services/video_service.py`
-- [ ] T014 Implement transient frame retrieval retries (max 3 per seek/read) in `src/services/video_service.py`
-- [ ] T015 [P] Implement OCR line aggregation (group Tesseract tokens by line metadata into full-line strings) in `src/services/ocr_service.py`
+- [X] T008 Implement deterministic settings path resolution (`%APPDATA%` fallback local) in `src/config.py`
+- [X] T009 Implement first-launch defaults (patterns, toggles, thresholds, quality) in `src/config.py`
+- [X] T010 [P] Add timestamp formatter (`HH:MM:SS.mmm`) in `src/services/analysis_service.py`
+- [X] T011 Implement deterministic output filename generation (`scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv`) in `src/services/export_service.py`
+- [X] T012 Implement two-stage YouTube URL validation (format + accessibility preflight) in `src/services/video_service.py`
+- [X] T013 Implement quality selection with fallback-to-lower and non-blocking warning in `src/services/video_service.py`
+- [X] T014 Implement transient frame retrieval retries (max 3 per seek/read) in `src/services/video_service.py`
+- [X] T015 [P] Implement OCR line aggregation (group Tesseract tokens by line metadata into full-line strings) in `src/services/ocr_service.py`
 - [X] T016 [P] Implement OCR normalization for matching (remove line breaks, collapse whitespace) in `src/services/ocr_service.py`
 - [X] T017 [P] Implement fuzzy substring pattern matching utility (best-occurrence scan, configurable threshold default 0.75) in `src/services/ocr_service.py`
 - [X] T018 [P] Implement boundary-clipped context acceptance utility (2-char overlap or threshold pass) in `src/services/ocr_service.py`
 - [X] T019 [P] Implement single-token extraction helpers for after-only (last token before marker), before-only (first token after marker), and both-boundary (first token between markers) modes in `src/services/ocr_service.py`
-- [ ] T020 Implement normalized-name utility (lowercase + trim + collapse internal spaces) in `src/services/analysis_service.py`
-- [ ] T021 Implement appearance-event merge utility (max gap default 1.0 s) in `src/services/analysis_service.py`
-- [ ] T022 Implement summary CSV writer with exact header order `PlayerName,StartTimestamp` in `src/services/export_service.py`
+- [X] T020 Implement normalized-name utility (lowercase + trim + collapse internal spaces) in `src/services/analysis_service.py`
+- [X] T021 Implement appearance-event merge utility (max gap default 1.0 s) in `src/services/analysis_service.py`
+- [X] T022 Implement summary CSV writer with exact header order `PlayerName,StartTimestamp` in `src/services/export_service.py`
 - [X] T023 Implement sidecar log writer with fixed FR-049 schema including `TestedStringRaw` and `TestedStringNormalized` in `src/services/logging.py`
-- [ ] T024 [P] Add foundational settings, default persistence, and URL/retry unit tests in `tests/unit/test_config.py` and `tests/unit/test_video_service.py`
+- [X] T024 [P] Add foundational settings, default persistence, and URL/retry unit tests in `tests/unit/test_config.py` and `tests/unit/test_video_service.py`
 
 **Checkpoint**: Foundation complete; user stories can proceed in parallel.
 
