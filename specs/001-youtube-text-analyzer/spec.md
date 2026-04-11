@@ -46,6 +46,7 @@
 - Q: What is the priority for capturing player names when context patterns are configured, especially with lower video quality? → A: Prioritize recall to avoid missing context-matched player names, and account for reduced OCR reliability on lower-quality video by warning users and allowing sensitivity adjustment
 - Q: How should the video-area selection popup behave and present instructions? → A: The popup must open in the foreground and explanatory text must remain clearly legible while selecting regions
 - Q: How should video retrieval quality be handled? → A: User-selectable quality with default best quality; no automatic fallback
+- Q: What log file format and naming should be required when Advanced Settings logging is enabled? → A: Create a sidecar CSV log named like output with `_log.csv` suffix
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -123,7 +124,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-024**: The app MUST pre-configure two default context patterns on first launch: "joined" (position: after) and "connected" (position: after).
 - **FR-025**: The Advanced Settings section MUST be accessible from the main UI as a distinct collapsible or separate settings area, separate from the primary workflow controls.
 - **FR-026**: When a context pattern matches, the app MUST extract the player name as follows: if only after-text is set, extract all trimmed OCR text preceding the after-text match; if only before-text is set, extract all trimmed OCR text following the before-text match; if both are set, extract all trimmed text between the before-text match end and the after-text match start.
-- **FR-027**: The app MUST persist Advanced Settings (context patterns and filter toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) and default filter-toggle state (enabled) MUST only be applied on first launch when no config file exists. Config location MUST be deterministic: `%APPDATA%/SCYTcheck/scytcheck_settings.json` when writable, otherwise local `scytcheck_settings.json` beside the executable.
+- **FR-027**: The app MUST persist Advanced Settings (context patterns, filter toggle state, and log-function toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) and default filter-toggle state (enabled) MUST only be applied on first launch when no config file exists; the log-function toggle MUST default to disabled (off) on first launch. Config location MUST be deterministic: `%APPDATA%/SCYTcheck/scytcheck_settings.json` when writable, otherwise local `scytcheck_settings.json` beside the executable.
 - **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name, including an occurrence count representing appearance events (contiguous frame runs merged), not raw frame matches.
 - **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
 - **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
@@ -143,6 +144,10 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-044**: Analysis memory behavior MUST avoid retaining full-frame history; processing MUST stream frames and retain only active-frame buffers plus detection/summary aggregates needed for output.
 - **FR-045**: During network or access failures, user-facing error messaging MUST distinguish malformed URL, unreachable/private video, and transient retrieval interruption outcomes.
 - **FR-046**: The app MUST provide a video-quality selector for YouTube retrieval with default set to best available quality. The selected quality MUST be used for retrieval attempts for the current analysis run, and the app MUST NOT automatically downgrade quality without explicit user action.
+- **FR-047**: Advanced Settings MUST provide a toggle to enable/disable analysis logging. The default state MUST be disabled (off).
+- **FR-048**: When logging is enabled, the app MUST create a sidecar CSV log file in the same folder as the output CSV using the same base filename with `_log.csv` suffix.
+- **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST include, at minimum: video timestamp (seconds), raw found string, acceptance decision, rejection reason (when rejected), and extracted player name (when accepted).
+- **FR-050**: When logging is disabled, the app MUST NOT create a log file.
 
 ### Key Entities *(include if feature involves data)*
 
