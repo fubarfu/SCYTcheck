@@ -86,17 +86,17 @@
 
 ### Implementation for User Story 1
 
-- [ ] T042 [US1] Implement OCR candidate collection and per-region frame iteration in `src/services/analysis_service.py`
-- [ ] T043 [US1] Implement global pattern-filter toggle behavior (FR-023/FR-042) in `src/services/analysis_service.py`
-- [ ] T044 [US1] Integrate fuzzy substring matching with single-token extraction flow in `src/services/ocr_service.py`
-- [ ] T045 [US1] Implement deterministic tie-break resolution for competing pattern matches per FR-041 in `src/services/ocr_service.py`
-- [ ] T046 [US1] Preserve every non-empty context-matched candidate through collection before aggregation per FR-034 in `src/services/analysis_service.py`
-- [ ] T047 [US1] Implement normalized-key grouping with earliest on-screen `PlayerName` selection per FR-028/FR-005 in `src/services/analysis_service.py`
-- [ ] T048 [US1] Build and export summary CSV rows with correct schema in `src/services/export_service.py`
+- [X] T042 [US1] Implement OCR candidate collection and per-region frame iteration in `src/services/analysis_service.py`
+- [X] T043 [US1] Implement global pattern-filter toggle behavior (FR-023/FR-042) in `src/services/analysis_service.py`
+- [X] T044 [US1] Integrate fuzzy substring matching with single-token extraction flow in `src/services/ocr_service.py`
+- [X] T045 [US1] Implement deterministic tie-break resolution for competing pattern matches per FR-041 in `src/services/ocr_service.py`
+- [X] T046 [US1] Preserve every non-empty context-matched candidate through collection before aggregation per FR-034 in `src/services/analysis_service.py`
+- [X] T047 [US1] Implement normalized-key grouping with earliest on-screen `PlayerName` selection per FR-028/FR-005 in `src/services/analysis_service.py`
+- [X] T048 [US1] Build and export summary CSV rows with correct schema in `src/services/export_service.py`
 - [X] T049 [US1] Build sidecar log records with `TestedStringRaw` and `TestedStringNormalized` diagnostics fields in `src/services/logging.py`
-- [ ] T050 [US1] Preserve in-memory analysis results on export failure and support retry action without re-running detection per FR-039 in `src/main.py`
-- [ ] T051 [US1] Enforce analysis abort and non-blocking message when no regions are confirmed per FR-040 in `src/main.py`
-- [ ] T052 [US1] Wire full-duration analysis window (`start=0.0`, `end=get_video_info duration`), timed frame iteration, and 3-retry behavior in `src/services/video_service.py` and `src/main.py`
+- [X] T050 [US1] Preserve in-memory analysis results on export failure and support retry action without re-running detection per FR-039 in `src/main.py`
+- [X] T051 [US1] Enforce analysis abort and non-blocking message when no regions are confirmed per FR-040 in `src/main.py`
+- [X] T052 [US1] Wire full-duration analysis window (`start=0.0`, `end=get_video_info duration`), timed frame iteration, and 3-retry behavior in `src/services/video_service.py` and `src/main.py`
 
 **Checkpoint**: US1 independently functional and testable.
 
