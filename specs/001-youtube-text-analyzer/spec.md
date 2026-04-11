@@ -32,6 +32,11 @@
 - Q: How should the app determine what text to extract as the player name when a context pattern matches? → A: Extract all trimmed text before the after-text marker, or after the before-text marker; when both are set, extract trimmed text between them
 - Q: Does the context pattern filter toggle apply globally or per region? → A: Global toggle in Advanced Settings applies uniformly to all regions in the session
 - Q: Should Advanced Settings (context patterns and filter toggle) persist between app sessions? → A: Persist to a local config file; loaded on startup; default patterns applied only on first launch
+- Q: How should duplicate player detections across frames and repeated appearances in the video be handled? → A: Deduplicate by normalized player name across the whole video output and include occurrence count
+- Q: What normalization should be used for deduplication keys? → A: Lowercase + trim + collapse repeated internal whitespace
+- Q: How should occurrence count be calculated for deduplicated output? → A: Count appearance events by merging contiguous frame runs, not raw frame matches
+- Q: How should event boundaries be determined when OCR misses intermittent frames? → A: Use a maximum detection-gap threshold so nearby detections are merged into one event
+- Q: What should the default detection-gap threshold be for event merging? → A: 1.0 seconds
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -106,6 +111,9 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-025**: The Advanced Settings section MUST be accessible from the main UI as a distinct collapsible or separate settings area, separate from the primary workflow controls.
 - **FR-026**: When a context pattern matches, the app MUST extract the player name as follows: if only after-text is set, extract all trimmed OCR text preceding the after-text match; if only before-text is set, extract all trimmed OCR text following the before-text match; if both are set, extract all trimmed text between the before-text match end and the after-text match start.
 - **FR-027**: The app MUST persist Advanced Settings (context patterns and filter toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) MUST only be applied on first launch when no config file exists.
+- **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name, including an occurrence count representing appearance events (contiguous frame runs merged), not raw frame matches.
+- **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
+- **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
 
 ### Key Entities *(include if feature involves data)*
 
