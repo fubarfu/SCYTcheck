@@ -48,6 +48,8 @@
 - Q: How should video retrieval quality be handled? → A: User-selectable quality with default best quality; no automatic fallback
 - Q: What log file format and naming should be required when Advanced Settings logging is enabled? → A: Create a sidecar CSV log named like output with `_log.csv` suffix
 - Q: Where should region-selector explanatory text be displayed relative to the video preview? → A: In a separate area below the video; it must not cover the video preview
+- Q: When logging is enabled, what fixed log CSV schema should be required? → A: Fixed column order `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`
+- Q: What format should log `TimestampSec` use? → A: `HH:MM:SS.mmm` formatted string
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -148,7 +150,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-046**: The app MUST provide a video-quality selector for YouTube retrieval with default set to best available quality. The selected quality MUST be used for retrieval attempts for the current analysis run, and the app MUST NOT automatically downgrade quality without explicit user action.
 - **FR-047**: Advanced Settings MUST provide a toggle to enable/disable analysis logging. The default state MUST be disabled (off).
 - **FR-048**: When logging is enabled, the app MUST create a sidecar CSV log file in the same folder as the output CSV using the same base filename with `_log.csv` suffix.
-- **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST include, at minimum: video timestamp (seconds), raw found string, acceptance decision, rejection reason (when rejected), and extracted player name (when accepted).
+- **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST use this exact header order: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`. `TimestampSec` MUST be a string formatted as `HH:MM:SS.mmm`. `RejectionReason` MUST be non-empty when `Accepted=false`. `ExtractedName` MUST be non-empty when `Accepted=true`.
 - **FR-050**: When logging is disabled, the app MUST NOT create a log file.
 
 ### Key Entities *(include if feature involves data)*
