@@ -8,7 +8,7 @@ from src.services.video_service import VideoService
 
 class RegionSelector:
     """UI component for selecting analysis regions on video frames with time-based navigation."""
-    
+
     def __init__(self, video_service: VideoService) -> None:
         self.video_service = video_service
         self.selected_regions: list[tuple[int, int, int, int, float]] = []
@@ -38,12 +38,12 @@ class RegionSelector:
     ) -> list[tuple[int, int, int, int]]:
         """
         Select analysis regions from video frames.
-        
+
         Args:
             url: YouTube video URL
             frame_time_seconds: Initial frame time to display
             quality: Stream quality matching the UI selector (e.g. "best", "720p")
-            
+
         Returns:
             List of (x, y, width, height) tuples for selected regions
         """
@@ -83,9 +83,13 @@ class RegionSelector:
                     stable_cycles += 1
                     if stable_cycles >= _DEBOUNCE_CYCLES:
                         try:
-                            self.current_frame = self.video_service.get_frame_from_cap(cap, pending_time)
+                            self.current_frame = self.video_service.get_frame_from_cap(
+                                cap, pending_time
+                            )
                         except Exception:
-                            self.current_frame = self.get_frame_at_time(url, pending_time, quality=self.quality)
+                            self.current_frame = self.get_frame_at_time(
+                                url, pending_time, quality=self.quality
+                            )
                         self.current_frame_time = pending_time
                         pending_time = None
                         stable_cycles = 0
@@ -96,7 +100,9 @@ class RegionSelector:
 
                 # Press A to add a region from the currently shown frame.
                 if key in (ord("a"), ord("A")):
-                    region = cv2.selectROI(window_name, self.current_frame, fromCenter=False, showCrosshair=True)
+                    region = cv2.selectROI(
+                        window_name, self.current_frame, fromCenter=False, showCrosshair=True
+                    )
                     x, y, width, height = [int(value) for value in region]
                     if width > 0 and height > 0:
                         self.selected_regions.append((x, y, width, height, self.current_frame_time))
@@ -113,7 +119,11 @@ class RegionSelector:
         return [(x, y, width, height) for x, y, width, height, _ in self.selected_regions]
 
     def _build_preview_frame(self) -> np.ndarray:
-        frame = self.current_frame.copy() if self.current_frame is not None else np.zeros((480, 640, 3), dtype=np.uint8)
+        frame = (
+            self.current_frame.copy()
+            if self.current_frame is not None
+            else np.zeros((480, 640, 3), dtype=np.uint8)
+        )
         for x, y, width, height, _ in self.selected_regions:
             cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
 
@@ -250,7 +260,7 @@ class RegionSelector:
     def get_frame_at_time(self, url: str, time_seconds: float, quality: str = "best") -> np.ndarray:
         """Get a video frame at specific time (supports seek-to-time)."""
         return self.video_service.get_frame_at_time(url, time_seconds, quality=quality)
-    
+
     def get_video_duration(self, url: str) -> float:
         """Get video duration in seconds."""
         info = self.video_service.get_video_info(url)

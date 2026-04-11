@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from src.data.models import VideoAnalysis, TextString, Region
+from src.data.models import Region, VideoAnalysis
 
 
 @pytest.fixture
@@ -19,10 +19,10 @@ def mock_video_frame() -> np.ndarray:
     """
     # Create a realistic-looking frame with some variation
     frame = np.random.randint(50, 200, (720, 1280, 3), dtype=np.uint8)
-    
+
     # Add a white rectangle to simulate text region
     frame[100:150, 200:400] = 255
-    
+
     return frame
 
 
@@ -36,9 +36,9 @@ def mock_video_frames(mock_video_frame: np.ndarray) -> list[np.ndarray]:
     for i in range(10):
         # Create slight variations to simulate video progression
         frame = mock_video_frame.copy()
-        frame[50 + i:60 + i, 100 + i:200 + i] = (100 + i * 10, 100 + i * 10, 100 + i * 10)
+        frame[50 + i : 60 + i, 100 + i : 200 + i] = (100 + i * 10, 100 + i * 10, 100 + i * 10)
         frames.append(frame)
-    
+
     return frames
 
 
@@ -55,31 +55,38 @@ def mock_video_analysis() -> VideoAnalysis:
     Useful for testing export and processing pipelines.
     """
     analysis = VideoAnalysis(url="https://youtube.com/watch?v=testid")
-    
+
     # Add sample detections at different times
     analysis.add_detection("Hello", (10, 20, 100, 50), frame_time=1.0)
     analysis.add_detection("World", (120, 20, 100, 50), frame_time=1.0)
     analysis.add_detection("Test", (10, 100, 150, 50), frame_time=2.5)
     analysis.add_detection("Hello", (10, 20, 100, 50), frame_time=3.0)  # Duplicate text
-    
+
     return analysis
 
 
 class MockFrameGenerator:
     """Utility class for generating test video frames with specific characteristics."""
-    
+
     @staticmethod
-    def create_blank_frame(height: int = 720, width: int = 1280, bg_color: tuple[int, int, int] = (0, 0, 0)) -> np.ndarray:
+    def create_blank_frame(
+        height: int = 720, width: int = 1280, bg_color: tuple[int, int, int] = (0, 0, 0)
+    ) -> np.ndarray:
         """Create a blank frame with specified dimensions and background color."""
         frame = np.full((height, width, 3), bg_color, dtype=np.uint8)
         return frame
-    
+
     @staticmethod
-    def create_frame_with_region(height: int = 720, width: int = 1280, region_color: tuple[int, int, int] = (255, 255, 255), region_coords: tuple[int, int, int, int] = (10, 20, 100, 50)) -> np.ndarray:
+    def create_frame_with_region(
+        height: int = 720,
+        width: int = 1280,
+        region_color: tuple[int, int, int] = (255, 255, 255),
+        region_coords: tuple[int, int, int, int] = (10, 20, 100, 50),
+    ) -> np.ndarray:
         """Create a frame with a colored rectangular region."""
         frame = MockFrameGenerator.create_blank_frame(height, width)
         x, y, w, h = region_coords
-        frame[y:y+h, x:x+w] = region_color
+        frame[y : y + h, x : x + w] = region_color
         return frame
 
 

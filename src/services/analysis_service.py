@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import re
+from collections.abc import Callable
 
-from src.data.models import AppearanceEvent, ContextPattern, LogRecord, PlayerSummary, TextDetection, VideoAnalysis
+from src.data.models import (
+    AppearanceEvent,
+    ContextPattern,
+    LogRecord,
+    PlayerSummary,
+    TextDetection,
+    VideoAnalysis,
+)
 from src.services.ocr_service import OCRService
 from src.services.video_service import VideoService
 
@@ -49,7 +56,9 @@ class AnalysisService:
             for region in regions:
                 ocr_diagnostics: list[dict[str, object]] = []
                 if logging_enabled and hasattr(self.ocr_service, "detect_text_with_diagnostics"):
-                    tokens, ocr_diagnostics = self.ocr_service.detect_text_with_diagnostics(frame, region)
+                    tokens, ocr_diagnostics = self.ocr_service.detect_text_with_diagnostics(
+                        frame, region
+                    )
                 else:
                     tokens = self.ocr_service.detect_text(frame, region)
                 decision_rows: list[dict[str, object]] | None = None
@@ -66,7 +75,9 @@ class AnalysisService:
                                 (
                                     str(decision["raw_string"]),
                                     str(decision["extracted_name"]),
-                                    decision["matched_pattern"] if isinstance(decision["matched_pattern"], str) else None,
+                                    decision["matched_pattern"]
+                                    if isinstance(decision["matched_pattern"], str)
+                                    else None,
                                 )
                             )
                 else:
@@ -90,7 +101,9 @@ class AnalysisService:
                                 timestamp_sec=self.format_timestamp(frame_time),
                                 raw_string=str(diagnostic.get("raw_string", "")),
                                 accepted=False,
-                                rejection_reason=str(diagnostic.get("rejection_reason", "ocr_rejected")),
+                                rejection_reason=str(
+                                    diagnostic.get("rejection_reason", "ocr_rejected")
+                                ),
                                 extracted_name="",
                                 region_id=region_id,
                                 matched_pattern="",
@@ -146,9 +159,13 @@ class AnalysisService:
                 on_progress(percentage)
 
         analysis.set_player_summaries(
-            self.build_player_summaries(analysis.detections, gap_threshold_sec=analysis.event_gap_threshold_sec)
+            self.build_player_summaries(
+                analysis.detections, gap_threshold_sec=analysis.event_gap_threshold_sec
+            )
         )
-        summary_by_name = {summary.normalized_name: summary for summary in analysis.player_summaries}
+        summary_by_name = {
+            summary.normalized_name: summary for summary in analysis.player_summaries
+        }
         for detection in analysis.detections:
             summary = summary_by_name.get(detection.normalized_name)
             if summary is None:

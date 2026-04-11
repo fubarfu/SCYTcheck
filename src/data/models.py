@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Iterable
 
 
 @dataclass
 class Region:
     """Represents a rectangular region in a video frame with temporal context."""
+
     x: int
     y: int
     width: int
@@ -116,7 +117,9 @@ class VideoAnalysis:
         init=False,
     )
 
-    def add_detection(self, content: str, region: tuple[int, int, int, int], frame_time: float = 0.0) -> None:
+    def add_detection(
+        self, content: str, region: tuple[int, int, int, int], frame_time: float = 0.0
+    ) -> None:
         cleaned = content.strip()
         if not cleaned:
             return

@@ -15,12 +15,12 @@
 
 **Purpose**: Align dependencies, release scripts, and baseline project wiring.
 
-- [ ] T001 Update runtime dependency list for OCR/fuzzy matching/video stack in `requirements.txt`
-- [ ] T002 Align lint/test configuration and markers for unit/integration coverage in `pyproject.toml`
-- [ ] T003 [P] Prepare release build inputs for x64/x86 bundle flow in `scripts/release/build.ps1`
-- [ ] T004 [P] Prepare optional signing script behavior for post-build signing in `scripts/release/sign.ps1`
-- [ ] T005 Add release spec defaults for portable bundle layout in `build-config.spec`
-- [ ] T006 Add feature wiring checkpoints and startup guard rails in `src/main.py`
+- [X] T001 Update runtime dependency list for OCR/fuzzy matching/video stack in `requirements.txt`
+- [X] T002 Align lint/test configuration and markers for unit/integration coverage in `pyproject.toml`
+- [X] T003 [P] Prepare release build inputs for x64/x86 bundle flow in `scripts/release/build.ps1`
+- [X] T004 [P] Prepare optional signing script behavior for post-build signing in `scripts/release/sign.ps1`
+- [X] T005 Add release spec defaults for portable bundle layout in `build-config.spec`
+- [X] T006 Add feature wiring checkpoints and startup guard rails in `src/main.py`
 
 ---
 
@@ -30,23 +30,23 @@
 
 **CRITICAL**: No US1/US2 implementation starts until this phase is done.
 
-- [ ] T007 Extend domain entities for `VideoAnalysis`, `TextDetection`, `AppearanceEvent`, `PlayerSummary`, `LogRecord` in `src/data/models.py`
-- [ ] T008 Implement settings persistence path resolution (`%APPDATA%` then local fallback) in `src/config.py`
-- [ ] T009 Implement first-launch defaults for patterns/filter/logging/sensitivity/gap in `src/config.py`
-- [ ] T010 [P] Implement timestamp formatting helper (`HH:MM:SS.mmm`) in `src/services/analysis_service.py`
-- [ ] T011 Implement deterministic output filename generator (`scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv`) in `src/services/export_service.py`
-- [ ] T012 Implement two-stage URL validation (format then accessibility preflight) in `src/services/video_service.py`
-- [ ] T013 Implement quality selection and controlled fallback warning behavior in `src/services/video_service.py`
-- [ ] T014 Implement transient frame retrieval retry policy (max 3 tries) in `src/services/video_service.py`
-- [ ] T015 [P] Implement OCR text normalization utility (join region text, remove line breaks, collapse whitespace) in `src/services/ocr_service.py`
-- [ ] T016 [P] Implement fuzzy substring pattern locator with configurable threshold (default 0.75) in `src/services/ocr_service.py`
-- [ ] T017 [P] Implement boundary-clipped context acceptance helper in `src/services/ocr_service.py`
-- [ ] T018 Implement normalized-name key utility (lowercase/trim/collapse spaces) in `src/services/analysis_service.py`
-- [ ] T019 Implement appearance-event merge utility with default gap 1.0 seconds in `src/services/analysis_service.py`
-- [ ] T020 Implement summary CSV writer with exact header order `PlayerName,StartTimestamp` in `src/services/export_service.py`
-- [ ] T021 Implement sidecar log CSV writer with fixed FR-049 schema in `src/services/logging.py`
-- [ ] T022 [P] Add foundational tests for settings defaults/persistence in `tests/unit/test_config.py`
-- [ ] T023 [P] Add foundational tests for URL validation, retry policy, and quality behavior in `tests/unit/test_video_service.py`
+- [X] T007 Extend domain entities for `VideoAnalysis`, `TextDetection`, `AppearanceEvent`, `PlayerSummary`, `LogRecord` in `src/data/models.py`
+- [X] T008 Implement settings persistence path resolution (`%APPDATA%` then local fallback) in `src/config.py`
+- [X] T009 Implement first-launch defaults for patterns/filter/logging/sensitivity/gap in `src/config.py`
+- [X] T010 [P] Implement timestamp formatting helper (`HH:MM:SS.mmm`) in `src/services/analysis_service.py`
+- [X] T011 Implement deterministic output filename generator (`scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv`) in `src/services/export_service.py`
+- [X] T012 Implement two-stage URL validation (format then accessibility preflight) in `src/services/video_service.py`
+- [X] T013 Implement quality selection and controlled fallback warning behavior in `src/services/video_service.py`
+- [X] T014 Implement transient frame retrieval retry policy (max 3 tries) in `src/services/video_service.py`
+- [X] T015 [P] Implement OCR text normalization utility (join region text, remove line breaks, collapse whitespace) in `src/services/ocr_service.py`
+- [X] T016 [P] Implement fuzzy substring pattern locator with configurable threshold (default 0.75) in `src/services/ocr_service.py`
+- [X] T017 [P] Implement boundary-clipped context acceptance helper in `src/services/ocr_service.py`
+- [X] T018 Implement normalized-name key utility (lowercase/trim/collapse spaces) in `src/services/analysis_service.py`
+- [X] T019 Implement appearance-event merge utility with default gap 1.0 seconds in `src/services/analysis_service.py`
+- [X] T020 Implement summary CSV writer with exact header order `PlayerName,StartTimestamp` in `src/services/export_service.py`
+- [X] T021 Implement sidecar log CSV writer with fixed FR-049 schema in `src/services/logging.py`
+- [X] T022 [P] Add foundational tests for settings defaults/persistence in `tests/unit/test_config.py`
+- [X] T023 [P] Add foundational tests for URL validation, retry policy, and quality behavior in `tests/unit/test_video_service.py`
 
 **Checkpoint**: Foundation complete; user stories can proceed.
 
@@ -60,36 +60,36 @@
 
 ### Tests for User Story 1
 
-- [ ] T024 [P] [US1] Add integration test for valid URL analysis end-to-end summary generation in `tests/integration/test_us1_workflow.py`
-- [ ] T025 [P] [US1] Add integration test for invalid URL rejection before frame analysis in `tests/integration/test_us1_workflow.py`
-- [ ] T026 [P] [US1] Add integration test for no-text header-only CSV plus user feedback message in `tests/integration/test_us1_workflow.py`
-- [ ] T075 [P] [US1] Add integration test for analysis progress and completion feedback in `tests/integration/test_us1_workflow.py`
-- [ ] T027 [P] [US1] Add OCR normalization tests for joined region text and line-break removal in `tests/unit/test_ocr_service.py`
-- [ ] T028 [P] [US1] Add fuzzy substring search tests for context location within longer OCR strings in `tests/unit/test_ocr_service.py`
-- [ ] T029 [P] [US1] Add boundary-clipped context matching tests for overlap and threshold paths in `tests/unit/test_ocr_service.py`
-- [ ] T030 [P] [US1] Add extraction boundary tests for before-only/after-only/both markers in `tests/unit/test_ocr_service.py`
-- [ ] T031 [P] [US1] Add deterministic pattern conflict resolution tests for FR-041 tie-break rules in `tests/unit/test_ocr_service.py`
-- [ ] T032 [P] [US1] Add recall-first candidate preservation tests for FR-034 in `tests/unit/test_ocr_service.py`
-- [ ] T077 [P] [US1] Add unit tests for FR-042 behavior when pattern filtering is disabled in `tests/unit/test_analysis_service.py`
-- [ ] T033 [P] [US1] Add normalization and deduplication tests for FR-028/FR-029 in `tests/unit/test_analysis_service.py`
-- [ ] T034 [P] [US1] Add appearance-event gap merge tests for FR-030 in `tests/unit/test_analysis_service.py`
-- [ ] T035 [P] [US1] Add summary CSV schema and timestamp format tests for SC-004/SC-005 in `tests/unit/test_export_service.py`
-- [ ] T078 [P] [US1] Add integration test for FR-040 no-confirmed-region analysis abort in `tests/integration/test_us1_workflow.py`
-- [ ] T079 [P] [US1] Add integration test for FR-039 export retry without re-analysis in `tests/integration/test_us1_workflow.py`
+- [X] T024 [P] [US1] Add integration test for valid URL analysis end-to-end summary generation in `tests/integration/test_us1_workflow.py`
+- [X] T025 [P] [US1] Add integration test for invalid URL rejection before frame analysis in `tests/integration/test_us1_workflow.py`
+- [X] T026 [P] [US1] Add integration test for no-text header-only CSV plus user feedback message in `tests/integration/test_us1_workflow.py`
+- [X] T075 [P] [US1] Add integration test for analysis progress and completion feedback in `tests/integration/test_us1_workflow.py`
+- [X] T027 [P] [US1] Add OCR normalization tests for joined region text and line-break removal in `tests/unit/test_ocr_service.py`
+- [X] T028 [P] [US1] Add fuzzy substring search tests for context location within longer OCR strings in `tests/unit/test_ocr_service.py`
+- [X] T029 [P] [US1] Add boundary-clipped context matching tests for overlap and threshold paths in `tests/unit/test_ocr_service.py`
+- [X] T030 [P] [US1] Add extraction boundary tests for before-only/after-only/both markers in `tests/unit/test_ocr_service.py`
+- [X] T031 [P] [US1] Add deterministic pattern conflict resolution tests for FR-041 tie-break rules in `tests/unit/test_ocr_service.py`
+- [X] T032 [P] [US1] Add recall-first candidate preservation tests for FR-034 in `tests/unit/test_ocr_service.py`
+- [X] T077 [P] [US1] Add unit tests for FR-042 behavior when pattern filtering is disabled in `tests/unit/test_analysis_service.py`
+- [X] T033 [P] [US1] Add normalization and deduplication tests for FR-028/FR-029 in `tests/unit/test_analysis_service.py`
+- [X] T034 [P] [US1] Add appearance-event gap merge tests for FR-030 in `tests/unit/test_analysis_service.py`
+- [X] T035 [P] [US1] Add summary CSV schema and timestamp format tests for SC-004/SC-005 in `tests/unit/test_export_service.py`
+- [X] T078 [P] [US1] Add integration test for FR-040 no-confirmed-region analysis abort in `tests/integration/test_us1_workflow.py`
+- [X] T079 [P] [US1] Add integration test for FR-039 export retry without re-analysis in `tests/integration/test_us1_workflow.py`
 
 ### Implementation for User Story 1
 
-- [ ] T036 [US1] Implement OCR candidate collection pipeline over selected regions in `src/services/analysis_service.py`
-- [ ] T037 [US1] Enforce global pattern filter toggle behavior for matching/non-matching candidates in `src/services/analysis_service.py`
-- [ ] T038 [US1] Enforce fuzzy substring matching + extraction flow integration in `src/services/ocr_service.py`
-- [ ] T039 [US1] Apply deterministic tie-break rules for multi-pattern matches in `src/services/ocr_service.py`
-- [ ] T040 [US1] Preserve non-empty context-matched candidates through pre-aggregation stage in `src/services/analysis_service.py`
-- [ ] T041 [US1] Compute merged events and earliest per-name `StartTimestamp` in `src/services/analysis_service.py`
-- [ ] T042 [US1] Wire summary CSV export and header-only output handling in `src/services/export_service.py`
-- [ ] T043 [US1] Wire optional sidecar log record creation on accepted/rejected candidates in `src/services/logging.py`
-- [ ] T044 [US1] Preserve in-memory results after export failure and expose retry-export path in `src/main.py`
-- [ ] T045 [US1] Abort analysis start when region selection closes without confirmed region in `src/main.py`
-- [ ] T046 [US1] Wire frame iteration/timestamps/retry into analysis loop in `src/services/video_service.py`
+- [X] T036 [US1] Implement OCR candidate collection pipeline over selected regions in `src/services/analysis_service.py`
+- [X] T037 [US1] Enforce global pattern filter toggle behavior for matching/non-matching candidates in `src/services/analysis_service.py`
+- [X] T038 [US1] Enforce fuzzy substring matching + extraction flow integration in `src/services/ocr_service.py`
+- [X] T039 [US1] Apply deterministic tie-break rules for multi-pattern matches in `src/services/ocr_service.py`
+- [X] T040 [US1] Preserve non-empty context-matched candidates through pre-aggregation stage in `src/services/analysis_service.py`
+- [X] T041 [US1] Compute merged events and earliest per-name `StartTimestamp` in `src/services/analysis_service.py`
+- [X] T042 [US1] Wire summary CSV export and header-only output handling in `src/services/export_service.py`
+- [X] T043 [US1] Wire optional sidecar log record creation on accepted/rejected candidates in `src/services/logging.py`
+- [X] T044 [US1] Preserve in-memory results after export failure and expose retry-export path in `src/main.py`
+- [X] T045 [US1] Abort analysis start when region selection closes without confirmed region in `src/main.py`
+- [X] T046 [US1] Wire frame iteration/timestamps/retry into analysis loop in `src/services/video_service.py`
 
 **Checkpoint**: US1 is independently functional and testable.
 
@@ -103,30 +103,30 @@
 
 ### Tests for User Story 2
 
-- [ ] T047 [P] [US2] Add unit tests for URL entry and output-folder selection workflow in `tests/unit/test_main_window.py`
-- [ ] T048 [P] [US2] Add unit tests for auto-generated filename behavior and folder validation errors in `tests/unit/test_file_selector.py`
-- [ ] T049 [P] [US2] Add unit tests for advanced settings persistence across app restarts in `tests/unit/test_main_window.py`
-- [ ] T050 [P] [US2] Add unit tests for default settings state (filter on, logging off, default patterns) in `tests/unit/test_main_window.py`
-- [ ] T051 [P] [US2] Add unit tests for quality selector options/default/fallback warning messaging in `tests/unit/test_main_window.py`
-- [ ] T052 [P] [US2] Add unit tests for OCR sensitivity controls and low-quality reliability notice in `tests/unit/test_main_window.py`
-- [ ] T053 [P] [US2] Add unit tests for keyboard-only operation of core controls in `tests/unit/test_main_window.py`
-- [ ] T054 [P] [US2] Add unit tests for region selector scrollbar-only navigation in `tests/unit/test_region_selector.py`
-- [ ] T055 [P] [US2] Add unit tests for foreground popup and below-video instruction placement in `tests/unit/test_region_selector.py`
-- [ ] T056 [P] [US2] Add unit tests for FR-037 legibility constraints (font >=14px, contrast >=4.5:1, no overlap) in `tests/unit/test_region_selector.py`
-- [ ] T076 [P] [US2] Add unit test for FR-020 helper text visibility lifecycle in `tests/unit/test_region_selector.py`
-- [ ] T057 [P] [US2] Add unit test for FR-052 no logging-disabled warning/prompt behavior in `tests/unit/test_main.py`
-- [ ] T058 [US2] Add integration test for persisted settings + keyboard workflow in `tests/integration/test_us2_settings_workflow.py`
+- [X] T047 [P] [US2] Add unit tests for URL entry and output-folder selection workflow in `tests/unit/test_main_window.py`
+- [X] T048 [P] [US2] Add unit tests for auto-generated filename behavior and folder validation errors in `tests/unit/test_file_selector.py`
+- [X] T049 [P] [US2] Add unit tests for advanced settings persistence across app restarts in `tests/unit/test_main_window.py`
+- [X] T050 [P] [US2] Add unit tests for default settings state (filter on, logging off, default patterns) in `tests/unit/test_main_window.py`
+- [X] T051 [P] [US2] Add unit tests for quality selector options/default/fallback warning messaging in `tests/unit/test_main_window.py`
+- [X] T052 [P] [US2] Add unit tests for OCR sensitivity controls and low-quality reliability notice in `tests/unit/test_main_window.py`
+- [X] T053 [P] [US2] Add unit tests for keyboard-only operation of core controls in `tests/unit/test_main_window.py`
+- [X] T054 [P] [US2] Add unit tests for region selector scrollbar-only navigation in `tests/unit/test_region_selector.py`
+- [X] T055 [P] [US2] Add unit tests for foreground popup and below-video instruction placement in `tests/unit/test_region_selector.py`
+- [X] T056 [P] [US2] Add unit tests for FR-037 legibility constraints (font >=14px, contrast >=4.5:1, no overlap) in `tests/unit/test_region_selector.py`
+- [X] T076 [P] [US2] Add unit test for FR-020 helper text visibility lifecycle in `tests/unit/test_region_selector.py`
+- [X] T057 [P] [US2] Add unit test for FR-052 no logging-disabled warning/prompt behavior in `tests/unit/test_main.py`
+- [X] T058 [US2] Add integration test for persisted settings + keyboard workflow in `tests/integration/test_us2_settings_workflow.py`
 
 ### Implementation for User Story 2
 
-- [ ] T059 [US2] Implement URL input + validation status wiring in `src/components/url_input.py`
-- [ ] T060 [US2] Implement folder-only selector with actionable error messaging in `src/components/file_selector.py`
-- [ ] T061 [US2] Implement advanced settings UI for context patterns/filter/logging/sensitivity in `src/components/main_window.py`
-- [ ] T062 [US2] Implement quality selector UI with fixed levels (`best`,`720p`,`480p`,`360p`) in `src/components/main_window.py`
-- [ ] T063 [US2] Implement keyboard shortcut/focus behavior for core workflow controls in `src/components/main_window.py`
-- [ ] T064 [US2] Enforce non-overlapping label/control layout at minimum supported size in `src/components/main_window.py`
-- [ ] T065 [US2] Implement region selector foreground behavior, dedicated instruction panel below video, and scrollbar-only navigation in `src/components/region_selector.py`
-- [ ] T066 [US2] Wire settings load/save lifecycle and startup defaults in `src/main.py`
+- [X] T059 [US2] Implement URL input + validation status wiring in `src/components/url_input.py`
+- [X] T060 [US2] Implement folder-only selector with actionable error messaging in `src/components/file_selector.py`
+- [X] T061 [US2] Implement advanced settings UI for context patterns/filter/logging/sensitivity in `src/components/main_window.py`
+- [X] T062 [US2] Implement quality selector UI with fixed levels (`best`,`720p`,`480p`,`360p`) in `src/components/main_window.py`
+- [X] T063 [US2] Implement keyboard shortcut/focus behavior for core workflow controls in `src/components/main_window.py`
+- [X] T064 [US2] Enforce non-overlapping label/control layout at minimum supported size in `src/components/main_window.py`
+- [X] T065 [US2] Implement region selector foreground behavior, dedicated instruction panel below video, and scrollbar-only navigation in `src/components/region_selector.py`
+- [X] T066 [US2] Wire settings load/save lifecycle and startup defaults in `src/main.py`
 
 **Checkpoint**: US2 is independently functional and testable.
 
@@ -136,14 +136,14 @@
 
 **Purpose**: Final hardening, packaging, and traceability validations.
 
-- [ ] T067 Add integration performance validation for SC-001 in `tests/integration/test_performance_sc001.py`
-- [ ] T068 [P] Add integration validation for summary CSV schema/encoding/timestamp criteria in `tests/integration/test_output_schema_sc004_sc005.py`
-- [ ] T069 [P] Add integration validation for FR-049 sidecar log schema and acceptance/rejection constraints in `tests/integration/test_log_schema_fr049.py`
-- [ ] T070 [P] Add integration validation for FR-050 (no log file when logging disabled) in `tests/integration/test_log_schema_fr049.py`
-- [ ] T071 [P] Add integration validation for FR-010/FR-011/FR-012/FR-013 release bundle contents in `tests/integration/test_release_bundle_fr010_fr013.py`
-- [ ] T072 [P] Add integration validation for FR-014 unsigned packaging success and optional signing path in `tests/integration/test_release_signing_fr014.py`
-- [ ] T073 Validate quickstart walkthrough against implemented behavior in `specs/001-youtube-text-analyzer/quickstart.md`
-- [ ] T074 Run full regression and lint gates (`pytest`, `ruff check`) and record results in `README.md`
+- [X] T067 Add integration performance validation for SC-001 in `tests/integration/test_performance_sc001.py`
+- [X] T068 [P] Add integration validation for summary CSV schema/encoding/timestamp criteria in `tests/integration/test_output_schema_sc004_sc005.py`
+- [X] T069 [P] Add integration validation for FR-049 sidecar log schema and acceptance/rejection constraints in `tests/integration/test_log_schema_fr049.py`
+- [X] T070 [P] Add integration validation for FR-050 (no log file when logging disabled) in `tests/integration/test_log_schema_fr049.py`
+- [X] T071 [P] Add integration validation for FR-010/FR-011/FR-012/FR-013 release bundle contents in `tests/integration/test_release_bundle_fr010_fr013.py`
+- [X] T072 [P] Add integration validation for FR-014 unsigned packaging success and optional signing path in `tests/integration/test_release_signing_fr014.py`
+- [X] T073 Validate quickstart walkthrough against implemented behavior in `specs/001-youtube-text-analyzer/quickstart.md`
+- [X] T074 Run full regression and lint gates (`pytest`, `ruff check`) and record results in `README.md`
 
 ---
 

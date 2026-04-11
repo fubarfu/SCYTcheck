@@ -14,7 +14,9 @@ def test_sc001_analysis_of_ten_minute_video_completes_within_target() -> None:
     video_service = Mock(spec=VideoService)
     frames = [np.zeros((720, 1280, 3), dtype=np.uint8) for _ in range(10)]
 
-    def iterate_frames_with_timestamps(url: str, start_time: float, end_time: float, fps: int, quality: str = "best"):
+    def iterate_frames_with_timestamps(
+        url: str, start_time: float, end_time: float, fps: int, quality: str = "best"
+    ):
         del url, end_time, fps
         for index, frame in enumerate(frames):
             yield start_time + (index * 60.0), frame

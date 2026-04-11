@@ -28,4 +28,10 @@ def test_fr049_sidecar_log_uses_fixed_expanded_schema(tmp_path) -> None:
 
     lines = output.read_text(encoding="utf-8").splitlines()
     assert lines[0] == ",".join(LOG_HEADERS)
-    assert lines[1] == "00:00:01.234,Player: Alice,true,,Alice,region-1,pattern-1,alice,1,00:00:01.234,00:00:03.000,10:20:100:50"
+    assert (
+        lines[1]
+        == (
+            "00:00:01.234,Player: Alice,true,,Alice,region-1,pattern-1,"
+            "alice,1,00:00:01.234,00:00:03.000,10:20:100:50"
+        )
+    )

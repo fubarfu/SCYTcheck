@@ -41,7 +41,9 @@ def test_load_config_discovers_scoop_tesseract(monkeypatch, tmp_path: Path) -> N
 
 def test_advanced_settings_roundtrip_includes_video_quality_and_logging(tmp_path: Path) -> None:
     settings = AdvancedSettings(
-        context_patterns=[{"id": "p1", "before_text": None, "after_text": "joined", "enabled": True}],
+        context_patterns=[
+            {"id": "p1", "before_text": None, "after_text": "joined", "enabled": True}
+        ],
         filter_non_matching=False,
         event_gap_threshold_sec=2.0,
         ocr_confidence_threshold=33,

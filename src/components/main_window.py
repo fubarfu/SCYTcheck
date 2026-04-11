@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import tkinter as tk
-from datetime import datetime
 from tkinter import ttk
 
 from src.components.file_selector import FileSelector
@@ -48,9 +47,7 @@ class MainWindow:
 
         # Auto-generated filename preview (folder-only output workflow)
         self.filename_label = ttk.Label(
-            container,
-            text="Output Filename",
-            font=("TkDefaultFont", 9, "bold")
+            container, text="Output Filename", font=("TkDefaultFont", 9, "bold")
         )
         self.filename_label.grid(row=3, column=0, sticky="w", pady=(12, 2))
 
@@ -58,12 +55,14 @@ class MainWindow:
             container,
             text="(Filename will be generated from YouTube video ID)",
             foreground="gray",
-            font=("TkDefaultFont", 9)
+            font=("TkDefaultFont", 9),
         )
         self.filename_display.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(0, 0))
 
         # Advanced settings section (separate from primary workflow controls)
-        self.advanced_settings_frame = ttk.LabelFrame(container, text="Advanced Settings", padding=8)
+        self.advanced_settings_frame = ttk.LabelFrame(
+            container, text="Advanced Settings", padding=8
+        )
         self.advanced_settings_frame.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(12, 0))
         self.advanced_settings_frame.columnconfigure(0, weight=1)
         self.advanced_settings_frame.columnconfigure(1, weight=0)
@@ -114,7 +113,9 @@ class MainWindow:
         )
         self.logging_enabled_check.grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
-        self.event_gap_label = ttk.Label(self.advanced_settings_frame, text="Event merge gap (seconds)")
+        self.event_gap_label = ttk.Label(
+            self.advanced_settings_frame, text="Event merge gap (seconds)"
+        )
         self.event_gap_label.grid(row=4, column=0, sticky="w", pady=(8, 0))
 
         self.event_gap_var = tk.DoubleVar(value=1.0)
@@ -128,7 +129,9 @@ class MainWindow:
         )
         self.event_gap_spinbox.grid(row=4, column=1, sticky="w", pady=(8, 0))
 
-        self.ocr_sensitivity_label = ttk.Label(self.advanced_settings_frame, text="OCR sensitivity (confidence 0-100)")
+        self.ocr_sensitivity_label = ttk.Label(
+            self.advanced_settings_frame, text="OCR sensitivity (confidence 0-100)"
+        )
         self.ocr_sensitivity_label.grid(row=5, column=0, sticky="w", pady=(8, 0))
 
         self.ocr_confidence_var = tk.IntVar(value=40)
@@ -145,7 +148,8 @@ class MainWindow:
         self.low_quality_guidance = ttk.Label(
             self.advanced_settings_frame,
             text=(
-                "Low-quality videos can reduce OCR reliability. Lower confidence to improve recall, "
+                "Low-quality videos can reduce OCR reliability. "
+                "Lower confidence to improve recall, "
                 "or raise it to reduce false positives."
             ),
             foreground="gray",
@@ -218,7 +222,12 @@ class MainWindow:
         patterns = self._parse_pattern_lines(raw_patterns)
         if not patterns:
             patterns = [
-                {"id": "default-joined", "before_text": None, "after_text": "joined", "enabled": True},
+                {
+                    "id": "default-joined",
+                    "before_text": None,
+                    "after_text": "joined",
+                    "enabled": True,
+                },
                 {
                     "id": "default-connected",
                     "before_text": None,
@@ -232,7 +241,9 @@ class MainWindow:
             filter_non_matching=bool(self.filter_non_matching_var.get()),
             event_gap_threshold_sec=float(self.event_gap_var.get()),
             ocr_confidence_threshold=int(max(0, min(int(self.ocr_confidence_var.get()), 100))),
-            video_quality=str(getattr(self, "video_quality_var", _FallbackVar("best")).get() or "best"),
+            video_quality=str(
+                getattr(self, "video_quality_var", _FallbackVar("best")).get() or "best"
+            ),
             logging_enabled=bool(getattr(self, "logging_enabled_var", _FallbackVar(False)).get()),
         )
 
@@ -249,8 +260,12 @@ class MainWindow:
         self.filter_non_matching_var.set(bool(settings.filter_non_matching))
         self.event_gap_var.set(float(settings.event_gap_threshold_sec))
         self.ocr_confidence_var.set(int(max(0, min(int(settings.ocr_confidence_threshold), 100))))
-        getattr(self, "video_quality_var", _FallbackVar("best")).set(str(settings.video_quality or "best"))
-        getattr(self, "logging_enabled_var", _FallbackVar(False)).set(bool(settings.logging_enabled))
+        getattr(self, "video_quality_var", _FallbackVar("best")).set(
+            str(settings.video_quality or "best")
+        )
+        getattr(self, "logging_enabled_var", _FallbackVar(False)).set(
+            bool(settings.logging_enabled)
+        )
 
     def _on_url_changed(self, _event: object | None = None) -> None:
         self.update_filename_display()
@@ -262,21 +277,17 @@ class MainWindow:
 
         if not url:
             self.filename_display.configure(
-                text="(Enter a YouTube URL to generate filename)",
-                foreground="gray"
+                text="(Enter a YouTube URL to generate filename)", foreground="gray"
             )
             return
 
         try:
             filename = ExportService.generate_filename(url)
-            self.filename_display.configure(
-                text=filename,
-                foreground="black"
-            )
+            self.filename_display.configure(text=filename, foreground="black")
         except ValueError:
             self.filename_display.configure(
                 text="(Invalid YouTube URL - filename will be generated from valid URL)",
-                foreground="orange"
+                foreground="orange",
             )
 
     def set_status(self, value: str) -> None:
@@ -293,7 +304,11 @@ class MainWindow:
             self.retry_export_button.configure(command=command, state="normal")
 
     def _on_analyze_shortcut(self, _event=None):
-        command = self.analyze_button.options.get("command") if hasattr(self.analyze_button, "options") else None
+        command = (
+            self.analyze_button.options.get("command")
+            if hasattr(self.analyze_button, "options")
+            else None
+        )
         if command is None:
             try:
                 self.analyze_button.invoke()

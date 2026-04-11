@@ -234,7 +234,9 @@ def test_apply_advanced_settings_keeps_selected_video_quality() -> None:
 
     window.apply_advanced_settings(
         AdvancedSettings(
-            context_patterns=[{"id": "default", "before_text": None, "after_text": "joined", "enabled": True}],
+            context_patterns=[
+                {"id": "default", "before_text": None, "after_text": "joined", "enabled": True}
+            ],
             video_quality="720p",
             logging_enabled=False,
         )
@@ -246,16 +248,24 @@ def test_apply_advanced_settings_keeps_selected_video_quality() -> None:
 def test_update_filename_display_with_valid_url() -> None:
     window = _make_window_stub()
 
-    with patch("src.components.main_window.ExportService.generate_filename", return_value="scytcheck_test.csv"):
+    with patch(
+        "src.components.main_window.ExportService.generate_filename",
+        return_value="scytcheck_test.csv",
+    ):
         window.update_filename_display("https://youtube.com/watch?v=test")
 
-    window.filename_display.configure.assert_called_with(text="scytcheck_test.csv", foreground="black")
+    window.filename_display.configure.assert_called_with(
+        text="scytcheck_test.csv", foreground="black"
+    )
 
 
 def test_update_filename_display_with_invalid_url() -> None:
     window = _make_window_stub()
 
-    with patch("src.components.main_window.ExportService.generate_filename", side_effect=ValueError("bad url")):
+    with patch(
+        "src.components.main_window.ExportService.generate_filename",
+        side_effect=ValueError("bad url"),
+    ):
         window.update_filename_display("not-a-url")
 
     window.filename_display.configure.assert_called_with(
@@ -265,46 +275,62 @@ def test_update_filename_display_with_invalid_url() -> None:
 
 
 def test_layout_labels_do_not_overlap_controls_at_min_window_size() -> None:
-    with patch("src.components.main_window.URLInput", _URLInputStub), patch(
-        "src.components.main_window.FileSelector", _FileSelectorStub
-    ), patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub), patch(
-        "src.components.main_window.ttk.Frame", _WidgetStub
-    ), patch("src.components.main_window.ttk.LabelFrame", _WidgetStub), patch(
-        "src.components.main_window.ttk.Label", _WidgetStub
-    ), patch("src.components.main_window.ttk.Button", _WidgetStub), patch(
-        "src.components.main_window.ttk.Checkbutton", _WidgetStub
-    ), patch("src.components.main_window.ttk.Spinbox", _WidgetStub), patch(
-        "src.components.main_window.tk.Text", _WidgetStub
-    ), patch("src.components.main_window.tk.BooleanVar", _VarStub), patch(
-        "src.components.main_window.tk.DoubleVar", _VarStub
-    ), patch("src.components.main_window.tk.IntVar", _VarStub):
+    with (
+        patch("src.components.main_window.URLInput", _URLInputStub),
+        patch("src.components.main_window.FileSelector", _FileSelectorStub),
+        patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub),
+        patch("src.components.main_window.ttk.Frame", _WidgetStub),
+        patch("src.components.main_window.ttk.LabelFrame", _WidgetStub),
+        patch("src.components.main_window.ttk.Label", _WidgetStub),
+        patch("src.components.main_window.ttk.Button", _WidgetStub),
+        patch("src.components.main_window.ttk.Checkbutton", _WidgetStub),
+        patch("src.components.main_window.ttk.Spinbox", _WidgetStub),
+        patch("src.components.main_window.tk.Text", _WidgetStub),
+        patch("src.components.main_window.tk.BooleanVar", _VarStub),
+        patch("src.components.main_window.tk.DoubleVar", _VarStub),
+        patch("src.components.main_window.tk.IntVar", _VarStub),
+    ):
         window = MainWindow(_RootStub())
 
     assert window.url_input.label.grid_kwargs["row"] < window.url_input.entry.grid_kwargs["row"]
-    assert window.file_selector.label.grid_kwargs["row"] < window.file_selector.entry.grid_kwargs["row"]
+    assert (
+        window.file_selector.label.grid_kwargs["row"]
+        < window.file_selector.entry.grid_kwargs["row"]
+    )
     assert window.filename_label.grid_kwargs["row"] < window.filename_display.grid_kwargs["row"]
     assert window.event_gap_label.grid_kwargs["row"] == window.event_gap_spinbox.grid_kwargs["row"]
-    assert window.event_gap_label.grid_kwargs["column"] < window.event_gap_spinbox.grid_kwargs["column"]
-    assert window.ocr_sensitivity_label.grid_kwargs["row"] == window.ocr_sensitivity_spinbox.grid_kwargs["row"]
-    assert window.ocr_sensitivity_label.grid_kwargs["column"] < window.ocr_sensitivity_spinbox.grid_kwargs["column"]
+    assert (
+        window.event_gap_label.grid_kwargs["column"]
+        < window.event_gap_spinbox.grid_kwargs["column"]
+    )
+    assert (
+        window.ocr_sensitivity_label.grid_kwargs["row"]
+        == window.ocr_sensitivity_spinbox.grid_kwargs["row"]
+    )
+    assert (
+        window.ocr_sensitivity_label.grid_kwargs["column"]
+        < window.ocr_sensitivity_spinbox.grid_kwargs["column"]
+    )
 
 
 def test_primary_workflow_controls_and_shortcuts_are_wired() -> None:
-    with patch("src.components.main_window.URLInput", _URLInputStub), patch(
-        "src.components.main_window.FileSelector", _FileSelectorStub
-    ), patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub), patch(
-        "src.components.main_window.ttk.Frame", _WidgetStub
-    ), patch("src.components.main_window.ttk.LabelFrame", _WidgetStub), patch(
-        "src.components.main_window.ttk.Label", _WidgetStub
-    ), patch("src.components.main_window.ttk.Button", _WidgetStub), patch(
-        "src.components.main_window.ttk.Checkbutton", _WidgetStub
-    ), patch("src.components.main_window.ttk.Combobox", _WidgetStub), patch(
-        "src.components.main_window.ttk.Spinbox", _WidgetStub
-    ), patch("src.components.main_window.tk.Text", _WidgetStub), patch(
-        "src.components.main_window.tk.BooleanVar", _VarStub
-    ), patch("src.components.main_window.tk.DoubleVar", _VarStub), patch(
-        "src.components.main_window.tk.IntVar", _VarStub
-    ), patch("src.components.main_window.tk.StringVar", _VarStub):
+    with (
+        patch("src.components.main_window.URLInput", _URLInputStub),
+        patch("src.components.main_window.FileSelector", _FileSelectorStub),
+        patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub),
+        patch("src.components.main_window.ttk.Frame", _WidgetStub),
+        patch("src.components.main_window.ttk.LabelFrame", _WidgetStub),
+        patch("src.components.main_window.ttk.Label", _WidgetStub),
+        patch("src.components.main_window.ttk.Button", _WidgetStub),
+        patch("src.components.main_window.ttk.Checkbutton", _WidgetStub),
+        patch("src.components.main_window.ttk.Combobox", _WidgetStub),
+        patch("src.components.main_window.ttk.Spinbox", _WidgetStub),
+        patch("src.components.main_window.tk.Text", _WidgetStub),
+        patch("src.components.main_window.tk.BooleanVar", _VarStub),
+        patch("src.components.main_window.tk.DoubleVar", _VarStub),
+        patch("src.components.main_window.tk.IntVar", _VarStub),
+        patch("src.components.main_window.tk.StringVar", _VarStub),
+    ):
         root = _RootStub()
         window = MainWindow(root)
 
@@ -325,21 +351,26 @@ def test_primary_workflow_controls_and_shortcuts_are_wired() -> None:
 
 
 def test_low_quality_guidance_text_is_visible() -> None:
-    with patch("src.components.main_window.URLInput", _URLInputStub), patch(
-        "src.components.main_window.FileSelector", _FileSelectorStub
-    ), patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub), patch(
-        "src.components.main_window.ttk.Frame", _WidgetStub
-    ), patch("src.components.main_window.ttk.LabelFrame", _WidgetStub), patch(
-        "src.components.main_window.ttk.Label", _WidgetStub
-    ), patch("src.components.main_window.ttk.Button", _WidgetStub), patch(
-        "src.components.main_window.ttk.Checkbutton", _WidgetStub
-    ), patch("src.components.main_window.ttk.Combobox", _WidgetStub), patch(
-        "src.components.main_window.ttk.Spinbox", _WidgetStub
-    ), patch("src.components.main_window.tk.Text", _WidgetStub), patch(
-        "src.components.main_window.tk.BooleanVar", _VarStub
-    ), patch("src.components.main_window.tk.DoubleVar", _VarStub), patch(
-        "src.components.main_window.tk.IntVar", _VarStub
-    ), patch("src.components.main_window.tk.StringVar", _VarStub):
+    with (
+        patch("src.components.main_window.URLInput", _URLInputStub),
+        patch("src.components.main_window.FileSelector", _FileSelectorStub),
+        patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub),
+        patch("src.components.main_window.ttk.Frame", _WidgetStub),
+        patch("src.components.main_window.ttk.LabelFrame", _WidgetStub),
+        patch("src.components.main_window.ttk.Label", _WidgetStub),
+        patch("src.components.main_window.ttk.Button", _WidgetStub),
+        patch("src.components.main_window.ttk.Checkbutton", _WidgetStub),
+        patch("src.components.main_window.ttk.Combobox", _WidgetStub),
+        patch("src.components.main_window.ttk.Spinbox", _WidgetStub),
+        patch("src.components.main_window.tk.Text", _WidgetStub),
+        patch("src.components.main_window.tk.BooleanVar", _VarStub),
+        patch("src.components.main_window.tk.DoubleVar", _VarStub),
+        patch("src.components.main_window.tk.IntVar", _VarStub),
+        patch("src.components.main_window.tk.StringVar", _VarStub),
+    ):
         window = MainWindow(_RootStub())
 
-    assert "Low-quality videos can reduce OCR reliability" in window.low_quality_guidance.options["text"]
+    assert (
+        "Low-quality videos can reduce OCR reliability"
+        in window.low_quality_guidance.options["text"]
+    )

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 import os
 import shutil
+from collections.abc import Iterator
 
 import cv2
 from yt_dlp import YoutubeDL
@@ -24,23 +24,31 @@ class VideoService:
     @staticmethod
     def _is_supported_youtube_url(url: str) -> bool:
         lowered = url.lower().strip()
-        return (
-            "youtube.com/watch?v=" in lowered
-            or "youtu.be/" in lowered
-        )
+        return "youtube.com/watch?v=" in lowered or "youtu.be/" in lowered
 
     # Map UI quality labels to yt-dlp format selectors.
     # Prefer mp4 for OpenCV compatibility; fall through to any format as a last resort.
     _QUALITY_FORMAT_MAP: dict[str, str] = {
         "best": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-        "720p": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]/best",
-        "480p": "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best[height<=480]/best",
-        "360p": "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best[height<=360]/best",
+        "720p": (
+            "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
+            "best[height<=720][ext=mp4]/best[height<=720]/best"
+        ),
+        "480p": (
+            "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/"
+            "best[height<=480][ext=mp4]/best[height<=480]/best"
+        ),
+        "360p": (
+            "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/"
+            "best[height<=360][ext=mp4]/best[height<=360]/best"
+        ),
     }
 
     @staticmethod
     def _build_ydl_opts(quality: str = "best") -> dict[str, object]:
-        fmt = VideoService._QUALITY_FORMAT_MAP.get(quality, VideoService._QUALITY_FORMAT_MAP["best"])
+        fmt = VideoService._QUALITY_FORMAT_MAP.get(
+            quality, VideoService._QUALITY_FORMAT_MAP["best"]
+        )
         ydl_opts: dict[str, object] = {
             "quiet": True,
             "skip_download": True,
@@ -95,7 +103,7 @@ class VideoService:
         stream_url = info.get("url")
         if not stream_url:
             # Merged formats (e.g. bestvideo+bestaudio) store the URL inside requested_formats.
-            for fmt in (info.get("requested_formats") or []):
+            for fmt in info.get("requested_formats") or []:
                 if fmt.get("url"):
                     stream_url = fmt["url"]
                     break
@@ -131,7 +139,9 @@ class VideoService:
                 return frame
             except Exception as exc:
                 last_error = exc
-        raise VideoAccessError(str(last_error) if last_error else "Could not retrieve frame from requested timestamp.")
+        raise VideoAccessError(
+            str(last_error) if last_error else "Could not retrieve frame from requested timestamp."
+        )
 
     def open_stream(self, url: str, quality: str = "best") -> cv2.VideoCapture:
         """Open and return a persistent VideoCapture for repeated seeks (e.g. region selector).
@@ -159,7 +169,9 @@ class VideoService:
     def get_frames_in_range(
         self, url: str, start_time: float, end_time: float, fps: int, quality: str = "best"
     ) -> Iterator:
-        for _, frame in self.iterate_frames_with_timestamps(url, start_time, end_time, fps, quality=quality):
+        for _, frame in self.iterate_frames_with_timestamps(
+            url, start_time, end_time, fps, quality=quality
+        ):
             yield frame
 
     def iterate_frames_with_timestamps(

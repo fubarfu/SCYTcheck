@@ -1,7 +1,9 @@
-from src.services.ocr_service import OCRService
-from src.data.models import ContextPattern
-import numpy as np
 from unittest.mock import patch
+
+import numpy as np
+
+from src.data.models import ContextPattern
+from src.services.ocr_service import OCRService
 
 
 def test_extract_with_boundaries_before_only() -> None:
@@ -127,6 +129,8 @@ def test_detect_text_with_diagnostics_reports_low_confidence() -> None:
 
     assert tokens == ["Bob"]
     assert any(
-        row["raw_string"] == "Alice" and row["accepted"] is False and row["rejection_reason"] == "low_confidence"
+        row["raw_string"] == "Alice"
+        and row["accepted"] is False
+        and row["rejection_reason"] == "low_confidence"
         for row in diagnostics
     )

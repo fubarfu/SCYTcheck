@@ -1,8 +1,9 @@
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
-from src.data.models import PlayerSummary, VideoAnalysis
-from src.data.models import ContextPattern
+import pytest
+
+from src.data.models import ContextPattern, PlayerSummary, VideoAnalysis
 from src.services.export_service import ExportService
 
 
@@ -20,16 +21,22 @@ def test_export_to_csv_writes_header_only_when_no_summaries(tmp_path: Path) -> N
 def test_extract_youtube_video_id() -> None:
     """Test video ID extraction from various YouTube URL formats."""
     service = ExportService()
-    
+
     # Standard youtube.com URL
-    assert service.extract_youtube_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ") == "dQw4w9WgXcQ"
-    
+    assert (
+        service.extract_youtube_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        == "dQw4w9WgXcQ"
+    )
+
     # youtube.com URL with additional parameters
-    assert service.extract_youtube_video_id("https://youtube.com/watch?v=abc123&t=10s&list=xyz") == "abc123"
-    
+    assert (
+        service.extract_youtube_video_id("https://youtube.com/watch?v=abc123&t=10s&list=xyz")
+        == "abc123"
+    )
+
     # youtu.be short URL
     assert service.extract_youtube_video_id("https://youtu.be/shorturl123") == "shorturl123"
-    
+
     # youtu.be with query parameters
     assert service.extract_youtube_video_id("https://youtu.be/vid456?t=5") == "vid456"
 
@@ -37,48 +44,44 @@ def test_extract_youtube_video_id() -> None:
 def test_extract_youtube_video_id_invalid() -> None:
     """Test that invalid URLs raise ValueError."""
     service = ExportService()
-    
-    try:
+
+    with pytest.raises(ValueError):
         service.extract_youtube_video_id("https://example.com/video")
-        assert False, "Should raise ValueError for non-YouTube URL"
-    except ValueError:
-        pass
-    
-    try:
+
+    with pytest.raises(ValueError):
         service.extract_youtube_video_id("https://youtube.com/channel/UCxyz")
-        assert False, "Should raise ValueError for non-watch URL"
-    except ValueError:
-        pass
 
 
 def test_generate_filename() -> None:
     """Test auto-filename generation with various inputs."""
     service = ExportService()
     test_time = datetime(2026, 4, 11, 14, 30, 45)
-    
+
     # Basic youtube.com URL
     filename = service.generate_filename("https://youtube.com/watch?v=test123", test_time)
     assert filename == "scytcheck_test123_20260411-143045.csv"
-    
+
     # youtu.be short URL
     filename = service.generate_filename("https://youtu.be/vid456", test_time)
     assert filename == "scytcheck_vid456_20260411-143045.csv"
-    
+
     # URL with query parameters
-    filename = service.generate_filename("https://youtube.com/watch?v=abc&t=10s&list=xyz", test_time)
+    filename = service.generate_filename(
+        "https://youtube.com/watch?v=abc&t=10s&list=xyz", test_time
+    )
     assert filename == "scytcheck_abc_20260411-143045.csv"
 
 
 def test_generate_filename_uses_current_time_when_not_specified() -> None:
     """Test that generate_filename uses current time by default."""
     service = ExportService()
-    
+
     filename = service.generate_filename("https://youtube.com/watch?v=testid")
-    
+
     # Should contain video ID and timestamp format
     assert "scytcheck_testid_" in filename
     assert filename.endswith(".csv")
-    
+
     # Check timestamp format YYYYMMDD-HHMMSS
     parts = filename.replace("scytcheck_", "").replace(".csv", "").split("_")
     timestamp_part = parts[-1]
@@ -121,4 +124,3 @@ def test_export_to_csv_writes_header_only_summary_when_no_text_detected(tmp_path
     lines = exported.read_text(encoding="utf-8").splitlines()
 
     assert lines == ["PlayerName,StartTimestamp"]
-

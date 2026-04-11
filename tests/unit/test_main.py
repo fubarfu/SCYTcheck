@@ -4,9 +4,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import src.main as app_main
 from src.config import AdvancedSettings, AppConfig
 from src.data.models import ContextPattern, PlayerSummary, VideoAnalysis
-import src.main as app_main
 
 
 class _FakeButton:
@@ -27,7 +27,9 @@ class _FakeRoot:
 
 
 class _FakeWindow:
-    def __init__(self, root: _FakeRoot, url: str, output_folder: str, settings: AdvancedSettings) -> None:
+    def __init__(
+        self, root: _FakeRoot, url: str, output_folder: str, settings: AdvancedSettings
+    ) -> None:
         self.root = root
         self.root.window = self
         self.url_input = SimpleNamespace(get=lambda: url)
@@ -52,7 +54,9 @@ def _run_main_once(
     window_holder: dict[str, _FakeWindow] = {}
 
     settings = AdvancedSettings(
-        context_patterns=[{"id": "pattern-1", "before_text": "Player:", "after_text": None, "enabled": True}],
+        context_patterns=[
+            {"id": "pattern-1", "before_text": "Player:", "after_text": None, "enabled": True}
+        ],
         filter_non_matching=True,
         event_gap_threshold_sec=1.5,
         ocr_confidence_threshold=12,
@@ -85,19 +89,24 @@ def _run_main_once(
         window_holder["window"] = window
         return window
 
-    with patch("src.main.load_config", return_value=AppConfig(sample_fps=1, confidence_threshold=40, tesseract_cmd=None)), patch(
-        "src.main.configure_logging", return_value=logger
-    ), patch("src.main.VideoService", return_value=video_service), patch(
-        "src.main.OCRService", return_value=ocr_service
-    ), patch("src.main.AnalysisService", return_value=analysis_service), patch(
-        "src.main.ExportService", return_value=export_service
-    ), patch("src.main.RegionSelector", return_value=region_selector), patch(
-        "src.main.tk.Tk", return_value=root
-    ), patch("src.main.MainWindow", side_effect=make_window), patch(
-        "src.main.load_advanced_settings", return_value=settings
-    ) as load_settings, patch("src.main.save_advanced_settings") as save_settings, patch(
-        "src.main.messagebox.showinfo"
-    ) as show_info, patch("src.main.messagebox.showerror") as show_error:
+    with (
+        patch(
+            "src.main.load_config",
+            return_value=AppConfig(sample_fps=1, confidence_threshold=40, tesseract_cmd=None),
+        ),
+        patch("src.main.configure_logging", return_value=logger),
+        patch("src.main.VideoService", return_value=video_service),
+        patch("src.main.OCRService", return_value=ocr_service),
+        patch("src.main.AnalysisService", return_value=analysis_service),
+        patch("src.main.ExportService", return_value=export_service),
+        patch("src.main.RegionSelector", return_value=region_selector),
+        patch("src.main.tk.Tk", return_value=root),
+        patch("src.main.MainWindow", side_effect=make_window),
+        patch("src.main.load_advanced_settings", return_value=settings) as load_settings,
+        patch("src.main.save_advanced_settings") as save_settings,
+        patch("src.main.messagebox.showinfo") as show_info,
+        patch("src.main.messagebox.showerror") as show_error,
+    ):
         app_main.main()
         retry_command = window_holder["window"].retry_export_button.command
         if trigger_retry and retry_command is not None:
@@ -218,7 +227,9 @@ def test_main_retries_export_without_rerunning_analysis(tmp_path: Path) -> None:
     assert result["analysis_service"].analyze.call_count == 1
     assert result["export_service"].export_to_csv.call_count == 2
     result["show_error"].assert_called_once_with("Export Error", "file is locked")
-    result["show_info"].assert_called_once_with("Export Complete", f"CSV exported to:\n{tmp_path / 'out.csv'}")
+    result["show_info"].assert_called_once_with(
+        "Export Complete", f"CSV exported to:\n{tmp_path / 'out.csv'}"
+    )
 
 
 def test_main_uses_selected_region_time_as_analysis_start(tmp_path: Path) -> None:

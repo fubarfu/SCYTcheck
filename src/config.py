@@ -7,7 +7,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-
 SETTINGS_FILE = "scytcheck_settings.json"
 
 
@@ -27,7 +26,9 @@ def _candidate_tesseract_paths() -> list[Path]:
 
     user_profile = os.getenv("USERPROFILE")
     if user_profile:
-        candidates.append(Path(user_profile) / "scoop" / "apps" / "tesseract" / "current" / "tesseract.exe")
+        candidates.append(
+            Path(user_profile) / "scoop" / "apps" / "tesseract" / "current" / "tesseract.exe"
+        )
 
     local_app_data = os.getenv("LOCALAPPDATA")
     if local_app_data:
@@ -155,7 +156,9 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
     return AdvancedSettings(
         context_patterns=list(payload.get("context_patterns", defaults.context_patterns)),
         filter_non_matching=bool(payload.get("filter_non_matching", defaults.filter_non_matching)),
-        event_gap_threshold_sec=float(payload.get("event_gap_threshold_sec", defaults.event_gap_threshold_sec)),
+        event_gap_threshold_sec=float(
+            payload.get("event_gap_threshold_sec", defaults.event_gap_threshold_sec)
+        ),
         ocr_confidence_threshold=int(
             max(
                 0,
@@ -179,7 +182,9 @@ def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = No
                 "context_patterns": settings.context_patterns,
                 "filter_non_matching": settings.filter_non_matching,
                 "event_gap_threshold_sec": settings.event_gap_threshold_sec,
-                "ocr_confidence_threshold": int(max(0, min(settings.ocr_confidence_threshold, 100))),
+                "ocr_confidence_threshold": int(
+                    max(0, min(settings.ocr_confidence_threshold, 100))
+                ),
                 "video_quality": settings.video_quality,
                 "logging_enabled": settings.logging_enabled,
             },

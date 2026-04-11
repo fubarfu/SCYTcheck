@@ -237,11 +237,16 @@ class OCRService:
 
                 if meta:
                     extracted, start_pos, span_len = meta
-                    matched_candidates.append((extracted, pattern.id, span_len, start_pos, pattern_index))
+                    matched_candidates.append(
+                        (extracted, pattern.id, span_len, start_pos, pattern_index)
+                    )
 
             if matched_candidates:
-                # Deterministic conflict resolution: longest span, then earliest start, then pattern order.
-                selected = sorted(matched_candidates, key=lambda item: (-item[2], item[3], item[4]))[0]
+                # Deterministic conflict resolution:
+                # longest span, then earliest start, then pattern order.
+                selected = sorted(
+                    matched_candidates, key=lambda item: (-item[2], item[3], item[4])
+                )[0]
                 extracted_name = selected[0].strip()
                 decisions.append(
                     {

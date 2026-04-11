@@ -212,21 +212,23 @@ def test_low_quality_warning_and_sensitivity_tuning_flow(tmp_path) -> None:
 
 def test_keyboard_only_main_workflow_shortcuts(tmp_path) -> None:
     del tmp_path
-    with patch("src.components.main_window.URLInput", _URLInputStub), patch(
-        "src.components.main_window.FileSelector", _FileSelectorStub
-    ), patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub), patch(
-        "src.components.main_window.ttk.Frame", _WidgetStub
-    ), patch("src.components.main_window.ttk.LabelFrame", _WidgetStub), patch(
-        "src.components.main_window.ttk.Label", _WidgetStub
-    ), patch("src.components.main_window.ttk.Button", _WidgetStub), patch(
-        "src.components.main_window.ttk.Checkbutton", _WidgetStub
-    ), patch("src.components.main_window.ttk.Combobox", _WidgetStub), patch(
-        "src.components.main_window.ttk.Spinbox", _WidgetStub
-    ), patch("src.components.main_window.tk.Text", _WidgetStub), patch(
-        "src.components.main_window.tk.BooleanVar", _VarStub
-    ), patch("src.components.main_window.tk.DoubleVar", _VarStub), patch(
-        "src.components.main_window.tk.IntVar", _VarStub
-    ), patch("src.components.main_window.tk.StringVar", _VarStub):
+    with (
+        patch("src.components.main_window.URLInput", _URLInputStub),
+        patch("src.components.main_window.FileSelector", _FileSelectorStub),
+        patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub),
+        patch("src.components.main_window.ttk.Frame", _WidgetStub),
+        patch("src.components.main_window.ttk.LabelFrame", _WidgetStub),
+        patch("src.components.main_window.ttk.Label", _WidgetStub),
+        patch("src.components.main_window.ttk.Button", _WidgetStub),
+        patch("src.components.main_window.ttk.Checkbutton", _WidgetStub),
+        patch("src.components.main_window.ttk.Combobox", _WidgetStub),
+        patch("src.components.main_window.ttk.Spinbox", _WidgetStub),
+        patch("src.components.main_window.tk.Text", _WidgetStub),
+        patch("src.components.main_window.tk.BooleanVar", _VarStub),
+        patch("src.components.main_window.tk.DoubleVar", _VarStub),
+        patch("src.components.main_window.tk.IntVar", _VarStub),
+        patch("src.components.main_window.tk.StringVar", _VarStub),
+    ):
         root = _RootStub()
         window = MainWindow(root)
 

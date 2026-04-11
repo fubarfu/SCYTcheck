@@ -7,7 +7,7 @@ from tkinter import messagebox
 from src.components.main_window import MainWindow
 from src.components.region_selector import RegionSelector
 from src.config import load_advanced_settings, load_config, save_advanced_settings
-from src.data.models import ContextPattern
+from src.data.models import ContextPattern, VideoAnalysis
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
 from src.services.logging import configure_logging, write_sidecar_log
@@ -56,7 +56,9 @@ def main() -> None:
         if last_analysis is None or not last_output_folder or not last_filename:
             return
         try:
-            exported = export_service.export_to_csv(last_analysis, last_output_folder, last_filename)
+            exported = export_service.export_to_csv(
+                last_analysis, last_output_folder, last_filename
+            )
             if last_logging_enabled:
                 write_sidecar_log(last_output_folder, last_filename, last_analysis.log_records)
             window.set_status(f"Completed: {exported}")
@@ -89,19 +91,27 @@ def main() -> None:
 
             advanced = window.get_advanced_settings()
             save_advanced_settings(advanced)
-            ocr_service.confidence_threshold = int(max(0, min(advanced.ocr_confidence_threshold, 100)))
+            ocr_service.confidence_threshold = int(
+                max(0, min(advanced.ocr_confidence_threshold, 100))
+            )
             context_patterns = [
                 ContextPattern(
                     id=str(item.get("id", f"pattern-{index}")),
-                    before_text=str(item["before_text"]) if item.get("before_text") is not None else None,
-                    after_text=str(item["after_text"]) if item.get("after_text") is not None else None,
+                    before_text=str(item["before_text"])
+                    if item.get("before_text") is not None
+                    else None,
+                    after_text=str(item["after_text"])
+                    if item.get("after_text") is not None
+                    else None,
                     enabled=bool(item.get("enabled", True)),
                 )
                 for index, item in enumerate(advanced.context_patterns)
             ]
 
             window.set_status("Selecting regions...")
-            regions = region_selector.select_regions(url, frame_time_seconds=0.0, quality=advanced.video_quality)
+            regions = region_selector.select_regions(
+                url, frame_time_seconds=0.0, quality=advanced.video_quality
+            )
             if not regions:
                 window.set_status("No regions selected")
                 return

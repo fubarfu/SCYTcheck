@@ -1,5 +1,5 @@
-from src.services.analysis_service import AnalysisService
 from src.data.models import ContextPattern, TextDetection
+from src.services.analysis_service import AnalysisService
 
 
 class _VideoServiceStub:
@@ -177,7 +177,9 @@ def test_analyze_records_rejected_ocr_rows_when_logging_enabled() -> None:
 
 
 def test_analyze_records_low_confidence_rejection_when_logging_enabled() -> None:
-    service = AnalysisService(video_service=_VideoServiceStub(), ocr_service=_OCRServiceDiagnosticsStub())
+    service = AnalysisService(
+        video_service=_VideoServiceStub(), ocr_service=_OCRServiceDiagnosticsStub()
+    )
 
     analysis = service.analyze(
         url="https://youtube.com/watch?v=test",
