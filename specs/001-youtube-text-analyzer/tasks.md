@@ -35,18 +35,18 @@
 
 ## Phase 1: Setup & Environment
 
-- [ ] T001 Configure Python 3.11 virtual environment in workspace
-- [ ] T002 Install core dependencies: opencv-python, pytesseract, yt-dlp, pytest
-- [ ] T003 Verify existing app runs without errors and unit tests pass
+- [X] T001 Configure Python 3.11 virtual environment in workspace
+- [X] T002 Install core dependencies: opencv-python, pytesseract, yt-dlp, pytest
+- [X] T003 Verify existing app runs without errors and unit tests pass
 
 ---
 
 ## Phase 2: Foundational Infrastructure
 
-- [ ] T004 Extend Region model to support time-based seeking and frame_time metadata in src/data/models.py
-- [ ] T005 [P] Update export_service.py to accept output_folder parameter instead of full_file_path
-- [ ] T006 [P] Add output folder validation utility in src/services/export_service.py with error handling
-- [ ] T007 Create mock video frame utilities and fixtures in tests/unit/ for offline testing
+- [X] T004 Extend Region model to support time-based seeking and frame_time metadata in src/data/models.py
+- [X] T005 [P] Update export_service.py to accept output_folder parameter instead of full_file_path
+- [X] T006 [P] Add output folder validation utility in src/services/export_service.py with error handling
+- [X] T007 Create mock video frame utilities and fixtures in tests/unit/ for offline testing
 
 ---
 
@@ -63,13 +63,13 @@
 
 ### Implementation Tasks
 
-- [ ] T008 [P] [US1] Add time-based horizontal scrollbar to region_selector.py for frame navigation
-- [ ] T009 [P] [US1] Extend video_service.py to support seek-to-time and frame extraction at arbitrary timestamps
-- [ ] T010 [US1] Implement auto-filename generation logic in export_service.py (scytcheck_<videoId>_<DateTime>.csv)
-- [ ] T011 [US1] Add output folder existence and write-permission checks with user-friendly error dialog in export_service.py
-- [ ] T012 [P] [US1] Unit tests for scrollbar time-value mapping and frame sync in tests/unit/test_region_selector.py
-- [ ] T013 [P] [US1] Unit tests for filename generation with various video IDs and timestamps in tests/unit/test_export_service.py
-- [ ] T014 [US1] Integration test: full workflow (URL input → region selection with scrollbar → analysis → CSV export) in tests/integration/
+- [X] T008 [P] [US1] Add time-based horizontal scrollbar to region_selector.py for frame navigation
+- [X] T009 [P] [US1] Extend video_service.py to support seek-to-time and frame extraction at arbitrary timestamps
+- [X] T010 [US1] Implement auto-filename generation logic in export_service.py (scytcheck_<videoId>_<DateTime>.csv)
+- [X] T011 [US1] Add output folder existence and write-permission checks with user-friendly error dialog in export_service.py
+- [X] T012 [P] [US1] Unit tests for scrollbar time-value mapping and frame sync in tests/unit/test_region_selector.py
+- [X] T013 [P] [US1] Unit tests for filename generation with various video IDs and timestamps in tests/unit/test_export_service.py
+- [X] T014 [US1] Integration test: full workflow (URL input → region selection with scrollbar → analysis → CSV export) in tests/integration/
 
 ---
 
