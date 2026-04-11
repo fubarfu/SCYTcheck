@@ -58,10 +58,27 @@ class PlayerSummary:
     """Deduplicated output row for export."""
 
     player_name: str
+    start_timestamp: str
+    normalized_name: str = ""
+    occurrence_count: int = 0
+    first_seen_sec: float = 0.0
+    last_seen_sec: float = 0.0
+    representative_region: str = ""
+
+
+@dataclass
+class LogRecord:
+    timestamp_sec: str
+    raw_string: str
+    accepted: bool
+    rejection_reason: str
+    extracted_name: str
+    region_id: str
+    matched_pattern: str
     normalized_name: str
     occurrence_count: int
-    first_seen_sec: float
-    last_seen_sec: float
+    start_timestamp: str
+    end_timestamp: str
     representative_region: str
 
 
@@ -87,8 +104,11 @@ class VideoAnalysis:
     regions: list[Region] = field(default_factory=list)
     context_patterns: list[ContextPattern] = field(default_factory=list)
     filter_non_matching: bool = False
+    video_quality: str = "best"
+    logging_enabled: bool = False
     event_gap_threshold_sec: float = 1.0
     detections: list[TextDetection] = field(default_factory=list)
+    log_records: list[LogRecord] = field(default_factory=list)
     player_summaries: list[PlayerSummary] = field(default_factory=list)
     text_strings: list[TextString] = field(default_factory=list)
     _index: dict[tuple[str, int, int, int, int], TextString] = field(
@@ -123,6 +143,9 @@ class VideoAnalysis:
     def add_detection_record(self, detection: TextDetection) -> None:
         """Store one extracted per-frame detection record."""
         self.detections.append(detection)
+
+    def add_log_record(self, record: LogRecord) -> None:
+        self.log_records.append(record)
 
     def set_player_summaries(self, summaries: Iterable[PlayerSummary]) -> None:
         """Replace deduplicated summaries with latest aggregation output."""

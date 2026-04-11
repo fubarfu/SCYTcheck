@@ -78,6 +78,8 @@ class AdvancedSettings:
     filter_non_matching: bool = True
     event_gap_threshold_sec: float = 1.0
     ocr_confidence_threshold: int = 40
+    video_quality: str = "best"
+    logging_enabled: bool = False
 
 
 def _default_advanced_settings() -> AdvancedSettings:
@@ -94,6 +96,8 @@ def _default_advanced_settings() -> AdvancedSettings:
         filter_non_matching=True,
         event_gap_threshold_sec=1.0,
         ocr_confidence_threshold=40,
+        video_quality="best",
+        logging_enabled=False,
     )
 
 
@@ -112,8 +116,24 @@ def load_config() -> AppConfig:
 
 
 def _settings_path(base_dir: str | None = None) -> Path:
-    root = Path(base_dir) if base_dir else Path.cwd()
-    return root / SETTINGS_FILE
+    if base_dir:
+        return Path(base_dir) / SETTINGS_FILE
+
+    appdata = os.getenv("APPDATA")
+    if appdata:
+        appdata_dir = Path(appdata) / "SCYTcheck"
+        try:
+            appdata_dir.mkdir(parents=True, exist_ok=True)
+            test_file = appdata_dir / ".write_test"
+            test_file.write_text("ok", encoding="utf-8")
+            test_file.unlink(missing_ok=True)
+            return appdata_dir / SETTINGS_FILE
+        except Exception:
+            pass
+
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / SETTINGS_FILE
+    return Path.cwd() / SETTINGS_FILE
 
 
 def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
@@ -145,6 +165,8 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
                 ),
             )
         ),
+        video_quality=str(payload.get("video_quality", defaults.video_quality) or "best"),
+        logging_enabled=bool(payload.get("logging_enabled", defaults.logging_enabled)),
     )
 
 
@@ -158,6 +180,8 @@ def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = No
                 "filter_non_matching": settings.filter_non_matching,
                 "event_gap_threshold_sec": settings.event_gap_threshold_sec,
                 "ocr_confidence_threshold": int(max(0, min(settings.ocr_confidence_threshold, 100))),
+                "video_quality": settings.video_quality,
+                "logging_enabled": settings.logging_enabled,
             },
             indent=2,
         ),

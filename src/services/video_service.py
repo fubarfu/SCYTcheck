@@ -71,12 +71,13 @@ class VideoService:
 
         return True, ""
 
-    def _extract_media_url(self, url: str) -> tuple[str, dict]:
+    def _extract_media_url(self, url: str, quality: str = "best") -> tuple[str, dict]:
         if not url or not self._is_supported_youtube_url(url):
             raise InvalidURLError("Please provide a valid YouTube URL.")
 
-        if url in self._stream_cache:
-            return self._stream_cache[url]
+        cache_key = f"{url}|{quality}"
+        if cache_key in self._stream_cache:
+            return self._stream_cache[cache_key]
 
         with YoutubeDL(self._build_ydl_opts()) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -85,7 +86,7 @@ class VideoService:
         if not stream_url:
             raise VideoAccessError("No playable stream URL found for this video.")
 
-        self._stream_cache[url] = (stream_url, info)
+        self._stream_cache[cache_key] = (stream_url, info)
         return stream_url, info
 
     def get_video_info(self, url: str) -> dict:
@@ -97,25 +98,29 @@ class VideoService:
             "height": info.get("height"),
         }
 
-    def get_frame_at_time(self, url: str, time_seconds: float):
-        stream_url, _ = self._extract_media_url(url)
-        cap = cv2.VideoCapture(stream_url)
-        if not cap.isOpened():
-            raise VideoAccessError("Could not open video stream.")
+    def get_frame_at_time(self, url: str, time_seconds: float, quality: str = "best"):
+        last_error: Exception | None = None
+        for _attempt in range(3):
+            try:
+                stream_url, _ = self._extract_media_url(url, quality=quality)
+                cap = cv2.VideoCapture(stream_url)
+                if not cap.isOpened():
+                    raise VideoAccessError("Could not open video stream.")
 
-        cap.set(cv2.CAP_PROP_POS_MSEC, max(0.0, time_seconds) * 1000)
+                cap.set(cv2.CAP_PROP_POS_MSEC, max(0.0, time_seconds) * 1000)
+                ok, frame = cap.read()
+                cap.release()
+                if not ok:
+                    raise VideoAccessError("Could not retrieve frame from requested timestamp.")
+                return frame
+            except Exception as exc:
+                last_error = exc
+        raise VideoAccessError(str(last_error) if last_error else "Could not retrieve frame from requested timestamp.")
 
-        ok, frame = cap.read()
-        cap.release()
-        if not ok:
-            raise VideoAccessError("Could not retrieve frame from requested timestamp.")
-
-        return frame
-
-    def open_stream(self, url: str) -> cv2.VideoCapture:
+    def open_stream(self, url: str, quality: str = "best") -> cv2.VideoCapture:
         """Open and return a persistent VideoCapture for repeated seeks (e.g. region selector).
         Caller is responsible for calling close_stream() when done."""
-        stream_url, _ = self._extract_media_url(url)
+        stream_url, _ = self._extract_media_url(url, quality=quality)
         cap = cv2.VideoCapture(stream_url)
         if not cap.isOpened():
             raise VideoAccessError("Could not open video stream.")
@@ -136,9 +141,9 @@ class VideoService:
         cap.release()
 
     def get_frames_in_range(
-        self, url: str, start_time: float, end_time: float, fps: int
+        self, url: str, start_time: float, end_time: float, fps: int, quality: str = "best"
     ) -> Iterator:
-        for _, frame in self.iterate_frames_with_timestamps(url, start_time, end_time, fps):
+        for _, frame in self.iterate_frames_with_timestamps(url, start_time, end_time, fps, quality=quality):
             yield frame
 
     def iterate_frames_with_timestamps(
@@ -147,8 +152,9 @@ class VideoService:
         start_time: float,
         end_time: float,
         fps: int,
+        quality: str = "best",
     ) -> Iterator[tuple[float, object]]:
-        stream_url, _ = self._extract_media_url(url)
+        stream_url, _ = self._extract_media_url(url, quality=quality)
         cap = cv2.VideoCapture(stream_url)
         if not cap.isOpened():
             raise VideoAccessError("Could not open video stream.")

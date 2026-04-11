@@ -6,17 +6,15 @@ from src.data.models import ContextPattern
 from src.services.export_service import ExportService
 
 
-def test_export_to_csv_writes_headers_and_rows(tmp_path: Path) -> None:
+def test_export_to_csv_writes_header_only_when_no_summaries(tmp_path: Path) -> None:
     analysis = VideoAnalysis(url="https://youtube.com/watch?v=abc")
-    analysis.add_detection("SampleText", (1, 2, 3, 4))
 
     service = ExportService()
     exported = service.export_to_csv(analysis, str(tmp_path), "output.csv")
 
     assert exported.exists()
     content = exported.read_text(encoding="utf-8")
-    assert "Text,X,Y,Width,Height,Frequency" in content
-    assert "SampleText,1,2,3,4,1" in content
+    assert content.strip() == "PlayerName,StartTimestamp"
 
 
 def test_extract_youtube_video_id() -> None:
@@ -94,6 +92,7 @@ def test_export_player_summary_schema_order(tmp_path: Path) -> None:
         [
             PlayerSummary(
                 player_name="Alice",
+                start_timestamp="00:00:01.000",
                 normalized_name="alice",
                 occurrence_count=3,
                 first_seen_sec=1.0,
@@ -107,8 +106,8 @@ def test_export_player_summary_schema_order(tmp_path: Path) -> None:
     exported = service.export_to_csv(analysis, str(tmp_path), "summary.csv")
     lines = exported.read_text(encoding="utf-8").splitlines()
 
-    assert lines[0] == "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion"
-    assert lines[1] == "Alice,alice,3,1.000,9.500,r1"
+    assert lines[0] == "PlayerName,StartTimestamp"
+    assert lines[1] == "Alice,00:00:01.000"
 
 
 def test_export_to_csv_writes_header_only_summary_when_no_text_detected(tmp_path: Path) -> None:
@@ -121,7 +120,5 @@ def test_export_to_csv_writes_header_only_summary_when_no_text_detected(tmp_path
     exported = service.export_to_csv(analysis, str(tmp_path), "empty-summary.csv")
     lines = exported.read_text(encoding="utf-8").splitlines()
 
-    assert lines == [
-        "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion"
-    ]
+    assert lines == ["PlayerName,StartTimestamp"]
 

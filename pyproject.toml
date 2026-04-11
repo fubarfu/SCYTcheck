@@ -3,6 +3,19 @@ name = "scytcheck"
 version = "0.1.0"
 description = "Windows desktop tool for YouTube gameplay text extraction and deduplicated player summaries"
 requires-python = ">=3.11"
+dependencies = [
+	"opencv-python>=4.9.0,<5.0.0",
+	"pytesseract>=0.3.10,<0.4.0",
+	"yt-dlp>=2026.1.0,<2027.0.0",
+	"numpy>=1.26.0,<3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+	"pytest>=9.0.0,<10.0.0",
+	"ruff>=0.11.0,<0.12.0",
+	"pyinstaller>=6.14.0,<7.0.0",
+]
 
 [tool.black]
 line-length = 100
@@ -15,7 +28,12 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+combine-as-imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q"
+pythonpath = ["."]

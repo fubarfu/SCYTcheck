@@ -21,11 +21,44 @@ import numpy as np
 import pytest
 
 from src.components.region_selector import RegionSelector
+from src.config import AdvancedSettings, AppConfig
 from src.data.models import ContextPattern, VideoAnalysis
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
 from src.services.ocr_service import OCRService
 from src.services.video_service import VideoService
+import src.main as app_main
+
+
+class _FakeButton:
+    def __init__(self) -> None:
+        self.command = None
+
+    def configure(self, **kwargs) -> None:
+        self.command = kwargs.get("command")
+
+
+class _FakeRoot:
+    def __init__(self) -> None:
+        self.window = None
+
+    def mainloop(self) -> None:
+        if self.window and self.window.analyze_button.command:
+            self.window.analyze_button.command()
+
+
+class _FakeWindow:
+    def __init__(self, root: _FakeRoot, url: str, output_folder: str, settings: AdvancedSettings) -> None:
+        self.root = root
+        self.root.window = self
+        self.url_input = Mock(get=Mock(return_value=url))
+        self.file_selector = Mock(get=Mock(return_value=output_folder))
+        self.progress = Mock()
+        self.analyze_button = _FakeButton()
+        self.retry_export_button = _FakeButton()
+        self.apply_advanced_settings = Mock()
+        self.get_advanced_settings = Mock(return_value=settings)
+        self.set_status = Mock()
 
 
 class TestUS1FullWorkflow:
@@ -134,7 +167,7 @@ class TestUS1FullWorkflow:
         
         assert csv_path.exists()
         content = csv_path.read_text(encoding="utf-8")
-        assert "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion" in content
+        assert "PlayerName,StartTimestamp" in content
     
     def test_scrollbar_time_navigation_workflow(self, mock_services: dict) -> None:
         """Test scrollbar-based time navigation specific to US1."""
@@ -261,8 +294,71 @@ class TestUS1FullWorkflow:
         export_service = ExportService()
         exported = export_service.export_to_csv(analysis, str(tmp_path), "summary.csv")
         lines = exported.read_text(encoding="utf-8").splitlines()
-        assert lines[0] == "PlayerName,NormalizedName,OccurrenceCount,FirstSeenSec,LastSeenSec,RepresentativeRegion"
-        assert lines[1].startswith("Alice,alice,2,")
+        assert lines[0] == "PlayerName,StartTimestamp"
+        assert lines[1].startswith("Alice,")
+
+    def test_header_only_summary_export_when_no_names_detected(self, mock_services: dict, tmp_path: Path) -> None:
+        video_service = mock_services["video_service"]
+        ocr_service = mock_services["ocr_service"]
+        ocr_service.detect_text.return_value = []
+        ocr_service.extract_candidates.return_value = []
+
+        analysis_service = AnalysisService(video_service, ocr_service)
+        analysis = analysis_service.analyze(
+            url="https://youtube.com/watch?v=testvideoabc123",
+            regions=[(100, 100, 200, 150)],
+            start_time=0.0,
+            end_time=10.0,
+            fps=1,
+            filter_non_matching=True,
+        )
+
+        exported = ExportService().export_to_csv(analysis, str(tmp_path), "header-only.csv")
+        assert exported.read_text(encoding="utf-8").splitlines() == ["PlayerName,StartTimestamp"]
+
+    def test_invalid_url_is_rejected_before_analysis_workflow(self, tmp_path: Path) -> None:
+        root = _FakeRoot()
+        settings = AdvancedSettings(
+            context_patterns=[{"id": "pattern-1", "before_text": "Player:", "after_text": None, "enabled": True}],
+            filter_non_matching=True,
+            event_gap_threshold_sec=1.0,
+            ocr_confidence_threshold=40,
+            video_quality="best",
+            logging_enabled=False,
+        )
+        window_holder: dict[str, _FakeWindow] = {}
+        logger = Mock()
+        video_service = Mock()
+        video_service.validate_youtube_url.return_value = (False, "Bad YouTube URL")
+        analysis_service = Mock()
+        export_service = Mock()
+        region_selector = Mock()
+
+        def make_window(root_arg):
+            window = _FakeWindow(root_arg, "https://youtube.com/watch?v=bad", str(tmp_path), settings)
+            window_holder["window"] = window
+            return window
+
+        with patch("src.main.load_config", return_value=AppConfig(sample_fps=1, confidence_threshold=40, tesseract_cmd=None)), patch(
+            "src.main.configure_logging", return_value=logger
+        ), patch("src.main.VideoService", return_value=video_service), patch(
+            "src.main.OCRService", return_value=Mock(confidence_threshold=40)
+        ), patch("src.main.AnalysisService", return_value=analysis_service), patch(
+            "src.main.ExportService", return_value=export_service
+        ), patch("src.main.RegionSelector", return_value=region_selector), patch(
+            "src.main.tk.Tk", return_value=root
+        ), patch("src.main.MainWindow", side_effect=make_window), patch(
+            "src.main.load_advanced_settings", return_value=settings
+        ), patch("src.main.save_advanced_settings"), patch("src.main.messagebox.showinfo") as show_info, patch(
+            "src.main.messagebox.showerror"
+        ) as show_error:
+            app_main.main()
+
+        analysis_service.analyze.assert_not_called()
+        export_service.export_to_csv.assert_not_called()
+        region_selector.select_regions.assert_not_called()
+        show_info.assert_not_called()
+        show_error.assert_called_once_with("Invalid URL", "Bad YouTube URL")
 
     def test_region_selector_foreground_and_overlay_workflow(self, mock_services: dict) -> None:
         video_service = mock_services["video_service"]

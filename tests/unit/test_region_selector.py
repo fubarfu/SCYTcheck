@@ -204,6 +204,14 @@ class TestRegionSelectorScrollbarMapping:
 
 
 class TestRegionSelectorOverlayAndFocus:
+    def test_preview_frame_stacks_instruction_panel_below_video(self, region_selector: RegionSelector) -> None:
+        region_selector.current_frame = np.zeros((120, 200, 3), dtype=np.uint8)
+
+        preview = region_selector._build_preview_frame()
+
+        assert preview.shape[1] == 200
+        assert preview.shape[0] > 120
+
     def test_overlay_moves_to_bottom_when_top_overlaps_selected_region(self, region_selector: RegionSelector) -> None:
         region_selector.selected_regions = [(0, 0, 200, 120, 0.0)]
 
@@ -255,3 +263,16 @@ class TestRegionSelectorOverlayAndFocus:
             region_selector.select_regions("https://youtube.com/watch?v=test")
 
         set_topmost.assert_called()
+
+    def test_select_regions_uses_time_scrollbar_only(self, region_selector: RegionSelector) -> None:
+        with patch("src.components.region_selector.cv2.namedWindow"), patch(
+            "src.components.region_selector.cv2.createTrackbar"
+        ) as create_trackbar, patch("src.components.region_selector.cv2.getTrackbarPos", return_value=0), patch(
+            "src.components.region_selector.cv2.imshow"
+        ), patch("src.components.region_selector.cv2.waitKey", return_value=13), patch(
+            "src.components.region_selector.cv2.destroyWindow"
+        ), patch("src.components.region_selector.cv2.setWindowProperty"):
+            region_selector.select_regions("https://youtube.com/watch?v=test")
+
+        create_trackbar.assert_called_once()
+        assert create_trackbar.call_args.args[0] == "Time (s)"

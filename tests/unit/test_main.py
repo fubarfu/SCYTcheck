@@ -34,12 +34,20 @@ class _FakeWindow:
         self.file_selector = SimpleNamespace(get=lambda: output_folder)
         self.progress = Mock()
         self.analyze_button = _FakeButton()
+        self.retry_export_button = _FakeButton()
         self.apply_advanced_settings = Mock()
         self.get_advanced_settings = Mock(return_value=settings)
         self.set_status = Mock()
 
 
-def _run_main_once(tmp_path: Path, analysis: VideoAnalysis):
+def _run_main_once(
+    tmp_path: Path,
+    analysis: VideoAnalysis,
+    logging_enabled: bool = False,
+    export_side_effect=None,
+    trigger_retry: bool = False,
+    selected_region_times: list[float] | None = None,
+):
     root = _FakeRoot()
     window_holder: dict[str, _FakeWindow] = {}
 
@@ -48,6 +56,8 @@ def _run_main_once(tmp_path: Path, analysis: VideoAnalysis):
         filter_non_matching=True,
         event_gap_threshold_sec=1.5,
         ocr_confidence_threshold=12,
+        video_quality="best",
+        logging_enabled=logging_enabled,
     )
 
     logger = Mock()
@@ -59,9 +69,16 @@ def _run_main_once(tmp_path: Path, analysis: VideoAnalysis):
     analysis_service.analyze.return_value = analysis
     export_service = Mock()
     export_service.generate_filename.return_value = "out.csv"
-    export_service.export_to_csv.return_value = tmp_path / "out.csv"
+    if export_side_effect is None:
+        export_service.export_to_csv.return_value = tmp_path / "out.csv"
+    else:
+        export_service.export_to_csv.side_effect = export_side_effect
     region_selector = Mock()
     region_selector.select_regions.return_value = [(10, 20, 100, 50)]
+    region_selector.selected_regions = [
+        (10, 20, 100, 50, value)
+        for value in (selected_region_times if selected_region_times is not None else [0.0])
+    ]
 
     def make_window(root_arg):
         window = _FakeWindow(root_arg, "https://youtube.com/watch?v=test", str(tmp_path), settings)
@@ -82,6 +99,9 @@ def _run_main_once(tmp_path: Path, analysis: VideoAnalysis):
         "src.main.messagebox.showinfo"
     ) as show_info, patch("src.main.messagebox.showerror") as show_error:
         app_main.main()
+        retry_command = window_holder["window"].retry_export_button.command
+        if trigger_retry and retry_command is not None:
+            retry_command()
 
     return {
         "window": window_holder["window"],
@@ -104,6 +124,7 @@ def test_main_loads_settings_and_wires_analysis_flow(tmp_path: Path) -> None:
         [
             PlayerSummary(
                 player_name="Alice",
+                start_timestamp="00:00:01.000",
                 normalized_name="alice",
                 occurrence_count=1,
                 first_seen_sec=1.0,
@@ -146,3 +167,78 @@ def test_main_shows_header_only_completion_message_when_no_text_detected(tmp_pat
     assert title == "Analysis Complete"
     assert "No matching text was detected" in message
     assert "out.csv" in message
+
+
+def test_main_does_not_write_sidecar_log_when_logging_disabled(tmp_path: Path) -> None:
+    analysis = VideoAnalysis(url="https://youtube.com/watch?v=test")
+    analysis.set_player_summaries(
+        [
+            PlayerSummary(
+                player_name="Alice",
+                start_timestamp="00:00:01.000",
+                normalized_name="alice",
+                occurrence_count=1,
+                first_seen_sec=1.0,
+                last_seen_sec=1.0,
+                representative_region="10:20:100:50",
+            )
+        ]
+    )
+
+    with patch("src.main.write_sidecar_log") as write_sidecar_log:
+        result = _run_main_once(tmp_path, analysis, logging_enabled=False)
+
+    write_sidecar_log.assert_not_called()
+    result["show_error"].assert_not_called()
+
+
+def test_main_retries_export_without_rerunning_analysis(tmp_path: Path) -> None:
+    analysis = VideoAnalysis(url="https://youtube.com/watch?v=test")
+    analysis.set_player_summaries(
+        [
+            PlayerSummary(
+                player_name="Alice",
+                start_timestamp="00:00:01.000",
+                normalized_name="alice",
+                occurrence_count=1,
+                first_seen_sec=1.0,
+                last_seen_sec=1.0,
+                representative_region="10:20:100:50",
+            )
+        ]
+    )
+
+    result = _run_main_once(
+        tmp_path,
+        analysis,
+        export_side_effect=[OSError("file is locked"), tmp_path / "out.csv"],
+        trigger_retry=True,
+    )
+
+    assert result["analysis_service"].analyze.call_count == 1
+    assert result["export_service"].export_to_csv.call_count == 2
+    result["show_error"].assert_called_once_with("Export Error", "file is locked")
+    result["show_info"].assert_called_once_with("Export Complete", f"CSV exported to:\n{tmp_path / 'out.csv'}")
+
+
+def test_main_uses_selected_region_time_as_analysis_start(tmp_path: Path) -> None:
+    analysis = VideoAnalysis(url="https://youtube.com/watch?v=test")
+    analysis.set_player_summaries(
+        [
+            PlayerSummary(
+                player_name="Alice",
+                start_timestamp="00:03:05.000",
+                normalized_name="alice",
+                occurrence_count=1,
+                first_seen_sec=185.0,
+                last_seen_sec=185.0,
+                representative_region="10:20:100:50",
+            )
+        ]
+    )
+
+    result = _run_main_once(tmp_path, analysis, selected_region_times=[185.0])
+    kwargs = result["analysis_service"].analyze.call_args.kwargs
+
+    assert kwargs["start_time"] == 185.0
+    assert kwargs["end_time"] == 245.0

@@ -11,24 +11,13 @@ from src.data.models import PlayerSummary, VideoAnalysis
 
 class ExportService:
     LEGACY_HEADERS = ["Text", "X", "Y", "Width", "Height", "Frequency"]
-    SUMMARY_HEADERS = [
-        "PlayerName",
-        "NormalizedName",
-        "OccurrenceCount",
-        "FirstSeenSec",
-        "LastSeenSec",
-        "RepresentativeRegion",
-    ]
+    SUMMARY_HEADERS = ["PlayerName", "StartTimestamp"]
 
     @staticmethod
     def player_summary_to_row(summary: PlayerSummary) -> list[str | int | float]:
         return [
             summary.player_name,
-            summary.normalized_name,
-            summary.occurrence_count,
-            f"{summary.first_seen_sec:.3f}",
-            f"{summary.last_seen_sec:.3f}",
-            summary.representative_region,
+            summary.start_timestamp,
         ]
 
     @staticmethod
@@ -121,29 +110,8 @@ class ExportService:
         
         with output_path.open("w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            should_write_summary_schema = bool(
-                analysis.player_summaries
-                or analysis.detections
-                or analysis.context_patterns
-            )
-
-            if should_write_summary_schema:
-                writer.writerow(self.SUMMARY_HEADERS)
-                for summary in analysis.player_summaries:
-                    writer.writerow(self.player_summary_to_row(summary))
-            else:
-                # Backward-compatible export for legacy text-string analyses.
-                writer.writerow(self.LEGACY_HEADERS)
-                for entry in analysis.text_strings:
-                    writer.writerow(
-                        [
-                            entry.content,
-                            entry.x,
-                            entry.y,
-                            entry.width,
-                            entry.height,
-                            entry.frequency,
-                        ]
-                    )
+            writer.writerow(self.SUMMARY_HEADERS)
+            for summary in analysis.player_summaries:
+                writer.writerow(self.player_summary_to_row(summary))
 
         return output_path

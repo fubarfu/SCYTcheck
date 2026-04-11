@@ -32,10 +32,18 @@
 9. Optional: Enable analysis logging (default is off) to generate a sidecar `<output_base>_log.csv` file.
 10. Select only an output folder (filename is auto-generated).
 11. Start analysis and wait for completion.
-12. Open summary CSV output and verify exact headers:
+12. If export fails because the file is locked or otherwise unavailable, use `Retry Export` to write the summary again without rerunning OCR.
+13. Open summary CSV output and verify exact headers:
 	`PlayerName, StartTimestamp`.
-13. If logging was enabled, open sidecar log CSV and verify columns are:
+
+14. If logging was enabled, open sidecar log CSV and verify columns are:
 	`TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern, NormalizedName, OccurrenceCount, StartTimestamp, EndTimestamp, RepresentativeRegion`.
+
+## Release Smoke Check
+
+1. Run `powershell -ExecutionPolicy Bypass -File scripts/release/build.ps1 -Architecture x64 -BundleOnly` to stage a portable bundle layout.
+2. Confirm the script creates `dist/release/x64/SCYTcheck` and `dist/release/SCYTcheck-x64.zip`.
+3. If a signing certificate is available, run `powershell -ExecutionPolicy Bypass -File scripts/release/sign.ps1 -InputPath dist/release/x64/SCYTcheck -CertificatePath <certificate.pfx>`.
 
 ## Development
 

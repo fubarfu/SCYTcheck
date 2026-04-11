@@ -11,6 +11,22 @@ from src.config import AdvancedSettings
 from src.services.export_service import ExportService
 
 
+class _FallbackVar:
+    def __init__(self, value: object = None) -> None:
+        self._value = value
+
+    def get(self) -> object:
+        return self._value
+
+    def set(self, value: object) -> None:
+        self._value = value
+
+
+class _FallbackWidget:
+    def grid(self, *args, **kwargs) -> None:  # pragma: no cover - simple test fallback
+        return
+
+
 class MainWindow:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -50,6 +66,9 @@ class MainWindow:
         self.advanced_settings_frame = ttk.LabelFrame(container, text="Advanced Settings", padding=8)
         self.advanced_settings_frame.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(12, 0))
         self.advanced_settings_frame.columnconfigure(0, weight=1)
+        self.advanced_settings_frame.columnconfigure(1, weight=0)
+        self.advanced_settings_frame.columnconfigure(2, weight=0)
+        self.advanced_settings_frame.columnconfigure(3, weight=0)
 
         self.pattern_help = ttk.Label(
             self.advanced_settings_frame,
@@ -69,8 +88,34 @@ class MainWindow:
         )
         self.filter_non_matching_check.grid(row=2, column=0, columnspan=2, sticky="w")
 
+        self.video_quality_label = ttk.Label(self.advanced_settings_frame, text="Video quality")
+        self.video_quality_label.grid(row=2, column=2, sticky="e")
+        try:
+            self.video_quality_var = tk.StringVar(value="best")
+        except RuntimeError:
+            self.video_quality_var = _FallbackVar("best")
+        try:
+            self.video_quality_combo = ttk.Combobox(
+                self.advanced_settings_frame,
+                textvariable=self.video_quality_var,
+                values=["best", "720p", "480p", "360p"],
+                width=10,
+                state="readonly",
+            )
+        except Exception:
+            self.video_quality_combo = _FallbackWidget()
+        self.video_quality_combo.grid(row=2, column=3, sticky="w", padx=(8, 0))
+
+        self.logging_enabled_var = tk.BooleanVar(value=False)
+        self.logging_enabled_check = ttk.Checkbutton(
+            self.advanced_settings_frame,
+            text="Enable detailed sidecar log (_log.csv)",
+            variable=self.logging_enabled_var,
+        )
+        self.logging_enabled_check.grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
+
         self.event_gap_label = ttk.Label(self.advanced_settings_frame, text="Event merge gap (seconds)")
-        self.event_gap_label.grid(row=3, column=0, sticky="w", pady=(8, 0))
+        self.event_gap_label.grid(row=4, column=0, sticky="w", pady=(8, 0))
 
         self.event_gap_var = tk.DoubleVar(value=1.0)
         self.event_gap_spinbox = ttk.Spinbox(
@@ -81,10 +126,10 @@ class MainWindow:
             textvariable=self.event_gap_var,
             width=8,
         )
-        self.event_gap_spinbox.grid(row=3, column=1, sticky="w", pady=(8, 0))
+        self.event_gap_spinbox.grid(row=4, column=1, sticky="w", pady=(8, 0))
 
         self.ocr_sensitivity_label = ttk.Label(self.advanced_settings_frame, text="OCR sensitivity (confidence 0-100)")
-        self.ocr_sensitivity_label.grid(row=4, column=0, sticky="w", pady=(8, 0))
+        self.ocr_sensitivity_label.grid(row=5, column=0, sticky="w", pady=(8, 0))
 
         self.ocr_confidence_var = tk.IntVar(value=40)
         self.ocr_sensitivity_spinbox = ttk.Spinbox(
@@ -95,7 +140,7 @@ class MainWindow:
             textvariable=self.ocr_confidence_var,
             width=8,
         )
-        self.ocr_sensitivity_spinbox.grid(row=4, column=1, sticky="w", pady=(8, 0))
+        self.ocr_sensitivity_spinbox.grid(row=5, column=1, sticky="w", pady=(8, 0))
 
         self.low_quality_guidance = ttk.Label(
             self.advanced_settings_frame,
@@ -107,7 +152,7 @@ class MainWindow:
             wraplength=620,
             justify="left",
         )
-        self.low_quality_guidance.grid(row=5, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        self.low_quality_guidance.grid(row=6, column=0, columnspan=4, sticky="w", pady=(6, 0))
 
         self.progress = ProgressDisplay(container)
         self.progress.grid(row=6, column=0, columnspan=2)
@@ -118,9 +163,16 @@ class MainWindow:
         self.analyze_button = ttk.Button(container, text="Select Regions + Analyze")
         self.analyze_button.grid(row=8, column=0, sticky="w", pady=(12, 0))
 
+        self.retry_export_button = ttk.Button(container, text="Retry Export", state="disabled")
+        self.retry_export_button.grid(row=8, column=1, sticky="e", pady=(12, 0))
+
         self.url_input.entry.bind("<KeyRelease>", self._on_url_changed)
         self.url_input.entry.bind("<FocusOut>", self._on_url_changed)
         self.update_filename_display()
+
+        self.root.bind("<Control-Return>", self._on_analyze_shortcut)
+        self.root.bind("<Alt-u>", self._focus_url_input)
+        self.root.bind("<Alt-o>", self._focus_output_folder)
 
     @staticmethod
     def _parse_bool(value: str) -> bool:
@@ -180,6 +232,8 @@ class MainWindow:
             filter_non_matching=bool(self.filter_non_matching_var.get()),
             event_gap_threshold_sec=float(self.event_gap_var.get()),
             ocr_confidence_threshold=int(max(0, min(int(self.ocr_confidence_var.get()), 100))),
+            video_quality=str(getattr(self, "video_quality_var", _FallbackVar("best")).get() or "best"),
+            logging_enabled=bool(getattr(self, "logging_enabled_var", _FallbackVar(False)).get()),
         )
 
     def apply_advanced_settings(self, settings: AdvancedSettings) -> None:
@@ -195,6 +249,8 @@ class MainWindow:
         self.filter_non_matching_var.set(bool(settings.filter_non_matching))
         self.event_gap_var.set(float(settings.event_gap_threshold_sec))
         self.ocr_confidence_var.set(int(max(0, min(int(settings.ocr_confidence_threshold), 100))))
+        getattr(self, "video_quality_var", _FallbackVar("best")).set(str(settings.video_quality or "best"))
+        getattr(self, "logging_enabled_var", _FallbackVar(False)).set(bool(settings.logging_enabled))
 
     def _on_url_changed(self, _event: object | None = None) -> None:
         self.update_filename_display()
@@ -226,3 +282,37 @@ class MainWindow:
     def set_status(self, value: str) -> None:
         self.status.configure(text=value)
         self.status.update_idletasks()
+
+    def set_analyze_command(self, command) -> None:
+        self.analyze_button.configure(command=command)
+
+    def set_retry_export_command(self, command: object | None) -> None:
+        if command is None:
+            self.retry_export_button.configure(command=None, state="disabled")
+        else:
+            self.retry_export_button.configure(command=command, state="normal")
+
+    def _on_analyze_shortcut(self, _event=None):
+        command = self.analyze_button.options.get("command") if hasattr(self.analyze_button, "options") else None
+        if command is None:
+            try:
+                self.analyze_button.invoke()
+            except Exception:
+                return "break"
+        else:
+            command()
+        return "break"
+
+    def _focus_url_input(self, _event=None):
+        try:
+            self.url_input.entry.focus_set()
+        except Exception:
+            pass
+        return "break"
+
+    def _focus_output_folder(self, _event=None):
+        try:
+            self.file_selector.entry.focus_set()
+        except Exception:
+            pass
+        return "break"

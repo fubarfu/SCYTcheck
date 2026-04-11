@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.config import load_config
+from src.config import AdvancedSettings, load_advanced_settings, load_config, save_advanced_settings
 
 
 def test_load_config_prefers_explicit_tesseract_env(monkeypatch) -> None:
@@ -37,3 +37,22 @@ def test_load_config_discovers_scoop_tesseract(monkeypatch, tmp_path: Path) -> N
 
     assert config.tesseract_cmd == str(tesseract_exe)
     assert config.tessdata_prefix == str(tessdata_dir)
+
+
+def test_advanced_settings_roundtrip_includes_video_quality_and_logging(tmp_path: Path) -> None:
+    settings = AdvancedSettings(
+        context_patterns=[{"id": "p1", "before_text": None, "after_text": "joined", "enabled": True}],
+        filter_non_matching=False,
+        event_gap_threshold_sec=2.0,
+        ocr_confidence_threshold=33,
+        video_quality="720p",
+        logging_enabled=True,
+    )
+
+    save_advanced_settings(settings, base_dir=str(tmp_path))
+    loaded = load_advanced_settings(base_dir=str(tmp_path))
+
+    assert loaded.video_quality == "720p"
+    assert loaded.logging_enabled is True
+    assert loaded.event_gap_threshold_sec == 2.0
+    assert loaded.ocr_confidence_threshold == 33

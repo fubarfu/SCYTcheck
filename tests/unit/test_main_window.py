@@ -36,12 +36,18 @@ class _WidgetStub:
     def __init__(self, *args, **kwargs):
         self.grid_kwargs = None
         self.options = dict(kwargs)
+        self.focused = False
 
     def grid(self, **kwargs):
         self.grid_kwargs = kwargs
 
     def configure(self, **kwargs):
         self.options.update(kwargs)
+
+    def invoke(self):
+        command = self.options.get("command")
+        if command is not None:
+            command()
 
     def columnconfigure(self, *_args, **_kwargs):
         return None
@@ -61,8 +67,14 @@ class _WidgetStub:
     def insert(self, *_args, **_kwargs):
         return None
 
+    def focus_set(self):
+        self.focused = True
+
 
 class _RootStub:
+    def __init__(self):
+        self.bindings = {}
+
     def title(self, *_args, **_kwargs):
         return None
 
@@ -73,6 +85,10 @@ class _RootStub:
         return None
 
     def rowconfigure(self, *_args, **_kwargs):
+        return None
+
+    def bind(self, event, callback):
+        self.bindings[event] = callback
         return None
 
 
@@ -114,12 +130,16 @@ def _make_window_stub(
     filter_non_matching: bool = True,
     gap: float = 1.0,
     confidence: int = 40,
+    video_quality: str = "best",
+    logging_enabled: bool = False,
 ) -> MainWindow:
     window = MainWindow.__new__(MainWindow)
     window.patterns_text = _TextStub(patterns)
     window.filter_non_matching_var = _VarStub(filter_non_matching)
     window.event_gap_var = _VarStub(gap)
     window.ocr_confidence_var = _VarStub(confidence)
+    window.video_quality_var = _VarStub(video_quality)
+    window.logging_enabled_var = _VarStub(logging_enabled)
     window.filename_display = MagicMock()
     window.url_input = SimpleNamespace(get=lambda: "")
     return window
@@ -179,6 +199,50 @@ def test_apply_advanced_settings_populates_controls() -> None:
     assert window.ocr_confidence_var.get() == 22
 
 
+def test_advanced_settings_round_trip_preserves_quality_and_logging() -> None:
+    source = _make_window_stub(
+        patterns="Player:||true",
+        filter_non_matching=True,
+        gap=2.0,
+        confidence=30,
+        video_quality="480p",
+        logging_enabled=True,
+    )
+    target = _make_window_stub()
+
+    settings = source.get_advanced_settings()
+    target.apply_advanced_settings(settings)
+
+    reapplied = target.get_advanced_settings()
+    assert reapplied.video_quality == "480p"
+    assert reapplied.logging_enabled is True
+    assert reapplied.filter_non_matching is True
+
+
+def test_advanced_settings_defaults_include_best_quality_and_logging_off() -> None:
+    window = _make_window_stub()
+
+    settings = window.get_advanced_settings()
+
+    assert settings.filter_non_matching is True
+    assert settings.video_quality == "best"
+    assert settings.logging_enabled is False
+
+
+def test_apply_advanced_settings_keeps_selected_video_quality() -> None:
+    window = _make_window_stub()
+
+    window.apply_advanced_settings(
+        AdvancedSettings(
+            context_patterns=[{"id": "default", "before_text": None, "after_text": "joined", "enabled": True}],
+            video_quality="720p",
+            logging_enabled=False,
+        )
+    )
+
+    assert window.video_quality_var.get() == "720p"
+
+
 def test_update_filename_display_with_valid_url() -> None:
     window = _make_window_stub()
 
@@ -223,3 +287,59 @@ def test_layout_labels_do_not_overlap_controls_at_min_window_size() -> None:
     assert window.event_gap_label.grid_kwargs["column"] < window.event_gap_spinbox.grid_kwargs["column"]
     assert window.ocr_sensitivity_label.grid_kwargs["row"] == window.ocr_sensitivity_spinbox.grid_kwargs["row"]
     assert window.ocr_sensitivity_label.grid_kwargs["column"] < window.ocr_sensitivity_spinbox.grid_kwargs["column"]
+
+
+def test_primary_workflow_controls_and_shortcuts_are_wired() -> None:
+    with patch("src.components.main_window.URLInput", _URLInputStub), patch(
+        "src.components.main_window.FileSelector", _FileSelectorStub
+    ), patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub), patch(
+        "src.components.main_window.ttk.Frame", _WidgetStub
+    ), patch("src.components.main_window.ttk.LabelFrame", _WidgetStub), patch(
+        "src.components.main_window.ttk.Label", _WidgetStub
+    ), patch("src.components.main_window.ttk.Button", _WidgetStub), patch(
+        "src.components.main_window.ttk.Checkbutton", _WidgetStub
+    ), patch("src.components.main_window.ttk.Combobox", _WidgetStub), patch(
+        "src.components.main_window.ttk.Spinbox", _WidgetStub
+    ), patch("src.components.main_window.tk.Text", _WidgetStub), patch(
+        "src.components.main_window.tk.BooleanVar", _VarStub
+    ), patch("src.components.main_window.tk.DoubleVar", _VarStub), patch(
+        "src.components.main_window.tk.IntVar", _VarStub
+    ), patch("src.components.main_window.tk.StringVar", _VarStub):
+        root = _RootStub()
+        window = MainWindow(root)
+
+    triggered = []
+    window.set_analyze_command(lambda: triggered.append("analyze"))
+
+    assert window.analyze_button is not None
+    assert window.retry_export_button is not None
+    assert "<Control-Return>" in root.bindings
+    assert "<Alt-u>" in root.bindings
+    assert "<Alt-o>" in root.bindings
+    assert root.bindings["<Control-Return>"](None) == "break"
+    assert triggered == ["analyze"]
+    assert root.bindings["<Alt-u>"](None) == "break"
+    assert window.url_input.entry.focused is True
+    assert root.bindings["<Alt-o>"](None) == "break"
+    assert window.file_selector.entry.focused is True
+
+
+def test_low_quality_guidance_text_is_visible() -> None:
+    with patch("src.components.main_window.URLInput", _URLInputStub), patch(
+        "src.components.main_window.FileSelector", _FileSelectorStub
+    ), patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub), patch(
+        "src.components.main_window.ttk.Frame", _WidgetStub
+    ), patch("src.components.main_window.ttk.LabelFrame", _WidgetStub), patch(
+        "src.components.main_window.ttk.Label", _WidgetStub
+    ), patch("src.components.main_window.ttk.Button", _WidgetStub), patch(
+        "src.components.main_window.ttk.Checkbutton", _WidgetStub
+    ), patch("src.components.main_window.ttk.Combobox", _WidgetStub), patch(
+        "src.components.main_window.ttk.Spinbox", _WidgetStub
+    ), patch("src.components.main_window.tk.Text", _WidgetStub), patch(
+        "src.components.main_window.tk.BooleanVar", _VarStub
+    ), patch("src.components.main_window.tk.DoubleVar", _VarStub), patch(
+        "src.components.main_window.tk.IntVar", _VarStub
+    ), patch("src.components.main_window.tk.StringVar", _VarStub):
+        window = MainWindow(_RootStub())
+
+    assert "Low-quality videos can reduce OCR reliability" in window.low_quality_guidance.options["text"]

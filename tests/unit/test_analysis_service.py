@@ -1,9 +1,61 @@
 from src.services.analysis_service import AnalysisService
-from src.data.models import TextDetection
+from src.data.models import ContextPattern, TextDetection
+
+
+class _VideoServiceStub:
+    def iterate_frames_with_timestamps(self, url, start_time, end_time, fps, quality="best"):
+        del url, start_time, end_time, fps, quality
+        yield 12.0, [[0]]
+
+
+class _OCRServiceStub:
+    def detect_text(self, frame, region):
+        del frame, region
+        return ["Raw OCR Name"]
+
+    def evaluate_lines(self, lines, patterns=None, filter_non_matching=False):
+        del lines, patterns, filter_non_matching
+        return [
+            {
+                "raw_string": "Raw OCR Name",
+                "accepted": False,
+                "rejection_reason": "no_pattern_match",
+                "extracted_name": "",
+                "matched_pattern": None,
+            }
+        ]
+
+
+class _OCRServiceDiagnosticsStub:
+    def detect_text(self, frame, region):
+        del frame, region
+        return []
+
+    def detect_text_with_diagnostics(self, frame, region):
+        del frame, region
+        return [], [
+            {
+                "raw_string": "Alice",
+                "accepted": False,
+                "rejection_reason": "low_confidence",
+                "extracted_name": "",
+                "matched_pattern": None,
+            }
+        ]
+
+    def evaluate_lines(self, lines, patterns=None, filter_non_matching=False):
+        del lines, patterns, filter_non_matching
+        return []
 
 
 def test_normalize_name_lower_trim_and_collapse_spaces() -> None:
     assert AnalysisService.normalize_name("  Player   One  ") == "player one"
+
+
+def test_format_timestamp_hh_mm_ss_mmm() -> None:
+    assert AnalysisService.format_timestamp(0) == "00:00:00.000"
+    assert AnalysisService.format_timestamp(1.234) == "00:00:01.234"
+    assert AnalysisService.format_timestamp(3661.009) == "01:01:01.009"
 
 
 def test_merge_appearance_events_merges_within_gap() -> None:
@@ -100,3 +152,42 @@ def test_build_player_summaries_uses_gap_threshold() -> None:
     summaries = AnalysisService.build_player_summaries(detections, gap_threshold_sec=1.0)
 
     assert summaries[0].occurrence_count == 2
+
+
+def test_analyze_records_rejected_ocr_rows_when_logging_enabled() -> None:
+    service = AnalysisService(video_service=_VideoServiceStub(), ocr_service=_OCRServiceStub())
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=60.0,
+        fps=1,
+        context_patterns=[ContextPattern(id="joined", after_text="joined")],
+        filter_non_matching=True,
+        logging_enabled=True,
+    )
+
+    assert analysis.player_summaries == []
+    assert len(analysis.log_records) == 1
+    row = analysis.log_records[0]
+    assert row.accepted is False
+    assert row.rejection_reason == "no_pattern_match"
+    assert row.raw_string == "Raw OCR Name"
+
+
+def test_analyze_records_low_confidence_rejection_when_logging_enabled() -> None:
+    service = AnalysisService(video_service=_VideoServiceStub(), ocr_service=_OCRServiceDiagnosticsStub())
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=60.0,
+        fps=1,
+        logging_enabled=True,
+    )
+
+    assert analysis.player_summaries == []
+    assert len(analysis.log_records) == 1
+    assert analysis.log_records[0].rejection_reason == "low_confidence"

@@ -117,9 +117,32 @@ class RegionSelector:
             self.helper_text,
             "Use time scrollbar. Press A=add region, Enter/Q=confirm, ESC=cancel",
         ]
-        self._draw_instruction_overlay(frame, overlay_lines)
+        panel = self._build_instruction_panel(frame.shape[1], overlay_lines)
+        return np.vstack([frame, panel])
 
-        return frame
+    def _build_instruction_panel(self, width: int, lines: list[str]) -> np.ndarray:
+        panel_height = max(96, (self.overlay_line_height * len(lines)) + (self.overlay_padding * 2))
+        panel = np.zeros((panel_height, width, 3), dtype=np.uint8)
+        panel[:] = (18, 18, 18)
+        cv2.rectangle(panel, (0, 0), (width - 1, panel_height - 1), (255, 255, 255), 1)
+
+        wrapped = self._wrap_overlay_lines(lines, max(20, width - (self.overlay_padding * 2) - 20))
+        for idx, text in enumerate(wrapped):
+            baseline_y = self.overlay_padding + ((idx + 1) * self.overlay_line_height) - 8
+            if baseline_y >= panel_height - 4:
+                break
+            cv2.putText(
+                panel,
+                text,
+                (self.overlay_padding, baseline_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                self.overlay_font_scale,
+                (255, 255, 255),
+                self.overlay_thickness,
+                cv2.LINE_AA,
+            )
+
+        return panel
 
     def _draw_instruction_overlay(self, frame: np.ndarray, lines: list[str]) -> None:
         """Draw a high-contrast overlay that avoids overlap with selected regions."""
