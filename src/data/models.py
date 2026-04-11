@@ -5,6 +5,21 @@ from datetime import UTC, datetime
 
 
 @dataclass
+class Region:
+    """Represents a rectangular region in a video frame with temporal context."""
+    x: int
+    y: int
+    width: int
+    height: int
+    frame_time: float = 0.0  # Time in seconds when region was selected
+
+    @property
+    def as_tuple(self) -> tuple[int, int, int, int]:
+        """Return region as (x, y, width, height) tuple for backwards compatibility."""
+        return (self.x, self.y, self.width, self.height)
+
+
+@dataclass
 class TextString:
     content: str
     x: int
@@ -12,6 +27,7 @@ class TextString:
     width: int
     height: int
     frequency: int = 1
+    frame_time: float = 0.0  # Time in seconds when text was detected
 
     @property
     def region(self) -> tuple[int, int, int, int]:
@@ -28,7 +44,7 @@ class VideoAnalysis:
         init=False,
     )
 
-    def add_detection(self, content: str, region: tuple[int, int, int, int]) -> None:
+    def add_detection(self, content: str, region: tuple[int, int, int, int], frame_time: float = 0.0) -> None:
         cleaned = content.strip()
         if not cleaned:
             return
@@ -47,6 +63,7 @@ class VideoAnalysis:
             width=width,
             height=height,
             frequency=1,
+            frame_time=frame_time,
         )
         self.text_strings.append(text_string)
         self._index[key] = text_string

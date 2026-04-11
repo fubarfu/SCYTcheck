@@ -8,9 +8,8 @@ def test_export_to_csv_writes_headers_and_rows(tmp_path: Path) -> None:
     analysis = VideoAnalysis(url="https://youtube.com/watch?v=abc")
     analysis.add_detection("SampleText", (1, 2, 3, 4))
 
-    output = tmp_path / "output.csv"
     service = ExportService()
-    exported = service.export_to_csv(analysis, str(output))
+    exported = service.export_to_csv(analysis, str(tmp_path), "output.csv")
 
     assert exported.exists()
     content = exported.read_text(encoding="utf-8")
