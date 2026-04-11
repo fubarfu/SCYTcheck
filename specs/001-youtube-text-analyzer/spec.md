@@ -17,6 +17,9 @@
 - Q: How should OCR language data be provisioned? → A: Bundle English and German language data
 - Q: How should video decoding dependencies be provided? → A: Bundle FFmpeg binaries
 - Q: Should distributed bundles be code-signed? → A: Yes, sign bundled executables/packages
+- Q: What filename scheme should the app use when creating CSV files in the selected folder? → A: scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv
+- Q: How much control should users have over output filenames? → A: Folder-only selection with automatic filename generation
+- Q: What should happen if the selected output folder is missing or not writable? → A: Abort export and show a clear error
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -47,7 +50,7 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 **Acceptance Scenarios**:
 
 1. **Given** the app is launched, **When** the user enters a YouTube URL in the input field, **Then** the URL is accepted and stored for analysis.
-2. **Given** the user has entered a URL, **When** they select an output file path, **Then** the path is validated and stored.
+2. **Given** the user has entered a URL, **When** they select an output folder, **Then** the folder is validated and stored.
 
 ---
 
@@ -58,6 +61,7 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - What if the video has text in varying positions that are not "roughly the same"?
 - How to handle different video resolutions or frame rates?
 - What happens if the network connection drops during streaming?
+- What happens if the selected output folder is missing or not writable?
 
 ## Requirements *(mandatory)*
 
@@ -68,7 +72,7 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-003**: The app MUST stream the YouTube video for real-time analysis.
 - **FR-004**: The app MUST analyze video frames to detect text strings appearing in user-defined regions.
 - **FR-005**: The app MUST group similar text strings based on user-defined regions and content.
-- **FR-006**: The app MUST output a CSV file containing the list of detected text strings with their positions.
+- **FR-006**: The app MUST output a CSV file containing the list of detected text strings with their positions in a user-selected output folder.
 - **FR-007**: The app MUST provide feedback on analysis progress and completion.
 - **FR-008**: The app MUST handle errors gracefully (e.g., invalid URL, network issues).
 - **FR-009**: The app MUST allow users to define regions of interest on the video frame for text detection.
@@ -77,6 +81,9 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-012**: Bundled packages MUST include OCR language data for English and German so OCR works without first-run downloads.
 - **FR-013**: Bundled packages MUST include FFmpeg binaries required for video streaming/decoding so analysis works without external installs.
 - **FR-014**: Distributed executables and packages MUST be code-signed to reduce Windows trust warnings and improve user safety.
+- **FR-015**: The app MUST create CSV filenames using the pattern `scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv` to ensure unambiguous output naming.
+- **FR-016**: The output workflow MUST allow users to select only an output folder; the CSV filename MUST be generated automatically by the app.
+- **FR-017**: If the selected output folder does not exist or is not writable, the app MUST abort export and show a clear error message.
 
 ### Key Entities *(include if feature involves data)*
 
