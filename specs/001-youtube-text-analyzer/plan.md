@@ -3,38 +3,36 @@
 **Branch**: `001-youtube-text-analyzer` | **Date**: April 11, 2026 | **Spec**: [specs/001-youtube-text-analyzer/spec.md](spec.md)
 **Input**: Feature specification from `/specs/001-youtube-text-analyzer/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
-
 ## Summary
 
-Create a portable Windows desktop application that streams YouTube videos for real-time text analysis in user-defined regions. The app captures detected text strings to a CSV file with deterministic naming and provides region-selection UI with video frame navigation via time-based scrollbar. Distribute as bundled ZIP packages (x64/x86) including Python 3.11, OpenCV, Tesseract OCR (English/German), and FFmpeg, code-signed for user trust.
+Build a Windows desktop app that analyzes YouTube gameplay videos for player names in user-defined regions, supports configurable surrounding-text extraction rules, and exports deduplicated CSV output. Extraction uses case-insensitive context-pattern matching with optional before/after compound rules, and aggregates repeated detections into per-player appearance events with a default 1.0s event-gap merge threshold.
 
 ## Technical Context
 
 **Language/Version**: Python 3.11  
-**Primary Dependencies**: opencv-python (video processing), pytesseract (OCR), yt-dlp (YouTube streaming), tkinter (UI)  
-**Storage**: CSV files (no database)  
-**Testing**: pytest with unittest framework  
-**Target Platform**: Windows (x64 and x86)
-**Project Type**: Desktop application (Tkinter GUI)  
-**Performance Goals**: Analyze 10-minute video in under 5 minutes with 80% OCR accuracy  
-**Constraints**: Bundled distribution requires no external installs; OCR must support English and German  
-**Scale/Scope**: Single-window UI, folder-based output, 19 functional requirements including packaging/deployment
+**Primary Dependencies**: opencv-python, pytesseract, yt-dlp, tkinter  
+**Storage**: CSV files + local JSON settings file (`scytcheck_settings.json`)  
+**Testing**: pytest (unit + integration)  
+**Target Platform**: Windows x64 and x86  
+**Project Type**: Desktop GUI application  
+**Performance Goals**: Analyze a 10-minute video in under 5 minutes; avoid duplicate rows and keep aggregation memory bounded by unique normalized names  
+**Constraints**: Portable offline-capable bundled runtime, bundled FFmpeg and Tesseract (eng/deu), code-signing for release, no mandatory external installs  
+**Scale/Scope**: Single-window app with advanced settings, OCR region analysis, name extraction and dedup aggregation, CSV export
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-**Assessed Principles:**
-1. ✅ **Simple and Modular Architecture**: Existing service-based design in `src/services/` aligns well.
-2. ✅ **Readability Over Cleverness**: Current codebase uses type hints and clear naming.
-3. ✅ **Testing for Business Logic**: Tests exist in `tests/`; will expand for new packaging code.
-4. ✅ **Minimal Dependencies**: Core deps (opencv, pytesseract, yt-dlp) are justified for OCR/video streaming.
-5. ✅ **No Secrets in Repository**: Config loads from environment variables (already in place).
-6. ✅ **Windows-Friendly Development**: Target platform is Windows; cross-platform compat secondary.
-7. ✅ **Incremental Changes and Working State**: Current app runs; packaging will be non-breaking addition.
+Pre-Phase 0 assessment:
+1. PASS - Simple and Modular Architecture: service/component layering remains intact.
+2. PASS - Readability Over Cleverness: rules are explicit (normalization and event merge policy).
+3. PASS - Testing for Business Logic: new logic (pattern extraction and dedup) is testable via deterministic unit tests.
+4. PASS - Minimal Dependencies: no new external dependency introduced for pattern matching/dedup.
+5. PASS - No Secrets in Repository: unchanged; config file stores non-secret user settings.
+6. PASS - Windows-Friendly Development: feature targets Windows and bundled deployment workflow.
+7. PASS - Incremental Changes and Working State: additions are isolated to services/components and backward-compatible defaults.
 
-**Status**: PASS — no violations detected. Bundling and scrollbar features fit within constitution.
+**Gate Result**: PASS
 
 ## Project Structure
 
@@ -42,107 +40,72 @@ Create a portable Windows desktop application that streams YouTube videos for re
 
 ```text
 specs/001-youtube-text-analyzer/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command) - PENDING
-├── data-model.md        # Phase 1 output (/speckit.plan command) - EXISTS
-├── quickstart.md        # Phase 1 output (/speckit.plan command) - EXISTS
-├── spec.md              # Feature specification
-├── contracts/           # Phase 1 output (/speckit.plan command)
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
+├── contracts/
 │   ├── ocr_service.md
 │   └── video_streaming.md
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+└── tasks.md
 ```
 
 ### Source Code (repository root)
 
 ```text
 src/
-├── __init__.py
-├── main.py              # Tkinter app entry point
-├── config.py            # Environment-based configuration
-├── components/          # UI components
-│   ├── main_window.py   # Main window layout
-│   ├── url_input.py     # URL input field
-│   ├── file_selector.py # Output folder selector
+├── main.py
+├── config.py
+├── components/
+│   ├── main_window.py
+│   ├── url_input.py
+│   ├── file_selector.py
 │   ├── region_selector.py
 │   └── progress_display.py
-├── services/            # Business logic services
+├── services/
 │   ├── analysis_service.py
 │   ├── export_service.py
-│   ├── logging.py
 │   ├── ocr_service.py
-│   └── video_service.py
-└── data/                # Data models
-    ├── __init__.py
+│   ├── video_service.py
+│   └── logging.py
+└── data/
     └── models.py
 
 tests/
-├── unit/                # Unit tests
-│   ├── test_export_service.py
-│   └── test_models.py
-└── integration/         # Integration tests (empty)
-
-pyproject.toml          # Project metadata and dependencies
-requirements.txt        # Python dependencies
-README.md              # Project documentation
+├── unit/
+└── integration/
 ```
 
-**Structure Decision**: Single-project layout with service-based architecture. Existing structure (src/services/, src/components/, src/data/) is maintained. New packaging logic will extend export_service.py and main.py. New scrollbar feature extends region_selector.py.
+**Structure Decision**: Keep the existing single-project desktop architecture; extend `services` for extraction, normalization, and dedup/event aggregation logic; extend `components` for advanced settings UI.
 
-## Phase 0: Research & Unknowns
+## Phase 0: Research & Resolution
 
-**Action**: Generate research.md to resolve critical unknowns before Phase 1 design.
+All technical unknowns from updated requirements are resolved in [specs/001-youtube-text-analyzer/research.md](research.md):
+- On-demand video access with yt-dlp + ffmpeg seeking.
+- Case-insensitive context-pattern matching without regex.
+- Compound before/after rule evaluation.
+- Dedup by normalized key across whole video.
+- Appearance-event counting with configurable gap threshold (default 1.0s).
 
-### Research Tasks
-
-1. **PyInstaller + Bundled Dependencies**: Best practices for bundling Python 3.11, OpenCV, pytesseract, and FFmpeg into portable Windows executables (x64/x86).
-2. **Code Signing on Windows**: Process, tools, and certificate acquisition for signing executables and packages.
-3. **YouTube Video Streaming without Full Download**: Verify yt-dlp capability with current implementation and confirm time-based random-access to video frames.
-4. **Tesseract Integration in Bundled Executables**: Path configuration and dependency handling when tesseract.exe is bundled.
-5. **Tkinter Freezing with PyInstaller**: Known issues and workarounds when bundling Tkinter GUI applications.
-
-### Outcome
-
-research.md will document decisions and alternatives for each research task.
+No unresolved clarifications remain.
 
 ## Phase 1: Design & Contracts
 
-**Prerequisites**: research.md complete
+Design artifacts produced and aligned with FR-001 to FR-030:
+- [specs/001-youtube-text-analyzer/data-model.md](data-model.md)
+- [specs/001-youtube-text-analyzer/contracts/ocr_service.md](contracts/ocr_service.md)
+- [specs/001-youtube-text-analyzer/contracts/video_streaming.md](contracts/video_streaming.md)
+- [specs/001-youtube-text-analyzer/quickstart.md](quickstart.md)
 
-### Data Model
+## Post-Design Constitution Check
 
-Extract entities and relationships from spec → generate data-model.md:
-- **VideoAnalysis**: URL, regions, detected text, timestamp, output path
-- **TextString**: content, region, confidence, frequency
-- **Region**: coordinates (x, y, width, height)
+1. PASS - Architecture remains modular with explicit responsibilities.
+2. PASS - Business rules are explicit and testable.
+3. PASS - No unnecessary dependency added.
+4. PASS - Windows packaging/deployment constraints preserved.
 
-### Interface Contracts
+**Gate Result**: PASS
 
-Define contracts if exposing external interfaces → contracts/:
-- **ocr_service.md**: Input (image, region), Output (list of text strings)
-- **video_streaming.md**: Input (URL, time), Output (frame as numpy array)
-- Region selection UI protocol (mouse events, frame updates)
+## Complexity Tracking
 
-### Quickstart
-
-Provide minimal example in quickstart.md:
-- How to run dev environment
-- Example video URL for testing
-- How to define regions and run analysis
-
-### Agent Context Update
-
-Run update-agent-context.ps1 to encode new packaging dependencies into agent-specific context file.
-
-## Phase 2: Planning Summary
-
-**Total Requirements**: 19 functional requirements (FR-001 through FR-019)  
-**New Features**: Scrollbar-based region selection (FR-018, FR-019), auto-generated CSV filenames (FR-015, FR-016), output folder validation (FR-017)  
-**Packaging Requirements**: Portable ZIP (FR-010), Separate x64/x86 (FR-011), Bundled OCR/FFmpeg (FR-012, FR-013), Code signing (FR-014)  
-**Constitutional Status**: All principles pass; no violations to justify
-
-**Next Steps**:
-1. Complete Phase 0 (research.md)
-2. Complete Phase 1 (data-model.md, contracts/, quickstart.md, agent context)
-3. Run `/speckit.tasks` to generate task.md with actionable implementation tasks
-4. Begin implementation based on prioritized task list
+No constitution violations requiring justification.

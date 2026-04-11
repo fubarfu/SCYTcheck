@@ -37,6 +37,10 @@
 - Q: How should occurrence count be calculated for deduplicated output? → A: Count appearance events by merging contiguous frame runs, not raw frame matches
 - Q: How should event boundaries be determined when OCR misses intermittent frames? → A: Use a maximum detection-gap threshold so nearby detections are merged into one event
 - Q: What should the default detection-gap threshold be for event merging? → A: 1.0 seconds
+- Q: What should be the canonical CSV output model? → A: Deduplicated player-summary rows (one per normalized player name) with event-based occurrence metadata
+- Q: How should YouTube URL validation be performed before analysis? → A: Validate format first, then run a preflight accessibility check for public/reachable video
+- Q: What CSV summary columns should be required and fixed? → A: PlayerName, NormalizedName, OccurrenceCount, FirstSeenSec, LastSeenSec, RepresentativeRegion
+- Q: How explicit should region selection interaction behavior be in requirements? → A: Add explicit requirement for creating, adjusting, and confirming one or more rectangular regions before analysis
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -77,7 +81,7 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - How does the system handle very long videos (e.g., over 1 hour)?
 - What if the video has text in varying positions that are not "roughly the same"? → **Known limitation**: Regions are fixed per analysis session. The region selection UI MUST display a tooltip informing users: "Define your region where text appears consistently across the video." Users are responsible for choosing an appropriate fixed region.
 - How to handle different video resolutions or frame rates?
-- What happens if the network connection drops during streaming?
+- What happens if the network connection drops during on-demand video frame retrieval?
 - What happens if the selected output folder is missing or not writable?
 
 ## Requirements *(mandatory)*
@@ -85,18 +89,18 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 ### Functional Requirements
 
 - **FR-001**: The app MUST provide a user interface to input a YouTube video URL.
-- **FR-002**: The app MUST validate the input URL as a valid YouTube video URL.
+- **FR-002**: The app MUST validate the input URL in two stages before analysis starts: (1) format validation for a supported YouTube URL pattern, and (2) preflight accessibility validation that confirms the video is publicly reachable.
 - **FR-003**: The app MUST download and process YouTube video frames on-demand for real-time analysis without requiring users to download the full video.
 - **FR-004**: The app MUST analyze video frames to detect text strings appearing in user-defined regions.
 - **FR-005**: The app MUST group similar text strings based on user-defined regions and content.
-- **FR-006**: The app MUST output a CSV file containing the list of detected text strings with their positions in a user-selected output folder.
+- **FR-006**: The app MUST output a CSV file containing deduplicated player-summary rows (one row per normalized player name) with event-based occurrence metadata in a user-selected output folder.
 - **FR-007**: The app MUST provide feedback on analysis progress and completion.
 - **FR-008**: The app MUST handle errors gracefully (e.g., invalid URL, network issues).
 - **FR-009**: The app MUST allow users to define regions of interest on the video frame for text detection.
 - **FR-010**: The app MUST be distributed as a portable ZIP package that bundles required runtime and OCR/video dependencies so users do not need separate package installations.
 - **FR-011**: The release process MUST produce separate portable ZIP bundles for Windows x64 and Windows x86.
 - **FR-012**: Bundled packages MUST include OCR language data for English and German so OCR works without first-run downloads.
-- **FR-013**: Bundled packages MUST include FFmpeg binaries required for video streaming/decoding so analysis works without external installs.
+- **FR-013**: Bundled packages MUST include FFmpeg binaries required for on-demand video frame retrieval/decoding so analysis works without external installs.
 - **FR-014**: Distributed executables and packages MUST be code-signed to reduce Windows trust warnings and improve user safety.
 - **FR-015**: The app MUST create CSV filenames using the pattern `scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv` to ensure unambiguous output naming.
 - **FR-016**: The output workflow MUST allow users to select only an output folder; the CSV filename MUST be generated automatically by the app.
@@ -114,11 +118,14 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name, including an occurrence count representing appearance events (contiguous frame runs merged), not raw frame matches.
 - **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
 - **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
+- **FR-031**: Deduplicated CSV output schema MUST be fixed with the following required columns in order: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`.
+- **FR-032**: Before analysis starts, users MUST be able to create, adjust, and confirm one or more rectangular regions in the region selector.
 
 ### Key Entities *(include if feature involves data)*
 
-- **VideoAnalysis**: Represents the analysis session, containing the YouTube URL, list of detected text strings, and metadata like analysis timestamp.
-- **TextString**: Represents player names detected in game chat or system messages, with attributes like content, position coordinates, and frequency of appearance.
+- **VideoAnalysis**: Represents the analysis session, containing the YouTube URL, raw detections, deduplicated player summaries, and metadata like analysis timestamp.
+- **TextDetection**: Represents a per-frame extraction candidate from OCR with raw text, extracted player name, normalized player key, time, and matched pattern metadata.
+- **PlayerSummary**: Represents a deduplicated output row keyed by normalized player name with occurrence count (event-based), first-seen/last-seen timing, and representative region metadata.
 - **ContextPattern**: Represents a user-defined surrounding-text rule used to identify and extract player names from OCR output. Attributes: `before_text` (string, optional), `after_text` (string, optional), `enabled` (bool). At least one of `before_text` or `after_text` must be set. When both are set, both must match (compound AND). Multiple ContextPatterns can be configured per session.
 
 ## Success Criteria *(mandatory)*
@@ -128,12 +135,12 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **SC-001**: Users can complete video analysis for a 10-minute video in under 5 minutes.
 - **SC-002**: *(Aspirational)* The app is expected to achieve at least 80% accuracy in detecting text strings in standard video resolutions. No formal measurement methodology is defined; this target guides implementation quality but is not a hard acceptance gate.
 - **SC-003**: *(Aspirational)* 95% of users can successfully input a URL and initiate analysis without assistance. No formal user testing is planned; this target guides UX decisions but is not a hard acceptance gate.
-- **SC-004**: The output CSV file is easily readable and contains all detected strings with their positions.
+- **SC-004**: The output CSV file is easily readable and contains one deduplicated row per normalized player name with event-based occurrence metadata.
 
 ## Assumptions
 
 - The app runs on Windows operating system.
-- Users have stable internet access to stream YouTube videos.
+- Users have stable internet access for on-demand video frame retrieval from YouTube.
 - YouTube videos are publicly accessible and not restricted by copyright or region.
 - Videos are recordings of video game sessions; text strings are player names appearing in party chat or login/connection messages.
 - Videos contain text overlays or subtitles that are detectable by OCR technology.

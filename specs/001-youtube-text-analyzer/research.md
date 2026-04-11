@@ -14,6 +14,54 @@
 - Direct API: YouTube API doesn't provide video streams for analysis.
 - Browser automation: Too heavy, violates minimal dependencies.
 
+## Decision: Context Pattern Matching Strategy
+
+**Chosen**: Case-insensitive substring matching against OCR text, with per-pattern optional `before_text` and `after_text` fields.
+
+**Rationale**: This handles common OCR casing variance while avoiding regex complexity. Compound rules (both before and after set) provide precise extraction for predictable message templates.
+
+**Alternatives Considered**:
+- Exact matching only: Too brittle for OCR text variance.
+- Regex-based patterns: More powerful but too complex for a lean UI and higher user error risk.
+
+## Decision: Name Extraction Boundaries
+
+**Chosen**: Extract trimmed substring based on pattern configuration:
+- after only: text before `after_text`
+- before only: text after `before_text`
+- both: text between `before_text` and `after_text`
+
+**Rationale**: Deterministic, easy to test, and consistent with user expectation for predictable surrounding text.
+
+**Alternatives Considered**:
+- Adjacent-token extraction only: Breaks multi-word names.
+- Heuristic NLP extraction: unnecessary complexity.
+
+## Decision: Deduplication and Occurrence Semantics
+
+**Chosen**: Deduplicate by normalized player-name key across the entire video and output one CSV row per normalized name. Occurrence count is event-based, not frame-based.
+
+**Normalization Rule**:
+- lowercase
+- trim leading/trailing whitespace
+- collapse repeated internal whitespace
+
+**Rationale**: Prevents duplicate rows from repeated frame detections and repeated appearances while preserving meaningful frequency as event counts.
+
+**Alternatives Considered**:
+- Frame-count frequencies: Inflated and less meaningful.
+- Exact-string dedup only: Too sensitive to OCR variance.
+
+## Decision: Appearance Event Merging
+
+**Chosen**: Merge detections into one appearance event using a configurable detection-gap threshold, default 1.0 seconds.
+
+**Rationale**: Tolerates intermittent OCR misses and avoids splitting one visual appearance into multiple false events.
+
+**Alternatives Considered**:
+- Strict contiguous-frame events: Over-splits due to OCR dropouts.
+- Large fixed time buckets: Too coarse.
+
 ## Decision: OCR Implementation
 
 **Chosen**: pytesseract with OpenCV preprocessing for frame text detection.
@@ -36,9 +84,11 @@
 
 ## Decision: CSV Output Format
 
-**Chosen**: CSV with columns: Text, X, Y, Width, Height, Frequency
+**Chosen**: CSV with one row per normalized player name and event-based occurrence counts.
 
-**Rationale**: Includes position and size for regions, frequency for grouping. Standard CSV readable in Excel/sheets.
+**Recommended Columns**: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`
+
+**Rationale**: Preserves deduplicated business output while keeping enough metadata for verification and debugging.
 
 **Alternatives Considered**:
 - JSON: More complex for users.
@@ -133,10 +183,13 @@
 ## Summary: Research Complete
 
 **All clarifications from spec have solutions identified**:
-- ✅ Bundling strategy: PyInstaller + onedir
-- ✅ Code signing: Authenticode (self-signed or CA)
-- ✅ YouTube streaming: yt-dlp + ffmpeg
-- ✅ Tesseract bundling: Subfolder + env var
-- ✅ Tkinter freezing: hiddenimports + TCL_LIBRARY
+- Bundling strategy: PyInstaller + onedir
+- Code signing: Authenticode (self-signed or CA)
+- Video access: yt-dlp + ffmpeg seek
+- Tesseract bundling: Subfolder + env var
+- Tkinter freezing: hiddenimports + TCL_LIBRARY
+- Context pattern matching: case-insensitive substring with optional before/after
+- Dedup semantics: normalized-name dedup with event-based occurrence counting
+- Performance-aware event aggregation: configurable gap threshold (default 1.0s)
 
-**Status**: Ready for Phase 1 Design (data-model.md, contracts/, quickstart.md)
+**Status**: Ready for Phase 1 design and task generation.
