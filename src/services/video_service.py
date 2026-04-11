@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+import os
+import shutil
 
 import cv2
 from yt_dlp import YoutubeDL
@@ -15,6 +17,10 @@ class InvalidURLError(ValueError):
 
 
 class VideoService:
+    def __init__(self) -> None:
+        # Cache extracted (stream_url, info) per YouTube URL to avoid repeated network lookups.
+        self._stream_cache: dict[str, tuple[str, dict]] = {}
+
     @staticmethod
     def _is_supported_youtube_url(url: str) -> bool:
         lowered = url.lower().strip()
@@ -22,6 +28,34 @@ class VideoService:
             "youtube.com/watch?v=" in lowered
             or "youtu.be/" in lowered
         )
+
+    @staticmethod
+    def _build_ydl_opts() -> dict[str, object]:
+        ydl_opts: dict[str, object] = {
+            "quiet": True,
+            "skip_download": True,
+            "format": "best[ext=mp4]/best",
+        }
+
+        # yt-dlp >= 2026 expects js_runtimes as {runtime: {config}} dict
+        js_runtimes: dict[str, dict] = {"deno": {}}
+        for runtime in ("node", "quickjs", "bun"):
+            runtime_path = shutil.which(runtime)
+            if runtime_path:
+                js_runtimes[runtime] = {"path": runtime_path}
+
+        deno_path = shutil.which("deno")
+        if deno_path:
+            js_runtimes["deno"] = {"path": deno_path}
+        else:
+            user_profile = os.getenv("USERPROFILE")
+            if user_profile:
+                scoop_deno = os.path.join(user_profile, "scoop", "shims", "deno.exe")
+                if os.path.exists(scoop_deno):
+                    js_runtimes["deno"] = {"path": scoop_deno}
+
+        ydl_opts["js_runtimes"] = js_runtimes
+        return ydl_opts
 
     def validate_youtube_url(self, url: str) -> tuple[bool, str]:
         """Validate URL format and accessibility before analysis starts."""
@@ -32,8 +66,8 @@ class VideoService:
             self._extract_media_url(url)
         except InvalidURLError as exc:
             return False, str(exc)
-        except Exception:
-            return False, "Video is not publicly reachable or could not be accessed."
+        except Exception as exc:
+            return False, f"Video could not be accessed: {exc}"
 
         return True, ""
 
@@ -41,18 +75,17 @@ class VideoService:
         if not url or not self._is_supported_youtube_url(url):
             raise InvalidURLError("Please provide a valid YouTube URL.")
 
-        ydl_opts = {
-            "quiet": True,
-            "skip_download": True,
-            "format": "best[ext=mp4]/best",
-        }
-        with YoutubeDL(ydl_opts) as ydl:
+        if url in self._stream_cache:
+            return self._stream_cache[url]
+
+        with YoutubeDL(self._build_ydl_opts()) as ydl:
             info = ydl.extract_info(url, download=False)
 
         stream_url = info.get("url")
         if not stream_url:
             raise VideoAccessError("No playable stream URL found for this video.")
 
+        self._stream_cache[url] = (stream_url, info)
         return stream_url, info
 
     def get_video_info(self, url: str) -> dict:
@@ -70,9 +103,7 @@ class VideoService:
         if not cap.isOpened():
             raise VideoAccessError("Could not open video stream.")
 
-        fps = cap.get(cv2.CAP_PROP_FPS) or 30
-        frame_index = int(max(0.0, time_seconds) * fps)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        cap.set(cv2.CAP_PROP_POS_MSEC, max(0.0, time_seconds) * 1000)
 
         ok, frame = cap.read()
         cap.release()
@@ -80,6 +111,29 @@ class VideoService:
             raise VideoAccessError("Could not retrieve frame from requested timestamp.")
 
         return frame
+
+    def open_stream(self, url: str) -> cv2.VideoCapture:
+        """Open and return a persistent VideoCapture for repeated seeks (e.g. region selector).
+        Caller is responsible for calling close_stream() when done."""
+        stream_url, _ = self._extract_media_url(url)
+        cap = cv2.VideoCapture(stream_url)
+        if not cap.isOpened():
+            raise VideoAccessError("Could not open video stream.")
+        return cap
+
+    @staticmethod
+    def get_frame_from_cap(cap: cv2.VideoCapture, time_seconds: float):
+        """Read a frame from an already-open VideoCapture by seeking to time_seconds."""
+        cap.set(cv2.CAP_PROP_POS_MSEC, max(0.0, time_seconds) * 1000)
+        ok, frame = cap.read()
+        if not ok:
+            raise VideoAccessError("Could not retrieve frame from requested timestamp.")
+        return frame
+
+    @staticmethod
+    def close_stream(cap: cv2.VideoCapture) -> None:
+        """Release a VideoCapture opened with open_stream()."""
+        cap.release()
 
     def get_frames_in_range(
         self, url: str, start_time: float, end_time: float, fps: int

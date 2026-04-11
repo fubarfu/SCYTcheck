@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tkinter as tk
 from tkinter import messagebox
 
@@ -16,6 +17,8 @@ from src.services.video_service import InvalidURLError, VideoAccessError, VideoS
 
 def main() -> None:
     config = load_config()
+    if config.tessdata_prefix and not os.getenv("TESSDATA_PREFIX"):
+        os.environ["TESSDATA_PREFIX"] = config.tessdata_prefix
     logger = configure_logging()
 
     video_service = VideoService()

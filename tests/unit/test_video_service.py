@@ -12,6 +12,25 @@ def test_validate_youtube_url_rejects_invalid_format() -> None:
     assert "valid YouTube" in error
 
 
+def test_build_ydl_opts_enables_node_runtime_when_available() -> None:
+    service = VideoService()
+
+    with patch("src.services.video_service.shutil.which") as which_mock:
+        which_mock.side_effect = lambda name: {
+            "node": r"C:\Program Files\nodejs\node.exe",
+            "deno": None,
+            "quickjs": None,
+            "bun": None,
+        }.get(name)
+        opts = service._build_ydl_opts()
+
+    runtimes = opts["js_runtimes"]
+    assert isinstance(runtimes, dict)
+    assert "node" in runtimes
+    assert runtimes["node"] == {"path": r"C:\Program Files\nodejs\node.exe"}
+    assert "deno" in runtimes
+
+
 def test_validate_youtube_url_accepts_accessible_video() -> None:
     service = VideoService()
 
@@ -29,4 +48,4 @@ def test_validate_youtube_url_handles_unreachable_video() -> None:
         is_valid, error = service.validate_youtube_url("https://youtu.be/abc")
 
     assert not is_valid
-    assert "publicly reachable" in error
+    assert "could not be accessed" in error

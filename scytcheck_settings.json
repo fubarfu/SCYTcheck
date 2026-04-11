@@ -13,6 +13,7 @@
       "enabled": true
     }
   ],
-  "filter_non_matching": false,
-  "event_gap_threshold_sec": 1.0
+  "filter_non_matching": true,
+  "event_gap_threshold_sec": 1.0,
+  "ocr_confidence_threshold": 40
 }

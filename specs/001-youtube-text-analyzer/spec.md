@@ -45,6 +45,7 @@
 - Q: How should labels be laid out relative to input and display fields in the UI? → A: Labels must not overlap input fields or display fields at supported window sizes
 - Q: What is the priority for capturing player names when context patterns are configured, especially with lower video quality? → A: Prioritize recall to avoid missing context-matched player names, and account for reduced OCR reliability on lower-quality video by warning users and allowing sensitivity adjustment
 - Q: How should the video-area selection popup behave and present instructions? → A: The popup must open in the foreground and explanatory text must remain clearly legible while selecting regions
+- Q: How should video retrieval quality be handled? → A: User-selectable quality with default best quality; no automatic fallback
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -141,6 +142,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-043**: Core workflow controls MUST be operable via keyboard-only interaction (including URL entry, output-folder selection trigger, Advanced Settings toggle/fields, analysis start, and region-selection confirmation/cancel shortcuts).
 - **FR-044**: Analysis memory behavior MUST avoid retaining full-frame history; processing MUST stream frames and retain only active-frame buffers plus detection/summary aggregates needed for output.
 - **FR-045**: During network or access failures, user-facing error messaging MUST distinguish malformed URL, unreachable/private video, and transient retrieval interruption outcomes.
+- **FR-046**: The app MUST provide a video-quality selector for YouTube retrieval with default set to best available quality. The selected quality MUST be used for retrieval attempts for the current analysis run, and the app MUST NOT automatically downgrade quality without explicit user action.
 
 ### Key Entities *(include if feature involves data)*
 

@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from src.config import load_config
+
+
+def test_load_config_prefers_explicit_tesseract_env(monkeypatch) -> None:
+    monkeypatch.setenv("SCYTCHECK_TESSERACT_CMD", r"C:\custom\tesseract.exe")
+    monkeypatch.setenv("TESSDATA_PREFIX", r"C:\custom\tessdata")
+    monkeypatch.setenv("SCYTCHECK_SAMPLE_FPS", "2")
+    monkeypatch.setenv("SCYTCHECK_OCR_CONFIDENCE", "55")
+
+    config = load_config()
+
+    assert config.sample_fps == 2
+    assert config.confidence_threshold == 55
+    assert config.tesseract_cmd == r"C:\custom\tesseract.exe"
+    assert config.tessdata_prefix == r"C:\custom\tessdata"
+
+
+def test_load_config_discovers_scoop_tesseract(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.delenv("SCYTCHECK_TESSERACT_CMD", raising=False)
+    monkeypatch.delenv("TESSDATA_PREFIX", raising=False)
+
+    scoop_root = tmp_path / "profile"
+    tesseract_dir = scoop_root / "scoop" / "apps" / "tesseract" / "current"
+    tessdata_dir = tesseract_dir / "tessdata"
+    tessdata_dir.mkdir(parents=True)
+    tesseract_exe = tesseract_dir / "tesseract.exe"
+    tesseract_exe.write_text("", encoding="utf-8")
+
+    monkeypatch.setenv("USERPROFILE", str(scoop_root))
+    monkeypatch.setattr("src.config.shutil.which", lambda _name: None)
+
+    config = load_config()
+
+    assert config.tesseract_cmd == str(tesseract_exe)
+    assert config.tessdata_prefix == str(tessdata_dir)

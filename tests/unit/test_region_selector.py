@@ -4,6 +4,7 @@ Unit tests for RegionSelector component - frame navigation and time-based seekin
 
 from __future__ import annotations
 
+import cv2
 import numpy as np
 import pytest
 from unittest.mock import Mock, MagicMock, patch
@@ -220,6 +221,28 @@ class TestRegionSelectorOverlayAndFocus:
     def test_overlay_legibility_constants_are_configured(self, region_selector: RegionSelector) -> None:
         assert region_selector.overlay_min_effective_font_px >= 14
         assert region_selector.overlay_thickness >= 2
+
+    def test_overlay_text_wraps_within_frame_width(self, region_selector: RegionSelector) -> None:
+        frame_width = 320
+        x = 10
+        max_text_width = frame_width - (x + 10 + (region_selector.overlay_padding * 2))
+        lines = region_selector._wrap_overlay_lines(
+            [
+                "Define your region where text appears consistently across the video.",
+                "Use time scrollbar. Press A=add region, Enter/Q=confirm, ESC=cancel",
+            ],
+            max_text_width,
+        )
+
+        assert len(lines) >= 3
+        for line in lines:
+            width = cv2.getTextSize(
+                line,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                region_selector.overlay_font_scale,
+                region_selector.overlay_thickness,
+            )[0][0]
+            assert width <= max_text_width
 
     def test_select_regions_requests_foreground_window(self, region_selector: RegionSelector) -> None:
         with patch("src.components.region_selector.cv2.namedWindow"), patch(

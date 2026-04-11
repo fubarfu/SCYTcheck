@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +16,60 @@ class AppConfig:
     sample_fps: int = 1
     confidence_threshold: int = 40
     tesseract_cmd: str | None = None
+    tessdata_prefix: str | None = None
+
+
+def _candidate_tesseract_paths() -> list[Path]:
+    candidates: list[Path] = []
+
+    if getattr(sys, "frozen", False):
+        candidates.append(Path(sys.executable).resolve().parent / "tesseract.exe")
+
+    user_profile = os.getenv("USERPROFILE")
+    if user_profile:
+        candidates.append(Path(user_profile) / "scoop" / "apps" / "tesseract" / "current" / "tesseract.exe")
+
+    local_app_data = os.getenv("LOCALAPPDATA")
+    if local_app_data:
+        candidates.append(Path(local_app_data) / "Programs" / "Tesseract-OCR" / "tesseract.exe")
+
+    for env_key in ("ProgramFiles", "ProgramFiles(x86)"):
+        base = os.getenv(env_key)
+        if base:
+            candidates.append(Path(base) / "Tesseract-OCR" / "tesseract.exe")
+
+    return candidates
+
+
+def _discover_tesseract_command() -> str | None:
+    configured = os.getenv("SCYTCHECK_TESSERACT_CMD")
+    if configured:
+        return configured
+
+    discovered_on_path = shutil.which("tesseract")
+    if discovered_on_path:
+        return discovered_on_path
+
+    for candidate in _candidate_tesseract_paths():
+        if candidate.exists():
+            return str(candidate)
+
+    return None
+
+
+def _discover_tessdata_prefix(tesseract_cmd: str | None) -> str | None:
+    configured = os.getenv("TESSDATA_PREFIX")
+    if configured:
+        return configured
+
+    if not tesseract_cmd:
+        return None
+
+    tessdata_dir = Path(tesseract_cmd).resolve().parent / "tessdata"
+    if tessdata_dir.exists():
+        return str(tessdata_dir)
+
+    return None
 
 
 @dataclass
@@ -44,12 +100,14 @@ def _default_advanced_settings() -> AdvancedSettings:
 def load_config() -> AppConfig:
     sample_fps = int(os.getenv("SCYTCHECK_SAMPLE_FPS", "1"))
     confidence_threshold = int(os.getenv("SCYTCHECK_OCR_CONFIDENCE", "40"))
-    tesseract_cmd = os.getenv("SCYTCHECK_TESSERACT_CMD")
+    tesseract_cmd = _discover_tesseract_command()
+    tessdata_prefix = _discover_tessdata_prefix(tesseract_cmd)
 
     return AppConfig(
         sample_fps=max(1, sample_fps),
         confidence_threshold=max(0, min(confidence_threshold, 100)),
         tesseract_cmd=tesseract_cmd,
+        tessdata_prefix=tessdata_prefix,
     )
 
 
