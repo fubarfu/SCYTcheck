@@ -34,11 +34,12 @@
 
 ## Decision: OCR and Context-Pattern Extraction
 
-**Chosen**: Case-insensitive fuzzy matching over normalized OCR text with configurable similarity threshold (default `0.75`), combined with optional `before_text` / `after_text` extraction boundaries and deterministic collision resolution per FR-041.
+**Chosen**: Case-insensitive fuzzy **substring search** over normalized OCR text with configurable similarity threshold (default `0.75`), combined with optional `before_text` / `after_text` extraction boundaries and deterministic collision resolution per FR-041. The algorithm scans the full normalized OCR region text (all line breaks removed, whitespace collapsed) for the best matching occurrence of the pattern anywhere within it — not a whole-block comparison.
 
-**Rationale**: Reduces false negatives from OCR noise and spacing/line-break artifacts while preserving deterministic extraction behavior.
+**Rationale**: Reduces false negatives from OCR noise and spacing/line-break artifacts while preserving deterministic extraction behavior. Whole-block comparison would score very low similarity when the pattern (e.g. `"joined"`) is short relative to the full OCR block, causing missed matches even when the text is visibly present.
 
 **Alternatives considered**:
+- Whole-block fuzzy comparison: causes systematic misses when context pattern is a short marker inside a longer OCR string.
 - Strict substring-only matching: too brittle for noisy OCR text.
 - Regex-first pattern system: adds complexity for target users.
 

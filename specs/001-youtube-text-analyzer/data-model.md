@@ -63,8 +63,8 @@ Represents a user-defined surrounding-text extraction rule.
 
 **Validation Rules**:
 - At least one of `before_text` or `after_text` must be present
-- Matching is case-insensitive fuzzy comparison on normalized OCR text
-- OCR normalization for matching removes line breaks and collapses repeated whitespace to single spaces
+- Matching uses case-insensitive fuzzy **substring search**: the algorithm scans all normalized OCR region text for the best matching occurrence of the pattern anywhere within it (not a whole-block comparison)
+- OCR normalization for matching joins all text blocks in the region into one flat string, removes all line breaks, and collapses repeated whitespace runs to single spaces before any comparison occurs
 - Boundary-clipped context can match when at least two contiguous boundary characters overlap or fuzzy similarity meets threshold
 
 ### TextDetection

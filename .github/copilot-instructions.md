@@ -12,6 +12,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-11
 - CSV output files + local JSON settings file (`%APPDATA%/SCYTcheck/scytcheck_settings.json` fallback to local file) (001-youtube-text-analyzer)
 - Python 3.11 + `opencv-python`, `pytesseract`, `yt-dlp`, `tkinter`, `numpy` (001-youtube-text-analyzer)
 - CSV outputs + local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json` fallback to local file) (001-youtube-text-analyzer)
+- Python 3.11 + `opencv-python`, `pytesseract`, `yt-dlp`, `tkinter` (stdlib), `numpy`, `thefuzz` (fuzzy substring matching), `Pillow` (001-youtube-text-analyzer)
+- CSV outputs + local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, fallback to local file) (001-youtube-text-analyzer)
 
 - Python 3.11 + opencv-python (video processing), pytesseract (OCR), tkinter (UI) (001-youtube-text-analyzer)
 
@@ -31,8 +33,8 @@ cd src; pytest; ruff check .
 Python 3.11: Follow standard conventions
 
 ## Recent Changes
+- 001-youtube-text-analyzer: Added Python 3.11 + `opencv-python`, `pytesseract`, `yt-dlp`, `tkinter` (stdlib), `numpy`, `thefuzz` (fuzzy substring matching), `Pillow`
 - 001-youtube-text-analyzer: Added Python 3.11 + `opencv-python`, `pytesseract`, `yt-dlp`, `tkinter`, `numpy`
-- 001-youtube-text-analyzer: Added Python 3.11 + opencv-python, pytesseract, yt-dlp, tkinter, numpy
 - 001-youtube-text-analyzer: Added Python 3.11 + opencv-python, pytesseract, yt-dlp, tkinter, numpy
 
 

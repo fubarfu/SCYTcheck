@@ -37,23 +37,27 @@
 - Q: How should occurrence count be calculated for deduplicated output? → A: Count appearance events by merging contiguous frame runs, not raw frame matches
 - Q: How should event boundaries be determined when OCR misses intermittent frames? → A: Use a maximum detection-gap threshold so nearby detections are merged into one event
 - Q: What should the default detection-gap threshold be for event merging? → A: 1.0 seconds
-- Q: What should be the canonical CSV output model? → A: Deduplicated player-summary rows with `PlayerName` and earliest `StartTimestamp`; detailed occurrence/context metadata is written only to optional log output
+- Q: What should be the canonical CSV output model? → A: Deduplicated player-summary rows (one per normalized player name) with event-based occurrence metadata
 - Q: How should YouTube URL validation be performed before analysis? → A: Validate format first, then run a preflight accessibility check for public/reachable video
 - Q: How explicit should region selection interaction behavior be in requirements? → A: Add explicit requirement for creating, adjusting, and confirming one or more rectangular regions before analysis
 - Q: What should be the default state of the global context-pattern filter toggle? → A: Enabled by default on first launch so only names with at least one matching context pattern are kept
 - Q: How should labels be laid out relative to input and display fields in the UI? → A: Labels must not overlap input fields or display fields at supported window sizes
 - Q: What is the priority for capturing player names when context patterns are configured, especially with lower video quality? → A: Prioritize recall to avoid missing context-matched player names, and account for reduced OCR reliability on lower-quality video by warning users and allowing sensitivity adjustment
 - Q: How should the video-area selection popup behave and present instructions? → A: The popup must open in the foreground and explanatory text must remain clearly legible while selecting regions
-- Q: How should video retrieval quality be handled? → A: User-selectable quality with default best quality; no automatic fallback
+- Q: How should video retrieval quality be handled? → A: User-selectable quality with default best quality; if selected quality is unavailable, fall through to next lower available quality and show a non-blocking warning with requested vs actual quality used
 - Q: What log file format and naming should be required when Advanced Settings logging is enabled? → A: Create a sidecar CSV log named like output with `_log.csv` suffix
 - Q: Where should region-selector explanatory text be displayed relative to the video preview? → A: In a separate area below the video; it must not cover the video preview
 - Q: When logging is enabled, what fixed log CSV schema should be required? → A: Fixed column order `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`
 - Q: What format should log `TimestampSec` use? → A: `HH:MM:SS.mmm` formatted string
 - Q: For the simplified output CSV, which exact schema should be required? → A: `PlayerName, StartTimestamp` with `StartTimestamp` formatted as `HH:MM:SS.mmm`
 - Q: When summary output only contains `PlayerName` and `StartTimestamp`, what should happen if logging is disabled? → A: Proceed normally with no warning or prompt
+- Q: What matching mode should context patterns use for OCR variability and missed strict matches? → A: Fuzzy matching with normalized text and configurable similarity threshold (default 0.75)
 - Q: How should OCR text be normalized before fuzzy context matching? → A: Remove line breaks and collapse whitespace runs before comparison
 - Q: How should boundary-clipped context text be matched when OCR region cuts off parts of the pattern? → A: Match if either at least 2 contiguous boundary characters overlap or fuzzy score passes threshold on normalized text
 - Q: Should release packaging require signing certificates? → A: No; release packaging must support unsigned portable bundles by default
+- Q: Should the spec enumerate the exact quality levels users can choose, or describe them as a minimum set? → A: Enumerate exactly: `best`, `720p`, `480p`, `360p` as the fixed supported set
+- Q: When the user-selected quality level is unavailable from yt-dlp for a specific video, what should the app do? → A: Fall through to next lower available quality and show a non-blocking warning message
+- Q: How should the fuzzy matching algorithm locate a context pattern within the normalized OCR region text? → A: Fuzzy substring search — scan the normalized OCR text for the best matching occurrence of the pattern appearing anywhere within it
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -96,6 +100,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - How to handle different video resolutions or frame rates?
 - What happens if the network connection drops during on-demand video frame retrieval?
 - What happens if the selected output folder is missing or not writable?
+- What happens if the user-selected video quality level is not available for a given video? → Fall through to the next lower available quality level and display a non-blocking warning identifying requested and actual quality used.
 
 ## Requirements *(mandatory)*
 
@@ -126,7 +131,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-019**: Region selection navigation MUST be implemented with the time scrollbar only; no additional frame-step or fixed-time-step controls are required.
 - **FR-020**: The region selection UI MUST display a tooltip or helper text informing the user: "Define your region where text appears consistently across the video." to communicate the fixed-region limitation. The helper text MUST be visible immediately when the selector opens and remain visible until selector close or explicit user dismissal.
 - **FR-021**: The app MUST allow users to define multiple context patterns in an Advanced Settings section of the UI; each pattern optionally specifies a before-text string, an after-text string, or both. When both are provided, both must match (compound AND rule) for the name to be extracted.
-- **FR-022**: Context pattern matching MUST use case-insensitive fuzzy matching against normalized OCR text detected in the region. For matching, OCR text normalization MUST remove line breaks and collapse repeated whitespace runs to single spaces before comparison. Matching MUST support a configurable similarity threshold with default `0.75`. If context text is clipped at a region boundary, a match MUST still be accepted when either (a) at least two contiguous boundary characters overlap at the start or end of the context text, or (b) fuzzy similarity against normalized text meets the configured threshold.
+- **FR-022**: Context pattern matching MUST use case-insensitive fuzzy **substring** search against normalized OCR text detected in the region. The algorithm MUST scan the normalized OCR text for the best matching occurrence of the pattern appearing anywhere within it (not a whole-block comparison). For matching, OCR text normalization MUST remove line breaks and collapse repeated whitespace runs to single spaces before comparison. Matching MUST support a configurable similarity threshold with default `0.75`. If context text is clipped at a region boundary, a match MUST still be accepted when either (a) at least two contiguous boundary characters overlap at the start or end of the context text, or (b) fuzzy similarity against normalized text meets the configured threshold.
 - **FR-023**: The Advanced Settings section MUST provide a global toggle "Only extract names matching a context pattern"; when enabled, OCR text from all regions that does not match any defined context pattern MUST be excluded from the output. On first launch, this toggle MUST default to enabled.
 - **FR-024**: The app MUST pre-configure two default context patterns on first launch: "joined" (position: after) and "connected" (position: after).
 - **FR-025**: The Advanced Settings section MUST be accessible from the main UI as a distinct collapsible or separate settings area, separate from the primary workflow controls.
@@ -135,9 +140,9 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name. `StartTimestamp` in the output MUST represent the earliest merged appearance-event start for that player.
 - **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
 - **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
-- **FR-031**: Deduplicated summary CSV output schema MUST be fixed with the following required columns in order: `PlayerName`, `StartTimestamp`. `StartTimestamp` MUST be formatted as `HH:MM:SS.mmm`.
+- **FR-031**: `StartTimestamp` in summary CSV output MUST be formatted as `HH:MM:SS.mmm`.
 - **FR-032**: Before analysis starts, users MUST be able to create, adjust, and confirm one or more rectangular regions in the region selector.
-- **FR-033**: UI labels MUST be positioned and sized so they do not overlap associated input controls or display fields in the primary workflow and Advanced Settings at the supported minimum window size.
+- **FR-033**: UI labels MUST be positioned and sized so they do not overlap associated input controls or display fields in the primary workflow and Advanced Settings at minimum window size `1024x768`.
 - **FR-034**: For OCR extraction under configured context-pattern rules, the analysis workflow MUST preserve every non-empty context-matched candidate name through candidate-collection output (before deduplication/event aggregation); only empty/whitespace-only strings may be dropped.
 - **FR-035**: The app MUST inform users that lower video quality can reduce OCR reliability and MUST provide adjustable OCR sensitivity controls so users can tune detection to reduce missed context-matched player names.
 - **FR-036**: The video-area (region) selection popup/window MUST open in the foreground and retain focus visibility when launched from the main workflow so it is not hidden behind the main application window.
@@ -151,7 +156,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-043**: Core workflow controls MUST be operable via keyboard-only interaction (including URL entry, output-folder selection trigger, Advanced Settings toggle/fields, analysis start, and region-selection confirmation/cancel shortcuts).
 - **FR-044**: Analysis memory behavior MUST avoid retaining full-frame history; processing MUST stream frames and retain only active-frame buffers plus detection/summary aggregates needed for output.
 - **FR-045**: During network or access failures, user-facing error messaging MUST distinguish malformed URL, unreachable/private video, and transient retrieval interruption outcomes.
-- **FR-046**: The app MUST provide a video-quality selector for YouTube retrieval with default set to best available quality. The selected quality MUST be used for retrieval attempts for the current analysis run, and the app MUST NOT automatically downgrade quality without explicit user action.
+- **FR-046**: The app MUST provide a video-quality selector for YouTube retrieval with exactly four supported levels: `best`, `720p`, `480p`, `360p`. The default MUST be `best`. The selected quality MUST be used consistently for both region-selector preview frames and analysis frame retrieval in the current run. If the selected quality level is unavailable for a given video, the app MUST fall through to the next lower available quality level and display a non-blocking warning message identifying the requested and actual quality used.
 - **FR-047**: Advanced Settings MUST provide a toggle to enable/disable analysis logging. The default state MUST be disabled (off).
 - **FR-048**: When logging is enabled, the app MUST create a sidecar CSV log file in the same folder as the output CSV using the same base filename with `_log.csv` suffix.
 - **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST use this exact header order: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`, `NormalizedName`, `OccurrenceCount`, `StartTimestamp`, `EndTimestamp`, `RepresentativeRegion`. `TimestampSec`, `StartTimestamp`, and `EndTimestamp` MUST be strings formatted as `HH:MM:SS.mmm`. `RejectionReason` MUST be non-empty when `Accepted=false`. `ExtractedName` MUST be non-empty when `Accepted=true`.
