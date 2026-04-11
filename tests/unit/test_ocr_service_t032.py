@@ -6,8 +6,6 @@ Tests that competing pattern matches are resolved deterministically by:
 3. Pattern order third (as they appear in patterns list)
 """
 
-import pytest
-
 from src.data.models import ContextPattern
 from src.services.ocr_service import OCRService
 

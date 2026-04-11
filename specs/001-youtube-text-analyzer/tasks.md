@@ -110,29 +110,29 @@
 
 ### Tests for User Story 2
 
-- [ ] T053 [P] [US2] Add URL entry and output-folder workflow tests in `tests/unit/test_main_window.py`
-- [ ] T054 [P] [US2] Add auto-generated filename and folder-validation tests in `tests/unit/test_file_selector.py`
-- [ ] T055 [P] [US2] Add advanced settings persistence round-trip tests in `tests/unit/test_main_window.py`
-- [ ] T056 [P] [US2] Add first-launch default toggles, patterns, and quality level tests in `tests/unit/test_main_window.py`
-- [ ] T057 [P] [US2] Add OCR sensitivity controls and low-quality warning guidance tests per FR-035 in `tests/unit/test_main_window.py`
-- [ ] T058 [P] [US2] Add keyboard-only operability tests for all primary workflow controls per FR-043 in `tests/unit/test_main_window.py`
-- [ ] T059 [P] [US2] Add region selector scrollbar-only navigation tests per FR-019 in `tests/unit/test_region_selector.py`
-- [ ] T060 [P] [US2] Add foreground launch and below-video instruction placement tests per FR-036/FR-051 in `tests/unit/test_region_selector.py`
-- [ ] T061 [P] [US2] Add FR-037 legibility constraints tests (font size ≥14 px, contrast ratio ≥4.5:1) in `tests/unit/test_region_selector.py`
-- [ ] T062 [P] [US2] Add helper-text visibility lifecycle tests (visible on open, not removed until close/explicit dismiss) per FR-020 in `tests/unit/test_region_selector.py`
-- [ ] T063 [P] [US2] Add logging-disabled no-prompt/no-warning behavior tests per FR-052 in `tests/unit/test_main.py`
-- [ ] T064 [US2] Add integration test for persisted settings and keyboard-driven workflow in `tests/integration/test_us2_settings_workflow.py`
+- [X] T053 [P] [US2] Add URL entry and output-folder workflow tests in `tests/unit/test_main_window.py`
+- [X] T054 [P] [US2] Add auto-generated filename and folder-validation tests in `tests/unit/test_file_selector.py`
+- [X] T055 [P] [US2] Add advanced settings persistence round-trip tests in `tests/unit/test_main_window.py`
+- [X] T056 [P] [US2] Add first-launch default toggles, patterns, and quality level tests in `tests/unit/test_main_window.py`
+- [X] T057 [P] [US2] Add OCR sensitivity controls and low-quality warning guidance tests per FR-035 in `tests/unit/test_main_window.py`
+- [X] T058 [P] [US2] Add keyboard-only operability tests for all primary workflow controls per FR-043 in `tests/unit/test_main_window.py`
+- [X] T059 [P] [US2] Add region selector scrollbar-only navigation tests per FR-019 in `tests/unit/test_region_selector.py`
+- [X] T060 [P] [US2] Add foreground launch and below-video instruction placement tests per FR-036/FR-051 in `tests/unit/test_region_selector.py`
+- [X] T061 [P] [US2] Add FR-037 legibility constraints tests (font size ≥14 px, contrast ratio ≥4.5:1) in `tests/unit/test_region_selector.py`
+- [X] T062 [P] [US2] Add helper-text visibility lifecycle tests (visible on open, not removed until close/explicit dismiss) per FR-020 in `tests/unit/test_region_selector.py`
+- [X] T063 [P] [US2] Add logging-disabled no-prompt/no-warning behavior tests per FR-052 in `tests/unit/test_main.py`
+- [X] T064 [US2] Add integration test for persisted settings and keyboard-driven workflow in `tests/integration/test_us2_settings_workflow.py`
 
 ### Implementation for User Story 2
 
-- [ ] T065 [US2] Implement URL input validation status wiring (format + preflight feedback) in `src/components/url_input.py`
-- [ ] T066 [US2] Implement folder-only output selector with actionable error messages per FR-017 in `src/components/file_selector.py`
-- [ ] T067 [US2] Implement advanced settings UI (context patterns, filter toggle, logging toggle, OCR sensitivity, event-gap threshold) in `src/components/main_window.py`
-- [ ] T068 [US2] Implement quality selector UI with exactly four levels (`best`, `720p`, `480p`, `360p`) per FR-046 in `src/components/main_window.py`
-- [ ] T069 [US2] Implement keyboard shortcuts and focus traversal for all primary workflow controls per FR-043 in `src/components/main_window.py`
-- [ ] T070 [US2] Enforce non-overlapping labels and controls at minimum window size 1024×768 per FR-033 in `src/components/main_window.py`
-- [ ] T071 [US2] Implement region selector: foreground launch, scrollbar-only navigation, dedicated below-video instruction panel, minimum legibility rules per FR-036/FR-037/FR-051 in `src/components/region_selector.py`
-- [ ] T072 [US2] Wire settings load/save lifecycle and first-launch startup defaults in `src/main.py`
+- [X] T065 [US2] Implement URL input validation status wiring (format + preflight feedback) in `src/components/url_input.py`
+- [X] T066 [US2] Implement folder-only output selector with actionable error messages per FR-017 in `src/components/file_selector.py`
+- [X] T067 [US2] Implement advanced settings UI (context patterns, filter toggle, logging toggle, OCR sensitivity, event-gap threshold) in `src/components/main_window.py`
+- [X] T068 [US2] Implement quality selector UI with exactly four levels (`best`, `720p`, `480p`, `360p`) per FR-046 in `src/components/main_window.py`
+- [X] T069 [US2] Implement keyboard shortcuts and focus traversal for all primary workflow controls per FR-043 in `src/components/main_window.py`
+- [X] T070 [US2] Enforce non-overlapping labels and controls at minimum window size 1024×768 per FR-033 in `src/components/main_window.py`
+- [X] T071 [US2] Implement region selector: foreground launch, scrollbar-only navigation, dedicated below-video instruction panel, minimum legibility rules per FR-036/FR-037/FR-051 in `src/components/region_selector.py`
+- [X] T072 [US2] Wire settings load/save lifecycle and first-launch startup defaults in `src/main.py`
 
 **Checkpoint**: US2 independently functional and testable.
 
@@ -142,14 +142,14 @@
 
 **Purpose**: Final hardening, release packaging validation, and full RTR-001 traceability checks.
 
-- [ ] T073 Add SC-001 performance validation test (10-minute video under 5 minutes) in `tests/integration/test_performance_sc001.py`
-- [ ] T074 [P] Add SC-004/SC-005 summary CSV schema and timestamp format validation test in `tests/integration/test_output_schema_sc004_sc005.py`
-- [ ] T075 [P] Add FR-005/FR-028 on-screen `PlayerName` consistency and FR-049 sidecar schema validation tests in `tests/integration/test_log_schema_fr049.py` and `tests/integration/test_us1_workflow.py`
-- [ ] T076 [P] Add FR-050 no-log-file-when-disabled validation test in `tests/integration/test_log_schema_fr049.py`
-- [ ] T077 [P] Add FR-010..FR-013 release bundle content validation test in `tests/integration/test_release_bundle_fr010_fr013.py`
-- [ ] T078 [P] Add FR-014 unsigned-release and optional-signing validation test in `tests/integration/test_release_signing_fr014.py`
-- [ ] T079 Validate quickstart walkthrough steps (including step 14: on-screen PlayerName preservation) against implemented behavior in `specs/001-youtube-text-analyzer/quickstart.md`
-- [ ] T080 Run final quality gates (`pytest`, `ruff check`) and capture results in `README.md`
+- [X] T073 Add SC-001 performance validation test (10-minute video under 5 minutes) in `tests/integration/test_performance_sc001.py`
+- [X] T074 [P] Add SC-004/SC-005 summary CSV schema and timestamp format validation test in `tests/integration/test_output_schema_sc004_sc005.py`
+- [X] T075 [P] Add FR-005/FR-028 on-screen `PlayerName` consistency and FR-049 sidecar schema validation tests in `tests/integration/test_log_schema_fr049.py` and `tests/integration/test_us1_workflow.py`
+- [X] T076 [P] Add FR-050 no-log-file-when-disabled validation test in `tests/integration/test_log_schema_fr049.py`
+- [X] T077 [P] Add FR-010..FR-013 release bundle content validation test in `tests/integration/test_release_bundle_fr010_fr013.py`
+- [X] T078 [P] Add FR-014 unsigned-release and optional-signing validation test in `tests/integration/test_release_signing_fr014.py`
+- [X] T079 Validate quickstart walkthrough steps (including step 14: on-screen PlayerName preservation) against implemented behavior in `specs/001-youtube-text-analyzer/quickstart.md`
+- [X] T080 Run final quality gates (`pytest`, `ruff check`) and capture results in `README.md`
 
 ---
 

@@ -122,7 +122,11 @@ class OCRService:
         par_nums = data.get("par_num")
         line_nums = data.get("line_num")
 
-        line_meta_available = isinstance(block_nums, list) and isinstance(par_nums, list) and isinstance(line_nums, list)
+        line_meta_available = (
+            isinstance(block_nums, list)
+            and isinstance(par_nums, list)
+            and isinstance(line_nums, list)
+        )
 
         def parse_conf(raw: object) -> int:
             try:
@@ -156,7 +160,9 @@ class OCRService:
                     line_text = " ".join(token for _, token, _ in ordered_tokens).strip()
                     if not line_text:
                         continue
-                    avg_conf = int(round(sum(conf for _, _, conf in ordered_tokens) / len(ordered_tokens)))
+                    avg_conf = int(
+                        round(sum(conf for _, _, conf in ordered_tokens) / len(ordered_tokens))
+                    )
                     lines.append((line_text, avg_conf))
                 return lines
 

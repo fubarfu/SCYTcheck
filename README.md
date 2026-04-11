@@ -78,5 +78,5 @@ black --check .
 ## Latest Validation
 
 - Date: 2026-04-12
-- `pytest`: 115 passed
-- `ruff check .`: all checks passed
+- `pytest tests/ -q`: 156 passed
+- `ruff check src tests --select=E,F,W`: all checks passed

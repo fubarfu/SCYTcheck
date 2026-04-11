@@ -448,18 +448,6 @@ class TestUS1ValidURLAnalysis:
 
     def test_valid_url_analysis_produces_deduplicated_summary_csv(self) -> None:
         """Verify full valid URL analysis workflow produces deduplicated summary.csv."""
-        root = _FakeRoot()
-        settings = AdvancedSettings(
-            context_patterns=[
-                {"id": "joined", "before_text": None, "after_text": "joined", "enabled": True}
-            ],
-            filter_non_matching=False,
-            event_gap_threshold_sec=1.0,
-            ocr_confidence_threshold=40,
-            video_quality="best",
-            logging_enabled=False,
-        )
-
         analysis = VideoAnalysis(url="https://youtube.com/watch?v=abc123")
         analysis.set_player_summaries(
             [
@@ -560,7 +548,12 @@ class TestUS1NoRegionAbort:
         region_selector.select_regions.return_value = []  # No regions selected
 
         def make_window(root_arg):
-            window = _FakeWindow(root_arg, "https://youtube.com/watch?v=test", str(tmp_path), settings)
+            window = _FakeWindow(
+                root_arg,
+                "https://youtube.com/watch?v=test",
+                str(tmp_path),
+                settings,
+            )
             window_holder["window"] = window
             return window
 
@@ -616,7 +609,7 @@ class TestUS1AnalysisProgress:
         def on_progress(percentage: int) -> None:
             progress_calls.append(percentage)
 
-        analysis = analysis_service.analyze(
+        analysis_service.analyze(
             url="https://youtube.com/watch?v=test",
             regions=[(10, 20, 100, 50)],
             start_time=0.0,
