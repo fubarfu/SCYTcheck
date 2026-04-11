@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import csv
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 
 from src.data.models import VideoAnalysis
@@ -9,6 +11,49 @@ from src.data.models import VideoAnalysis
 
 class ExportService:
     HEADERS = ["Text", "X", "Y", "Width", "Height", "Frequency"]
+
+    @staticmethod
+    def extract_youtube_video_id(url: str) -> str:
+        """
+        Extract video ID from YouTube URL.
+        Supports standard youtube.com and youtu.be short URLs.
+        
+        Args:
+            url: YouTube URL
+            
+        Returns:
+            Video ID string
+            
+        Raises:
+            ValueError: If URL doesn't contain a valid video ID
+        """
+        # Pattern for youtube.com URLs
+        match = re.search(r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)', url)
+        if match:
+            return match.group(1)
+        
+        raise ValueError(f"Could not extract video ID from URL: {url}")
+
+    @staticmethod
+    def generate_filename(video_url: str, timestamp: datetime | None = None) -> str:
+        """
+        Generate auto-filename for CSV export.
+        Format: scytcheck_<videoId>_<YYYYMMDD-HHMMSS>.csv
+        
+        Args:
+            video_url: YouTube video URL
+            timestamp: DateTime for filename (defaults to current time)
+            
+        Returns:
+            Generated filename string
+        """
+        if timestamp is None:
+            timestamp = datetime.now()
+        
+        video_id = ExportService.extract_youtube_video_id(video_url)
+        timestamp_str = timestamp.strftime("%Y%m%d-%H%M%S")
+        
+        return f"scytcheck_{video_id}_{timestamp_str}.csv"
 
     def validate_output_folder(self, folder_path: str) -> tuple[bool, str]:
         """
