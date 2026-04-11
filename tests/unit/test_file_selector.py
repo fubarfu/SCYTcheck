@@ -4,24 +4,13 @@ Unit tests for FileSelector component - folder selection and validation.
 
 from __future__ import annotations
 
-import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 
 import pytest
 
 from src.components.file_selector import FileSelector
-
-
-@pytest.fixture
-def mock_parent():
-    """Create a mock parent widget for tkinter."""
-    # Use a MagicMock with proper tkinter internals
-    mock = MagicMock()
-    mock.tk = MagicMock()  # tkinter needs a tk attribute
-    mock._last_child_ids = {}  # tkinter uses this for widget naming
-    return mock
 
 
 @pytest.fixture
@@ -116,6 +105,23 @@ class TestFolderSelection:
         """Test that get() strips whitespace from path."""
         file_selector.set_path("  /test/folder  ")
         assert file_selector.get() == "/test/folder"
+
+    def test_choose_sets_selected_folder(self, file_selector: FileSelector) -> None:
+        """Test folder dialog stores selected path in folder-only mode."""
+        selected = "/tmp/output-folder"
+        with patch("src.components.file_selector.filedialog.askdirectory", return_value=selected) as ask_dir:
+            file_selector._choose()
+
+        ask_dir.assert_called_once()
+        assert file_selector.get() == selected
+
+    def test_choose_ignores_cancel(self, file_selector: FileSelector) -> None:
+        """Test folder dialog keeps path unchanged when selection is canceled."""
+        file_selector.set_path("/existing/path")
+        with patch("src.components.file_selector.filedialog.askdirectory", return_value=""):
+            file_selector._choose()
+
+        assert file_selector.get() == "/existing/path"
 
 
 class TestFolderValidation:

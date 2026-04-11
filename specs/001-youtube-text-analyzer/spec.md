@@ -41,6 +41,9 @@
 - Q: How should YouTube URL validation be performed before analysis? → A: Validate format first, then run a preflight accessibility check for public/reachable video
 - Q: What CSV summary columns should be required and fixed? → A: PlayerName, NormalizedName, OccurrenceCount, FirstSeenSec, LastSeenSec, RepresentativeRegion
 - Q: How explicit should region selection interaction behavior be in requirements? → A: Add explicit requirement for creating, adjusting, and confirming one or more rectangular regions before analysis
+- Q: What should be the default state of the global context-pattern filter toggle? → A: Enabled by default on first launch so only names with at least one matching context pattern are kept
+- Q: How should labels be laid out relative to input and display fields in the UI? → A: Labels must not overlap input fields or display fields at supported window sizes
+- Q: What is the priority for capturing player names when context patterns are configured, especially with lower video quality? → A: Prioritize recall to avoid missing context-matched player names, and account for reduced OCR reliability on lower-quality video by warning users and allowing sensitivity adjustment
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -110,16 +113,19 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-020**: The region selection UI MUST display a tooltip or helper text informing the user: "Define your region where text appears consistently across the video." to communicate the fixed-region limitation.
 - **FR-021**: The app MUST allow users to define multiple context patterns in an Advanced Settings section of the UI; each pattern optionally specifies a before-text string, an after-text string, or both. When both are provided, both must match (compound AND rule) for the name to be extracted.
 - **FR-022**: Context pattern matching MUST use case-insensitive substring matching against the full OCR text detected in the region.
-- **FR-023**: The Advanced Settings section MUST provide a global toggle "Only extract names matching a context pattern"; when enabled, OCR text from all regions that does not match any defined context pattern MUST be excluded from the output.
+- **FR-023**: The Advanced Settings section MUST provide a global toggle "Only extract names matching a context pattern"; when enabled, OCR text from all regions that does not match any defined context pattern MUST be excluded from the output. On first launch, this toggle MUST default to enabled.
 - **FR-024**: The app MUST pre-configure two default context patterns on first launch: "joined" (position: after) and "connected" (position: after).
 - **FR-025**: The Advanced Settings section MUST be accessible from the main UI as a distinct collapsible or separate settings area, separate from the primary workflow controls.
 - **FR-026**: When a context pattern matches, the app MUST extract the player name as follows: if only after-text is set, extract all trimmed OCR text preceding the after-text match; if only before-text is set, extract all trimmed OCR text following the before-text match; if both are set, extract all trimmed text between the before-text match end and the after-text match start.
-- **FR-027**: The app MUST persist Advanced Settings (context patterns and filter toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) MUST only be applied on first launch when no config file exists.
+- **FR-027**: The app MUST persist Advanced Settings (context patterns and filter toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) and default filter-toggle state (enabled) MUST only be applied on first launch when no config file exists.
 - **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name, including an occurrence count representing appearance events (contiguous frame runs merged), not raw frame matches.
 - **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
 - **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
 - **FR-031**: Deduplicated CSV output schema MUST be fixed with the following required columns in order: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`.
 - **FR-032**: Before analysis starts, users MUST be able to create, adjust, and confirm one or more rectangular regions in the region selector.
+- **FR-033**: UI labels MUST be positioned and sized so they do not overlap associated input controls or display fields in the primary workflow and Advanced Settings at the supported minimum window size.
+- **FR-034**: For OCR extraction under configured context-pattern rules, the analysis workflow MUST prioritize not missing context-matched player names (recall-first behavior) over aggressive filtering that could suppress valid names.
+- **FR-035**: The app MUST inform users that lower video quality can reduce OCR reliability and MUST provide adjustable OCR sensitivity controls so users can tune detection to reduce missed context-matched player names.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -133,7 +139,7 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 ### Measurable Outcomes
 
 - **SC-001**: Users can complete video analysis for a 10-minute video in under 5 minutes.
-- **SC-002**: *(Aspirational)* The app is expected to achieve at least 80% accuracy in detecting text strings in standard video resolutions. No formal measurement methodology is defined; this target guides implementation quality but is not a hard acceptance gate.
+- **SC-002**: *(Aspirational)* The app is expected to achieve at least 80% accuracy in detecting text strings in standard video resolutions and to favor high recall for context-matched player names. No formal measurement methodology is defined; these targets guide implementation quality but are not hard acceptance gates.
 - **SC-003**: *(Aspirational)* 95% of users can successfully input a URL and initiate analysis without assistance. No formal user testing is planned; this target guides UX decisions but is not a hard acceptance gate.
 - **SC-004**: Output CSV MUST be UTF-8 encoded, comma-delimited, include headers in this exact order (`PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`), and contain exactly one deduplicated row per normalized player name with event-based occurrence metadata.
 

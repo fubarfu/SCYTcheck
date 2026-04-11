@@ -1,13 +1,13 @@
 {
   "context_patterns": [
     {
-      "id": "default-joined",
+      "id": "pattern-1",
       "before_text": null,
       "after_text": "joined",
       "enabled": true
     },
     {
-      "id": "default-connected",
+      "id": "pattern-2",
       "before_text": null,
       "after_text": "connected",
       "enabled": true

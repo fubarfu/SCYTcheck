@@ -92,16 +92,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T035 [P] [US2] Add unit tests for folder-only selection and validation messages in `tests/unit/test_file_selector.py`
-- [ ] T036 [P] [US2] Add unit tests for advanced settings load/default persistence in `tests/unit/test_main_window.py`
-- [ ] T037 [US2] Add integration test for advanced settings workflow persistence in `tests/integration/test_us2_settings_workflow.py`
+- [X] T035 [P] [US2] Add unit tests for folder-only selection and validation messages in `tests/unit/test_file_selector.py`
+- [X] T036 [P] [US2] Add unit tests for advanced settings load/default persistence in `tests/unit/test_main_window.py`
+- [X] T037 [US2] Add integration test for advanced settings workflow persistence in `tests/integration/test_us2_settings_workflow.py`
 
 ### Implementation for User Story 2
 
-- [ ] T038 [P] [US2] Add Advanced Settings section for context-pattern management in `src/components/main_window.py`
-- [ ] T039 [P] [US2] Add global pattern-only toggle and threshold controls in `src/components/main_window.py`
-- [ ] T040 [US2] Load/save advanced settings defaults and user updates in `src/main.py`
-- [ ] T041 [US2] Display auto-generated filename preview in main workflow in `src/components/main_window.py`
+- [X] T038 [P] [US2] Add Advanced Settings section for context-pattern management in `src/components/main_window.py`
+- [X] T039 [P] [US2] Add global pattern-only toggle and threshold controls in `src/components/main_window.py`
+- [X] T040 [US2] Load/save advanced settings defaults and user updates in `src/main.py`
+- [X] T041 [US2] Display auto-generated filename preview in main workflow in `src/components/main_window.py`
 
 **Checkpoint**: US1 and US2 both work independently.
 

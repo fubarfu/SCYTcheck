@@ -5,7 +5,7 @@ from tkinter import messagebox
 
 from src.components.main_window import MainWindow
 from src.components.region_selector import RegionSelector
-from src.config import load_advanced_settings, load_config
+from src.config import load_advanced_settings, load_config, save_advanced_settings
 from src.data.models import ContextPattern
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
@@ -29,6 +29,7 @@ def main() -> None:
 
     root = tk.Tk()
     window = MainWindow(root)
+    window.apply_advanced_settings(load_advanced_settings())
 
     def run_analysis() -> None:
         url = window.url_input.get()
@@ -49,7 +50,8 @@ def main() -> None:
                 messagebox.showerror("Invalid URL", validation_error)
                 return
 
-            advanced = load_advanced_settings()
+            advanced = window.get_advanced_settings()
+            save_advanced_settings(advanced)
             context_patterns = [
                 ContextPattern(
                     id=str(item.get("id", f"pattern-{index}")),
