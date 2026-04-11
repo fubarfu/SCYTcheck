@@ -12,6 +12,11 @@
 - Q: How should the app access the YouTube video for analysis? → A: Stream the video and analyze in real-time without full download
 - Q: What is the output file format? → A: CSV
 - Q: What constitutes "roughly the same place"? → A: User-defined regions
+- Q: How should the app be distributed to minimize setup for users? → A: Portable ZIP with bundled runtime and dependencies
+- Q: Which Windows architectures must bundled builds support? → A: Separate x64 and x86 packages
+- Q: How should OCR language data be provisioned? → A: Bundle English and German language data
+- Q: How should video decoding dependencies be provided? → A: Bundle FFmpeg binaries
+- Q: Should distributed bundles be code-signed? → A: Yes, sign bundled executables/packages
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -67,6 +72,11 @@ As a user, I want a simple interface to enter the YouTube URL and specify the ou
 - **FR-007**: The app MUST provide feedback on analysis progress and completion.
 - **FR-008**: The app MUST handle errors gracefully (e.g., invalid URL, network issues).
 - **FR-009**: The app MUST allow users to define regions of interest on the video frame for text detection.
+- **FR-010**: The app MUST be distributed as a portable ZIP package that bundles required runtime and OCR/video dependencies so users do not need separate package installations.
+- **FR-011**: The release process MUST produce separate portable ZIP bundles for Windows x64 and Windows x86.
+- **FR-012**: Bundled packages MUST include OCR language data for English and German so OCR works without first-run downloads.
+- **FR-013**: Bundled packages MUST include FFmpeg binaries required for video streaming/decoding so analysis works without external installs.
+- **FR-014**: Distributed executables and packages MUST be code-signed to reduce Windows trust warnings and improve user safety.
 
 ### Key Entities *(include if feature involves data)*
 
