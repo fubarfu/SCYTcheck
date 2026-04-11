@@ -15,8 +15,11 @@ Represents a single video analysis session.
 - `context_patterns` (list[ContextPattern]): Active extraction rules
 - `filter_non_matching` (bool): Global toggle for pattern-only output filtering
 - `ocr_confidence_threshold` (int): Active OCR sensitivity setting used during detection
+- `video_quality` (string): User-selected retrieval quality (default `best`)
+- `logging_enabled` (bool): Whether sidecar audit log export is enabled
 - `event_gap_threshold_sec` (float): Max OCR miss gap used to merge one appearance event
 - `detections` (list[TextDetection]): Raw or pre-aggregated detections
+- `log_records` (list[LogRecord]): Per-candidate audit records when logging is enabled
 - `player_summaries` (list[PlayerSummary]): Deduplicated output rows
 
 **Relationships**:
@@ -38,12 +41,15 @@ Represents display and focus behavior of the region-selection popup.
 **Attributes**:
 - `open_in_foreground` (bool): Popup is raised and visible over main window at launch
 - `instruction_text` (string): Guidance text displayed in selection view
-- `instruction_contrast_mode` (string): Contrast strategy for legibility over video content
+- `instruction_area_position` (string): Must be `below_video`
+- `instruction_contrast_mode` (string): Contrast strategy for legibility in the dedicated instruction area
 - `instruction_font_scale` (float): Effective text scaling for readability
 
 **Validation Rules**:
 - `open_in_foreground` must be true for workflow launch
-- Instruction text placement must avoid overlap with selection controls and active selection rectangles
+- `instruction_area_position` must be `below_video`
+- Instruction text must avoid overlap with selection controls and active selection rectangles
+- Instruction text must never overlay the video canvas
 
 ### ContextPattern
 Represents a user-defined surrounding-text extraction rule.
@@ -87,6 +93,34 @@ Represents one merged appearance period for a normalized player name.
 - Event is extended while next detection for same normalized name is within `event_gap_threshold_sec`
 - Event closes when gap exceeds threshold
 
+### LoggingSettings
+Represents persisted settings for optional audit logging.
+
+**Attributes**:
+- `enabled` (bool): Default `false`
+- `log_filename_suffix` (string): Fixed `_log.csv`
+
+**Validation Rules**:
+- If `enabled=false`, no log file is produced
+- If `enabled=true`, log file must be created in output folder with output base name + suffix
+
+### LogRecord
+Represents one audit row written to the sidecar log CSV.
+
+**Attributes**:
+- `timestamp_sec` (string): `HH:MM:SS.mmm`
+- `raw_string` (string)
+- `accepted` (bool)
+- `rejection_reason` (string)
+- `extracted_name` (string)
+- `region_id` (string)
+- `matched_pattern` (string)
+
+**Validation Rules**:
+- Column order is fixed: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`
+- `rejection_reason` must be non-empty when `accepted=false`
+- `extracted_name` must be non-empty when `accepted=true`
+
 ### PlayerSummary
 Represents one deduplicated output row.
 
@@ -101,9 +135,10 @@ Represents one deduplicated output row.
 ## Data Flow
 
 1. User inputs URL and regions, configures optional context patterns in Advanced Settings
-2. User adjusts OCR sensitivity when needed for lower-quality videos and receives reliability guidance
+2. User selects retrieval quality (default best), adjusts OCR sensitivity as needed, and optionally enables audit logging
 3. Frames are analyzed and OCR text is matched against active patterns (recall-first for context-matched names)
 4. Candidate detections are normalized and grouped by normalized name
 5. Detections are merged into appearance events using gap threshold (default 1.0s)
 6. Player summaries are emitted with one row per normalized name and event-based occurrence count
-7. CSV is exported to selected folder using auto-generated filename
+7. Summary CSV is exported to selected folder using auto-generated filename
+8. If logging is enabled, sidecar log CSV is written in fixed schema with one row per candidate

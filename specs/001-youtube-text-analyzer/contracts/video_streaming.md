@@ -6,11 +6,11 @@
 - `validate_youtube_url(url: str) -> tuple[bool, str]`
 	- Performs format validation and accessibility preflight check.
 - `get_video_info(url: str) -> dict`: Returns video metadata (duration, resolution)
-- `get_frame_at_time(url: str, time_seconds: float) -> np.ndarray`: Returns frame image at specific time
-- `get_frames_in_range(url: str, start_time: float, end_time: float, fps: int) -> Iterator[np.ndarray]`: Yields frames in time range
+- `get_frame_at_time(url: str, time_seconds: float, quality: str = "best") -> np.ndarray`: Returns frame image at specific time
+- `get_frames_in_range(url: str, start_time: float, end_time: float, fps: int, quality: str = "best") -> Iterator[np.ndarray]`: Yields frames in time range
 - `iter_frames_with_timestamps(url: str, start_time: float, end_time: float, fps: int) -> Iterator[tuple[float, np.ndarray]]`
 	- Yields `(frame_time_sec, frame)` tuples to support event merging and first/last seen tracking.
-- `open_region_selector(url: str, initial_time_sec: float) -> tuple[list[tuple[int, int, int, int]], bool]`
+- `open_region_selector(url: str, initial_time_sec: float, quality: str = "best") -> tuple[list[tuple[int, int, int, int]], bool]`
 	- Opens region-selection popup in foreground and returns selected regions plus a confirmation flag.
 
 **Exceptions**:
@@ -23,6 +23,7 @@
 - Time seeks are best-effort and monotonic for increasing requests.
 - Returned timestamps are within a practical decode tolerance of requested times.
 - Service supports on-demand frame retrieval without full video download.
+- Requested quality is respected for retrieval attempts in the current run; no automatic quality downgrade is applied.
 - Validation method distinguishes malformed URL and unreachable/private video conditions.
 - Region-selection popup is raised to foreground when launched.
-- Selector instruction overlay is readable over typical gameplay frames (non-overlapping and legible).
+- Selector instructions are shown in a dedicated area below the video preview and do not overlay video content.

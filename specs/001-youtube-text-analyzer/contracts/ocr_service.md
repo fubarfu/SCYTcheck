@@ -18,6 +18,8 @@
 	- lowercase + trim + collapse repeated internal whitespace.
 - `detect_player_candidates(image: np.ndarray, region: tuple[int, int, int, int], patterns: list[ContextPattern], filter_non_matching: bool) -> list[TextDetection]`
 	- Performs OCR and returns extracted candidate detections.
+- `build_log_record(detection: TextDetection, accepted: bool, rejection_reason: str, matched_pattern: str | None) -> dict[str, str]`
+	- Builds one audit row for sidecar log CSV with fixed schema.
 
 **Exceptions**:
 - `OCRError`: When text detection fails
@@ -30,3 +32,5 @@
 - If `filter_non_matching` is true, lines that match no enabled pattern are excluded.
 - For lines that do match configured patterns, extraction is recall-first and avoids additional suppression that would drop plausible context-matched names.
 - Returned detections include `raw_ocr_text`, `extracted_name`, and `normalized_name`.
+- Log row schema is deterministic when logging is enabled: `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`.
+- `TimestampSec` is formatted as `HH:MM:SS.mmm`.

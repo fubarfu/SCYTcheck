@@ -50,6 +50,8 @@
 - Q: Where should region-selector explanatory text be displayed relative to the video preview? → A: In a separate area below the video; it must not cover the video preview
 - Q: When logging is enabled, what fixed log CSV schema should be required? → A: Fixed column order `TimestampSec, RawString, Accepted, RejectionReason, ExtractedName, RegionId, MatchedPattern`
 - Q: What format should log `TimestampSec` use? → A: `HH:MM:SS.mmm` formatted string
+- Q: For the simplified output CSV, which exact schema should be required? → A: `PlayerName, StartTimestamp` with `StartTimestamp` formatted as `HH:MM:SS.mmm`
+- Q: When summary output only contains `PlayerName` and `StartTimestamp`, what should happen if logging is disabled? → A: Proceed normally with no warning or prompt
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -105,8 +107,8 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-002**: The app MUST validate the input URL in two stages before analysis starts: (1) format validation for a supported YouTube URL pattern, and (2) preflight accessibility validation that confirms the video is publicly reachable.
 - **FR-003**: The app MUST download and process YouTube video frames on-demand for real-time analysis without requiring users to download the full video. On-demand behavior means frame retrieval starts only after user analysis initiation/region confirmation and does not pre-download complete video media.
 - **FR-004**: The app MUST analyze video frames to detect text strings appearing in user-defined regions.
-- **FR-005**: After detection, the app MUST aggregate extracted text detections into grouped results using normalized player-name matching and region context for deduplicated reporting. `RepresentativeRegion` MUST be selected deterministically as the most frequent contributing region for that normalized name, with ties broken by earliest first-seen occurrence.
-- **FR-006**: The app MUST output a CSV file containing deduplicated player-summary rows (one row per normalized player name) with event-based occurrence metadata in a user-selected output folder.
+- **FR-005**: After detection, the app MUST aggregate extracted text detections into grouped results using normalized player-name matching. Summary output rows MUST retain player name plus first appearance timestamp, while detailed acceptance/rejection and context data MUST be written to the optional log output when logging is enabled.
+- **FR-006**: The app MUST output a CSV file containing deduplicated player-summary rows with this exact header order: `PlayerName`, `StartTimestamp`.
 - **FR-007**: The app MUST provide feedback on analysis progress and completion.
 - **FR-008**: The app MUST handle errors gracefully (e.g., invalid URL, network issues).
 - **FR-009**: The app MUST allow users to define regions of interest on the video frame for text detection.
@@ -128,10 +130,10 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-025**: The Advanced Settings section MUST be accessible from the main UI as a distinct collapsible or separate settings area, separate from the primary workflow controls.
 - **FR-026**: When a context pattern matches, the app MUST extract the player name as follows: if only after-text is set, extract all trimmed OCR text preceding the after-text match; if only before-text is set, extract all trimmed OCR text following the before-text match; if both are set, extract all trimmed text between the before-text match end and the after-text match start.
 - **FR-027**: The app MUST persist Advanced Settings (context patterns, filter toggle state, and log-function toggle state) to a local config file on the user's machine. Settings MUST be loaded automatically on startup. Default context patterns ("joined" after, "connected" after) and default filter-toggle state (enabled) MUST only be applied on first launch when no config file exists; the log-function toggle MUST default to disabled (off) on first launch. Config location MUST be deterministic: `%APPDATA%/SCYTcheck/scytcheck_settings.json` when writable, otherwise local `scytcheck_settings.json` beside the executable.
-- **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name, including an occurrence count representing appearance events (contiguous frame runs merged), not raw frame matches.
+- **FR-028**: The app MUST deduplicate extracted player names across the entire analyzed video by normalized player name and output one row per normalized name. `StartTimestamp` in the output MUST represent the earliest merged appearance-event start for that player.
 - **FR-029**: For deduplication, the normalized player-name key MUST be computed by converting to lowercase, trimming leading/trailing whitespace, and collapsing repeated internal whitespace to a single space.
 - **FR-030**: Appearance events MUST be merged using a configurable maximum detection-gap threshold so intermittent OCR misses within the threshold do not split a single visual appearance into multiple events. The default threshold MUST be 1.0 seconds.
-- **FR-031**: Deduplicated CSV output schema MUST be fixed with the following required columns in order: `PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`.
+- **FR-031**: Deduplicated summary CSV output schema MUST be fixed with the following required columns in order: `PlayerName`, `StartTimestamp`. `StartTimestamp` MUST be formatted as `HH:MM:SS.mmm`.
 - **FR-032**: Before analysis starts, users MUST be able to create, adjust, and confirm one or more rectangular regions in the region selector.
 - **FR-033**: UI labels MUST be positioned and sized so they do not overlap associated input controls or display fields in the primary workflow and Advanced Settings at the supported minimum window size.
 - **FR-034**: For OCR extraction under configured context-pattern rules, the analysis workflow MUST preserve every non-empty context-matched candidate name through candidate-collection output (before deduplication/event aggregation); only empty/whitespace-only strings may be dropped.
@@ -150,14 +152,15 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **FR-046**: The app MUST provide a video-quality selector for YouTube retrieval with default set to best available quality. The selected quality MUST be used for retrieval attempts for the current analysis run, and the app MUST NOT automatically downgrade quality without explicit user action.
 - **FR-047**: Advanced Settings MUST provide a toggle to enable/disable analysis logging. The default state MUST be disabled (off).
 - **FR-048**: When logging is enabled, the app MUST create a sidecar CSV log file in the same folder as the output CSV using the same base filename with `_log.csv` suffix.
-- **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST use this exact header order: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`. `TimestampSec` MUST be a string formatted as `HH:MM:SS.mmm`. `RejectionReason` MUST be non-empty when `Accepted=false`. `ExtractedName` MUST be non-empty when `Accepted=true`.
+- **FR-049**: The log CSV MUST include one row per found OCR string candidate and MUST use this exact header order: `TimestampSec`, `RawString`, `Accepted`, `RejectionReason`, `ExtractedName`, `RegionId`, `MatchedPattern`, `NormalizedName`, `OccurrenceCount`, `StartTimestamp`, `EndTimestamp`, `RepresentativeRegion`. `TimestampSec`, `StartTimestamp`, and `EndTimestamp` MUST be strings formatted as `HH:MM:SS.mmm`. `RejectionReason` MUST be non-empty when `Accepted=false`. `ExtractedName` MUST be non-empty when `Accepted=true`.
 - **FR-050**: When logging is disabled, the app MUST NOT create a log file.
+- **FR-052**: When logging is disabled, analysis and export MUST proceed without any additional warning, confirmation dialog, or informational prompt about omitted detailed logging data.
 
 ### Key Entities *(include if feature involves data)*
 
 - **VideoAnalysis**: Represents the analysis session, containing the YouTube URL, raw detections, deduplicated player summaries, and metadata like analysis timestamp.
 - **TextDetection**: Represents a per-frame extraction candidate from OCR with raw text, extracted player name, normalized player key, time, and matched pattern metadata.
-- **PlayerSummary**: Represents a deduplicated output row keyed by normalized player name with occurrence count (event-based), first-seen/last-seen timing, and representative region metadata.
+- **PlayerSummary**: Represents a deduplicated output row keyed by normalized player name containing `PlayerName` and earliest `StartTimestamp`.
 - **ContextPattern**: Represents a user-defined surrounding-text rule used to identify and extract player names from OCR output. Attributes: `before_text` (string, optional), `after_text` (string, optional), `enabled` (bool). At least one of `before_text` or `after_text` must be set. When both are set, both must match (compound AND). Multiple ContextPatterns can be configured per session.
 
 ## Success Criteria *(mandatory)*
@@ -167,8 +170,8 @@ As a user, I want a simple interface to enter the YouTube URL and select an outp
 - **SC-001**: Users can complete video analysis for a 10-minute video in under 5 minutes, measured from the moment analysis begins after region confirmation to CSV write completion under representative standard conditions (publicly reachable video, stable network, default settings).
 - **SC-002**: *(Aspirational)* The app is expected to achieve at least 80% accuracy in detecting text strings in standard video resolutions and to favor high recall for context-matched player names. No formal measurement methodology is defined; these targets guide implementation quality but are not hard acceptance gates.
 - **SC-003**: *(Aspirational)* 95% of users can successfully input a URL and initiate analysis without assistance. No formal user testing is planned; this target guides UX decisions but is not a hard acceptance gate.
-- **SC-004**: Output CSV MUST be UTF-8 encoded, comma-delimited, include headers in this exact order (`PlayerName`, `NormalizedName`, `OccurrenceCount`, `FirstSeenSec`, `LastSeenSec`, `RepresentativeRegion`), and contain exactly one deduplicated row per normalized player name with event-based occurrence metadata.
-- **SC-005**: `FirstSeenSec` and `LastSeenSec` values in CSV output MUST be numeric and formatted to 3 decimal places.
+- **SC-004**: Output CSV MUST be UTF-8 encoded, comma-delimited, include headers in this exact order (`PlayerName`, `StartTimestamp`), and contain exactly one deduplicated row per normalized player name.
+- **SC-005**: `StartTimestamp` values in CSV output MUST use `HH:MM:SS.mmm` format.
 
 ## Assumptions
 
