@@ -46,6 +46,16 @@ class _FakeRoot:
             self.window.analyze_button.command()
 
 
+class _ImmediateThread:
+    def __init__(self, target=None, daemon=None, **_kwargs) -> None:
+        self.target = target
+        self.daemon = daemon
+
+    def start(self) -> None:
+        if self.target is not None:
+            self.target()
+
+
 class _FakeWindow:
     def __init__(
         self, root: _FakeRoot, url: str, output_folder: str, settings: AdvancedSettings
@@ -349,6 +359,7 @@ class TestUS1FullWorkflow:
             patch("src.main.ExportService", return_value=export_service),
             patch("src.main.RegionSelector", return_value=region_selector),
             patch("src.main.tk.Tk", return_value=root),
+            patch("src.main.threading.Thread", side_effect=_ImmediateThread),
             patch("src.main.MainWindow", side_effect=make_window),
             patch("src.main.load_advanced_settings", return_value=settings),
             patch("src.main.save_advanced_settings"),
@@ -569,6 +580,7 @@ class TestUS1NoRegionAbort:
             patch("src.main.ExportService", return_value=export_service),
             patch("src.main.RegionSelector", return_value=region_selector),
             patch("src.main.tk.Tk", return_value=root),
+            patch("src.main.threading.Thread", side_effect=_ImmediateThread),
             patch("src.main.MainWindow", side_effect=make_window),
             patch("src.main.load_advanced_settings", return_value=settings),
             patch("src.main.save_advanced_settings"),

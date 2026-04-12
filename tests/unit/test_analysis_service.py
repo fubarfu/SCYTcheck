@@ -13,6 +13,10 @@ class _OCRServiceStub:
         del frame, region
         return ["Raw OCR Name"]
 
+    def extract_candidates(self, tokens, patterns=None, filter_non_matching=False):
+        del patterns, filter_non_matching
+        return [(str(tokens[0]), None)]
+
     def evaluate_lines(self, lines, patterns=None, filter_non_matching=False):
         del lines, patterns, filter_non_matching
         return [
@@ -46,6 +50,17 @@ class _OCRServiceDiagnosticsStub:
     def evaluate_lines(self, lines, patterns=None, filter_non_matching=False):
         del lines, patterns, filter_non_matching
         return []
+
+
+class _StreamingVideoServiceStub:
+    def __init__(self) -> None:
+        self.frames_yielded = 0
+
+    def iterate_frames_with_timestamps(self, url, start_time, end_time, fps, quality="best"):
+        del url, start_time, end_time, fps, quality
+        for frame_time in (0.0, 1.0, 2.0):
+            self.frames_yielded += 1
+            yield frame_time, [[self.frames_yielded]]
 
 
 def test_normalize_name_lower_trim_and_collapse_spaces() -> None:
@@ -193,6 +208,28 @@ def test_analyze_records_low_confidence_rejection_when_logging_enabled() -> None
     assert analysis.player_summaries == []
     assert len(analysis.log_records) == 1
     assert analysis.log_records[0].rejection_reason == "low_confidence"
+
+
+def test_analyze_reports_progress_while_frames_are_still_streaming() -> None:
+    video_service = _StreamingVideoServiceStub()
+    service = AnalysisService(video_service=video_service, ocr_service=_OCRServiceStub())
+    progress_snapshots: list[tuple[int, int]] = []
+
+    def on_progress(value: int) -> None:
+        progress_snapshots.append((value, video_service.frames_yielded))
+
+    service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=2.0,
+        fps=1,
+        on_progress=on_progress,
+    )
+
+    assert progress_snapshots
+    assert progress_snapshots[0][1] == 1
+    assert progress_snapshots[-1][0] == 100
 
 
 # ---------------------------------------------------------------------------

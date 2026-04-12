@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import queue
+import threading
 import tkinter as tk
 from tkinter import messagebox
 
@@ -37,6 +39,27 @@ def main() -> None:
     last_output_folder: str | None = None
     last_filename: str | None = None
     last_logging_enabled = False
+    ui_queue: queue.Queue[tuple[object, tuple[object, ...], dict[str, object]]] = queue.Queue()
+
+    def dispatch_to_ui(callback, *args, **kwargs) -> None:
+        if hasattr(root, "tk") and hasattr(root, "after"):
+            ui_queue.put((callback, args, kwargs))
+        else:
+            callback(*args, **kwargs)
+
+    def drain_ui_queue() -> None:
+        while True:
+            try:
+                callback, args, kwargs = ui_queue.get_nowait()
+            except queue.Empty:
+                break
+            callback(*args, **kwargs)
+
+        if hasattr(root, "tk") and hasattr(root, "after"):
+            root.after(25, drain_ui_queue)
+
+    if hasattr(root, "tk") and hasattr(root, "after"):
+        root.after(25, drain_ui_queue)
 
     def set_retry_export_command(command) -> None:
         if hasattr(window, "set_retry_export_command"):
@@ -116,56 +139,92 @@ def main() -> None:
                 window.set_status("No regions selected")
                 return
 
-            # Analyze across the full video timeline. Region selection time is only
-            # for choosing representative ROIs, not for clipping analysis duration.
-            analysis_start_time = 0.0
-            video_info = video_service.get_video_info(url)
-            duration_value = video_info.get("duration", 0.0)
-            try:
-                analysis_end_time = float(duration_value)
-            except (TypeError, ValueError):
-                analysis_end_time = 0.0
-            if analysis_end_time <= analysis_start_time:
-                analysis_end_time = analysis_start_time + 60.0
-
             window.progress.set_stage("Detect")
+            window.progress.set_progress(1)
             window.set_status("Analyzing video...")
-            analysis = analysis_service.analyze(
-                url=url,
-                regions=regions,
-                start_time=analysis_start_time,
-                end_time=analysis_end_time,
-                fps=config.sample_fps,
-                on_progress=window.progress.set_progress,
-                context_patterns=context_patterns,
-                filter_non_matching=advanced.filter_non_matching,
-                event_gap_threshold_sec=advanced.event_gap_threshold_sec,
-                video_quality=advanced.video_quality,
-                logging_enabled=advanced.logging_enabled,
-            )
-            last_analysis = analysis
-            last_output_folder = output_folder
-            last_logging_enabled = advanced.logging_enabled
 
-            window.progress.set_stage("Aggregate")
-            window.progress.set_progress(100)
+            def run_analysis_worker() -> None:
+                nonlocal last_analysis, last_output_folder, last_filename, last_logging_enabled
+                try:
+                    # Analyze across the full video timeline. Region selection time is only
+                    # for choosing representative ROIs, not for clipping analysis duration.
+                    analysis_start_time = 0.0
+                    video_info = video_service.get_video_info(url)
+                    duration_value = video_info.get("duration", 0.0)
+                    try:
+                        analysis_end_time = float(duration_value)
+                    except (TypeError, ValueError):
+                        analysis_end_time = 0.0
+                    if analysis_end_time <= analysis_start_time:
+                        analysis_end_time = analysis_start_time + 60.0
 
-            filename = export_service.generate_filename(url)
-            last_filename = filename
-            window.progress.set_stage("Export")
-            exported = export_service.export_to_csv(analysis, output_folder, filename)
-            if advanced.logging_enabled:
-                write_sidecar_log(output_folder, filename, analysis.log_records)
-            window.set_status(f"Completed: {exported}")
-            set_retry_export_command(None)
-            if not analysis.player_summaries:
-                messagebox.showinfo(
-                    "Analysis Complete",
-                    "No matching text was detected. A header-only CSV was exported to:\n"
-                    f"{exported}",
-                )
-            else:
-                messagebox.showinfo("Analysis Complete", f"CSV exported to:\n{exported}")
+                    analysis = analysis_service.analyze(
+                        url=url,
+                        regions=regions,
+                        start_time=analysis_start_time,
+                        end_time=analysis_end_time,
+                        fps=config.sample_fps,
+                        on_progress=lambda value: dispatch_to_ui(
+                            window.progress.set_progress, value
+                        ),
+                        context_patterns=context_patterns,
+                        filter_non_matching=advanced.filter_non_matching,
+                        event_gap_threshold_sec=advanced.event_gap_threshold_sec,
+                        video_quality=advanced.video_quality,
+                        logging_enabled=advanced.logging_enabled,
+                    )
+                    last_analysis = analysis
+                    last_output_folder = output_folder
+                    last_logging_enabled = advanced.logging_enabled
+
+                    dispatch_to_ui(window.progress.set_stage, "Aggregate")
+                    dispatch_to_ui(window.progress.set_progress, 100)
+
+                    filename = export_service.generate_filename(url)
+                    last_filename = filename
+                    dispatch_to_ui(window.progress.set_stage, "Export")
+                    exported = export_service.export_to_csv(analysis, output_folder, filename)
+                    if advanced.logging_enabled:
+                        write_sidecar_log(output_folder, filename, analysis.log_records)
+                    dispatch_to_ui(window.set_status, f"Completed: {exported}")
+                    dispatch_to_ui(set_retry_export_command, None)
+                    if not analysis.player_summaries:
+                        dispatch_to_ui(
+                            messagebox.showinfo,
+                            "Analysis Complete",
+                            (
+                                "No matching text was detected. "
+                                "A header-only CSV was exported to:\n"
+                                f"{exported}"
+                            ),
+                        )
+                    else:
+                        dispatch_to_ui(
+                            messagebox.showinfo,
+                            "Analysis Complete",
+                            f"CSV exported to:\n{exported}",
+                        )
+
+                except InvalidURLError as exc:
+                    logger.exception("Invalid YouTube URL")
+                    dispatch_to_ui(messagebox.showerror, "Invalid URL", str(exc))
+                    dispatch_to_ui(window.set_status, "Invalid URL")
+                except VideoAccessError as exc:
+                    logger.exception("Video access error")
+                    dispatch_to_ui(messagebox.showerror, "Video Error", str(exc))
+                    dispatch_to_ui(window.set_status, "Video access error")
+                except OSError as exc:
+                    logger.exception("Export error")
+                    dispatch_to_ui(messagebox.showerror, "Export Error", str(exc))
+                    dispatch_to_ui(window.set_status, "Export failed")
+                    if last_analysis is not None and last_output_folder and last_filename:
+                        dispatch_to_ui(set_retry_export_command, retry_export)
+                except Exception as exc:  # pragma: no cover - UI safety net
+                    logger.exception("Unexpected application error")
+                    dispatch_to_ui(messagebox.showerror, "Unexpected Error", str(exc))
+                    dispatch_to_ui(window.set_status, "Unexpected error")
+
+            threading.Thread(target=run_analysis_worker, daemon=True).start()
 
         except InvalidURLError as exc:
             logger.exception("Invalid YouTube URL")

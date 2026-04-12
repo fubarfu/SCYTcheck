@@ -26,6 +26,16 @@ class _FakeRoot:
             self.window.analyze_button.command()
 
 
+class _ImmediateThread:
+    def __init__(self, target=None, daemon=None, **_kwargs) -> None:
+        self.target = target
+        self.daemon = daemon
+
+    def start(self) -> None:
+        if self.target is not None:
+            self.target()
+
+
 class _FakeWindow:
     def __init__(
         self, root: _FakeRoot, url: str, output_folder: str, settings: AdvancedSettings
@@ -102,6 +112,7 @@ def _run_main_once(
         patch("src.main.ExportService", return_value=export_service),
         patch("src.main.RegionSelector", return_value=region_selector),
         patch("src.main.tk.Tk", return_value=root),
+        patch("src.main.threading.Thread", side_effect=_ImmediateThread),
         patch("src.main.MainWindow", side_effect=make_window),
         patch("src.main.load_advanced_settings", return_value=settings) as load_settings,
         patch("src.main.save_advanced_settings") as save_settings,
@@ -162,6 +173,8 @@ def test_main_loads_settings_and_wires_analysis_flow(tmp_path: Path) -> None:
     assert result["window"].progress.set_stage.call_args_list[0].args == ("Detect",)
     assert result["window"].progress.set_stage.call_args_list[1].args == ("Aggregate",)
     assert result["window"].progress.set_stage.call_args_list[2].args == ("Export",)
+    assert result["window"].progress.set_progress.call_args_list[0].args == (1,)
+    assert result["window"].progress.set_progress.call_args_list[1].args == (100,)
     result["export_service"].generate_filename.assert_called_once()
     result["export_service"].export_to_csv.assert_called_once()
     result["show_error"].assert_not_called()

@@ -20,6 +20,11 @@ class AnalysisService:
         self.video_service = video_service
         self.ocr_service = ocr_service
 
+    @staticmethod
+    def _estimate_total_frames(start_time: float, end_time: float, fps: int) -> int:
+        duration = max(0.0, float(end_time) - float(start_time))
+        return max(1, int(duration * max(1, fps)) + 1)
+
     def analyze(
         self,
         url: str,
@@ -42,17 +47,14 @@ class AnalysisService:
             video_quality=video_quality,
             logging_enabled=logging_enabled,
         )
-        frames = list(
-            self.video_service.iterate_frames_with_timestamps(
-                url, start_time, end_time, fps, quality=video_quality
-            )
+        frames = self.video_service.iterate_frames_with_timestamps(
+            url, start_time, end_time, fps, quality=video_quality
         )
-        total_frames = len(frames)
-
-        if total_frames == 0:
-            return analysis
+        total_frames = self._estimate_total_frames(start_time, end_time, fps)
+        processed_frames = 0
 
         for idx, (frame_time, frame) in enumerate(frames, start=1):
+            processed_frames = idx
             for region in regions:
                 ocr_diagnostics: list[dict[str, object]] = []
                 if logging_enabled and hasattr(self.ocr_service, "detect_text_with_diagnostics"):
@@ -178,6 +180,12 @@ class AnalysisService:
             if on_progress:
                 percentage = int((idx / total_frames) * 100)
                 on_progress(percentage)
+
+        if processed_frames == 0:
+            return analysis
+
+        if on_progress:
+            on_progress(100)
 
         analysis.set_player_summaries(
             self.build_player_summaries(
