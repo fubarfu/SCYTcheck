@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 from collections.abc import Iterator
@@ -17,9 +18,18 @@ class InvalidURLError(ValueError):
 
 
 class VideoService:
+    _ITERATION_MODE_SEQUENTIAL = "sequential"
+    _ITERATION_MODE_LEGACY_SEEK = "legacy_seek"
+    _FALLBACK_REASON_NONE = "none"
+    _FALLBACK_REASON_DECODE_ERROR = "decode_error"
+    _FALLBACK_REASON_PERFORMANCE_PROBE = "performance_probe"
+    _PROBE_FRAME_BUDGET = 30
+    _PROBE_SLOWDOWN_FACTOR = 1.6
+
     def __init__(self) -> None:
         # Cache extracted (stream_url, info) per YouTube URL to avoid repeated network lookups.
         self._stream_cache: dict[str, tuple[str, dict]] = {}
+        self._logger = logging.getLogger(__name__)
 
     @staticmethod
     def _is_supported_youtube_url(url: str) -> bool:
@@ -174,6 +184,142 @@ class VideoService:
         ):
             yield frame
 
+    @staticmethod
+    def _compute_sampling_parameters(
+        start_time: float,
+        end_time: float,
+        fps: int,
+        native_fps: float,
+    ) -> tuple[int, int, int]:
+        effective_native_fps = native_fps if native_fps and native_fps > 0 else 30.0
+        start_frame = int(max(0.0, start_time) * effective_native_fps)
+        end_frame = int(max(start_time, end_time) * effective_native_fps)
+        step = max(1, int(effective_native_fps / max(1, fps)))
+        return start_frame, end_frame, step
+
+    @staticmethod
+    def _build_target_frame_indexes(start_frame: int, end_frame: int, step: int) -> list[int]:
+        if start_frame > end_frame:
+            return []
+        frame_indexes = list(range(start_frame, end_frame + 1, max(1, step)))
+        return frame_indexes or [start_frame]
+
+    def _emit_iteration_event(
+        self,
+        event_type: str,
+        message: str,
+        frame_index: int | None = None,
+        timestamp_sec: float | None = None,
+        reason: str | None = None,
+        source_id: str | None = None,
+    ) -> None:
+        if not self._logger.isEnabledFor(logging.DEBUG):
+            return
+        payload = {
+            "event_type": event_type,
+            "message": message,
+            "frame_index": frame_index,
+            "timestamp_sec": timestamp_sec,
+            "reason": reason,
+            "source_id": source_id,
+        }
+        self._logger.debug("video_iteration", extra={"video_iteration": payload})
+
+    def _should_fallback(
+        self,
+        reason: str,
+        source_id: str,
+    ) -> bool:
+        decision = reason in {
+            self._FALLBACK_REASON_DECODE_ERROR,
+            self._FALLBACK_REASON_PERFORMANCE_PROBE,
+        }
+        if decision:
+            self._emit_iteration_event(
+                event_type="fallback",
+                message="Activating guarded legacy fallback.",
+                reason=reason,
+                source_id=source_id,
+            )
+        return decision
+
+    def _run_startup_performance_probe(
+        self,
+        cap: cv2.VideoCapture,
+        frame_indexes: list[int],
+    ) -> bool:
+        del cap
+        if len(frame_indexes) < 2:
+            return False
+
+        budget = min(self._PROBE_FRAME_BUDGET, len(frame_indexes))
+        if budget <= 1:
+            return False
+
+        probe_start = frame_indexes[0]
+        probe_end = frame_indexes[budget - 1]
+        sequential_distance = max(1, probe_end - probe_start)
+
+        inferred_step = max(1, frame_indexes[1] - frame_indexes[0])
+        baseline_random_cost = budget * max(10, inferred_step)
+        sequential_cost = sequential_distance
+        return sequential_cost > (baseline_random_cost * self._PROBE_SLOWDOWN_FACTOR)
+
+    def _iterate_frames_legacy_seek(
+        self,
+        cap: cv2.VideoCapture,
+        native_fps: float,
+        frame_indexes: list[int],
+    ) -> Iterator[tuple[float, object]]:
+        for frame_index in frame_indexes:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+            ok, frame = cap.read()
+            if not ok:
+                raise VideoAccessError("Could not retrieve frame from requested timestamp.")
+            timestamp_sec = frame_index / native_fps
+            yield timestamp_sec, frame
+
+    def _iterate_frames_sequential(
+        self,
+        cap: cv2.VideoCapture,
+        native_fps: float,
+        frame_indexes: list[int],
+    ) -> Iterator[tuple[float, object]]:
+        if not frame_indexes:
+            return
+
+        start_frame = frame_indexes[0]
+        target_idx = 0
+
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+        current_frame = start_frame
+
+        self._emit_iteration_event(
+            event_type="init",
+            message="Initialized sequential decode from start frame.",
+            frame_index=start_frame,
+            timestamp_sec=start_frame / native_fps,
+        )
+
+        while target_idx < len(frame_indexes):
+            ok, frame = cap.read()
+            if not ok:
+                raise VideoAccessError("Could not retrieve frame from requested timestamp.")
+
+            target_frame = frame_indexes[target_idx]
+            if current_frame == target_frame:
+                timestamp_sec = current_frame / native_fps
+                yield timestamp_sec, frame
+                target_idx += 1
+                if target_idx % 100 == 0:
+                    self._emit_iteration_event(
+                        event_type="milestone",
+                        message="Sequential iteration milestone reached.",
+                        frame_index=current_frame,
+                        timestamp_sec=timestamp_sec,
+                    )
+            current_frame += 1
+
     def iterate_frames_with_timestamps(
         self,
         url: str,
@@ -187,21 +333,40 @@ class VideoService:
         if not cap.isOpened():
             raise VideoAccessError("Could not open video stream.")
 
-        native_fps = cap.get(cv2.CAP_PROP_FPS) or 30
-        start_frame = int(max(0.0, start_time) * native_fps)
-        end_frame = int(max(start_time, end_time) * native_fps)
-        step = max(1, int(native_fps / max(1, fps)))
+        try:
+            native_fps = cap.get(cv2.CAP_PROP_FPS) or 30
+            start_frame, end_frame, step = self._compute_sampling_parameters(
+                start_time=start_time,
+                end_time=end_time,
+                fps=fps,
+                native_fps=native_fps,
+            )
+            frame_indexes = self._build_target_frame_indexes(start_frame, end_frame, step)
+            if not frame_indexes:
+                return
 
-        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-        current = start_frame
+            fallback_reason = self._FALLBACK_REASON_NONE
+            source_id = f"{url}|{quality}"
 
-        while current <= end_frame:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, current)
-            ok, frame = cap.read()
-            if not ok:
-                break
-            timestamp_sec = current / native_fps
-            yield timestamp_sec, frame
-            current += step
+            if self._run_startup_performance_probe(cap, frame_indexes):
+                fallback_reason = self._FALLBACK_REASON_PERFORMANCE_PROBE
 
-        cap.release()
+            if self._should_fallback(fallback_reason, source_id):
+                yield from self._iterate_frames_legacy_seek(cap, native_fps, frame_indexes)
+                return
+
+            sequential_yield_count = 0
+            try:
+                for item in self._iterate_frames_sequential(cap, native_fps, frame_indexes):
+                    sequential_yield_count += 1
+                    yield item
+            except VideoAccessError:
+                if (
+                    sequential_yield_count == 0
+                    and self._should_fallback(self._FALLBACK_REASON_DECODE_ERROR, source_id)
+                ):
+                    yield from self._iterate_frames_legacy_seek(cap, native_fps, frame_indexes)
+                    return
+                raise
+        finally:
+            cap.release()

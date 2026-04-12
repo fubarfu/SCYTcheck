@@ -320,6 +320,31 @@ class TestUS1FullWorkflow:
         exported = ExportService().export_to_csv(analysis, str(tmp_path), "header-only.csv")
         assert exported.read_text(encoding="utf-8").splitlines() == ["PlayerName,StartTimestamp"]
 
+
+def test_us3_regression_iterate_frames_contract_stays_compatible() -> None:
+    video_service = Mock(spec=VideoService)
+    video_service.iterate_frames_with_timestamps.return_value = iter(
+        [(0.0, np.zeros((4, 4, 3), dtype=np.uint8))]
+    )
+
+    ocr_service = Mock(spec=OCRService)
+    ocr_service.detect_text.return_value = ["Alice"]
+    ocr_service.extract_candidates.return_value = [("Alice", None)]
+
+    analysis_service = AnalysisService(video_service=video_service, ocr_service=ocr_service)
+    analysis = analysis_service.analyze(
+        url="https://youtube.com/watch?v=contract",
+        regions=[(0, 0, 2, 2)],
+        start_time=0.0,
+        end_time=1.0,
+        fps=1,
+    )
+
+    assert analysis.url.endswith("contract")
+    video_service.iterate_frames_with_timestamps.assert_called_once_with(
+        "https://youtube.com/watch?v=contract", 0.0, 1.0, 1, quality="best"
+    )
+
     def test_invalid_url_is_rejected_before_analysis_workflow(self, tmp_path: Path) -> None:
         root = _FakeRoot()
         settings = AdvancedSettings(

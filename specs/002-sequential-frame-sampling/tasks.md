@@ -11,10 +11,10 @@
 
 **Purpose**: Prepare repeatable fixtures and helpers for performance, codec, and memory validation.
 
-- [ ] T001 Create feature fixture source list for long-video validation in tests/integration/fixtures/video_sources.json
-- [ ] T002 Create frame-iteration benchmark helper utilities in tests/integration/helpers/perf_helpers.py
-- [ ] T003 [P] Create RSS memory checkpoint helper utilities in tests/integration/helpers/memory_helpers.py
-- [ ] T004 [P] Create codec test input helper utilities for H.264/VP9 runs in tests/integration/helpers/codec_helpers.py
+- [X] T001 Create feature fixture source list for long-video validation in tests/integration/fixtures/video_sources.json
+- [X] T002 Create frame-iteration benchmark helper utilities in tests/integration/helpers/perf_helpers.py
+- [X] T003 [P] Create RSS memory checkpoint helper utilities in tests/integration/helpers/memory_helpers.py
+- [X] T004 [P] Create codec test input helper utilities for H.264/VP9 runs in tests/integration/helpers/codec_helpers.py
 
 ---
 
@@ -24,12 +24,12 @@
 
 **CRITICAL**: No user story implementation starts until this phase is complete.
 
-- [ ] T005 Add internal iteration strategy state and constants in src/services/video_service.py
-- [ ] T006 Add guarded fallback decision helper (`decode_error` / `performance_probe`) in src/services/video_service.py
-- [ ] T007 [P] Add structured debug logging helper methods for iteration telemetry in src/services/video_service.py
-- [ ] T008 Add startup performance probe helper for sequential-vs-legacy decisioning in src/services/video_service.py
-- [ ] T009 [P] Add parity assertion helpers for timestamp/frame-count comparisons in tests/integration/helpers/parity_helpers.py
-- [ ] T010 Add baseline stubs and reusable mocks for sequential/fallback paths in tests/unit/test_video_service.py
+- [X] T005 Add internal iteration strategy state and constants in src/services/video_service.py
+- [X] T006 Add guarded fallback decision helper (`decode_error` / `performance_probe`) in src/services/video_service.py
+- [X] T007 [P] Add structured debug logging helper methods for iteration telemetry in src/services/video_service.py
+- [X] T008 Add startup performance probe helper for sequential-vs-legacy decisioning in src/services/video_service.py
+- [X] T009 [P] Add parity assertion helpers for timestamp/frame-count comparisons in tests/integration/helpers/parity_helpers.py
+- [X] T010 Add baseline stubs and reusable mocks for sequential/fallback paths in tests/unit/test_video_service.py
 
 **Checkpoint**: Foundation complete; user stories can proceed.
 
@@ -43,19 +43,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Add unit test ensuring no per-sample random seek in iteration loop in tests/unit/test_video_service.py
-- [ ] T012 [P] [US1] Add integration test for 1-hour iteration speed target in tests/integration/test_performance_sc001.py
-- [ ] T013 [P] [US1] Add integration test for 2-hour iteration scaling target in tests/integration/test_performance_sc001.py
-- [ ] T014 [P] [US1] Add network-stream stability integration test (no repeated re-seek behavior, no timeout regressions) in tests/integration/test_video_service_network_stream.py
-- [ ] T015 [P] [US1] Add 2-hour RSS checkpoint assertion test (0/50/100, +-10%) in tests/integration/test_video_service_memory_stability.py
+- [X] T011 [P] [US1] Add unit test ensuring no per-sample random seek in iteration loop in tests/unit/test_video_service.py
+- [X] T012 [P] [US1] Add integration test for 1-hour iteration speed target in tests/integration/test_performance_sc001.py
+- [X] T013 [P] [US1] Add integration test for 2-hour iteration scaling target in tests/integration/test_performance_sc001.py
+- [X] T014 [P] [US1] Add network-stream stability integration test (no repeated re-seek behavior, no timeout regressions) in tests/integration/test_video_service_network_stream.py
+- [X] T015 [P] [US1] Add 2-hour RSS checkpoint assertion test (0/50/100, +-10%) in tests/integration/test_video_service_memory_stability.py
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Implement sequential decode traversal in iterate_frames_with_timestamps in src/services/video_service.py
-- [ ] T017 [US1] Implement sample-step frame selection during sequential traversal in src/services/video_service.py
-- [ ] T018 [US1] Wire startup probe to enable guarded fallback activation in src/services/video_service.py
-- [ ] T019 [US1] Emit sequential performance and fallback telemetry events in src/services/video_service.py
-- [ ] T020 [US1] Update performance test scenarios and add assertions for sequential-path targets in tests/integration/test_performance_sc001.py
+- [X] T016 [US1] Implement sequential decode traversal in iterate_frames_with_timestamps in src/services/video_service.py
+- [X] T017 [US1] Implement sample-step frame selection during sequential traversal in src/services/video_service.py
+- [X] T018 [US1] Wire startup probe to enable guarded fallback activation in src/services/video_service.py
+- [X] T019 [US1] Emit sequential performance and fallback telemetry events in src/services/video_service.py
+- [X] T020 [US1] Update performance test scenarios and add assertions for sequential-path targets in tests/integration/test_performance_sc001.py
 
 **Checkpoint**: User Story 1 is independently testable and delivers measurable performance gains.
 
@@ -69,16 +69,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Add unit test for exact timestamp parity against baseline selector in tests/unit/test_video_service.py
-- [ ] T022 [P] [US2] Add unit test for frame-count parity tolerance (+/-1) across ranges in tests/unit/test_video_service.py
-- [ ] T023 [P] [US2] Add integration test for H.264/VP9 timestamp and OCR parity in tests/integration/test_video_service_codec_parity.py
+- [X] T021 [P] [US2] Add unit test for exact timestamp parity against baseline selector in tests/unit/test_video_service.py
+- [X] T022 [P] [US2] Add unit test for frame-count parity tolerance (+/-1) across ranges in tests/unit/test_video_service.py
+- [X] T023 [P] [US2] Add integration test for H.264/VP9 timestamp and OCR parity in tests/integration/test_video_service_codec_parity.py
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Implement shared frame-index selection utility used by sequential and fallback paths in src/services/video_service.py
-- [ ] T025 [US2] Preserve native-fps fallback and step calculation semantics in src/services/video_service.py
-- [ ] T026 [US2] Preserve empty/single-frame/out-of-bounds range behavior in src/services/video_service.py
-- [ ] T027 [US2] Add deterministic timestamp regression fixtures and assertions in tests/unit/test_video_service.py
+- [X] T024 [US2] Implement shared frame-index selection utility used by sequential and fallback paths in src/services/video_service.py
+- [X] T025 [US2] Preserve native-fps fallback and step calculation semantics in src/services/video_service.py
+- [X] T026 [US2] Preserve empty/single-frame/out-of-bounds range behavior in src/services/video_service.py
+- [X] T027 [US2] Add deterministic timestamp regression fixtures and assertions in tests/unit/test_video_service.py
 
 **Checkpoint**: User Story 2 is independently testable and guarantees timestamp fidelity.
 
@@ -92,18 +92,18 @@
 
 ### Tests for User Story 3
 
-- [ ] T028 [P] [US3] Add regression test confirming existing workflow behavior is unchanged in tests/integration/test_us1_workflow.py
-- [ ] T029 [P] [US3] Add unit test confirming iterate_frames_with_timestamps signature/contract remains unchanged in tests/unit/test_video_service.py
-- [ ] T030 [P] [US3] Add integration test for decode-error fallback parity behavior in tests/integration/test_video_service_fallback.py
-- [ ] T031 [P] [US3] Add debug-log assertion test for exactly one init-seek event and no repeated random-seek events in tests/integration/test_video_service_logging_contract.py
-- [ ] T032 [P] [US3] Add fallback telemetry assertion test for trigger category and source identifier fields in tests/integration/test_video_service_fallback.py
+- [X] T028 [P] [US3] Add regression test confirming existing workflow behavior is unchanged in tests/integration/test_us1_workflow.py
+- [X] T029 [P] [US3] Add unit test confirming iterate_frames_with_timestamps signature/contract remains unchanged in tests/unit/test_video_service.py
+- [X] T030 [P] [US3] Add integration test for decode-error fallback parity behavior in tests/integration/test_video_service_fallback.py
+- [X] T031 [P] [US3] Add debug-log assertion test for exactly one init-seek event and no repeated random-seek events in tests/integration/test_video_service_logging_contract.py
+- [X] T032 [P] [US3] Add fallback telemetry assertion test for trigger category and source identifier fields in tests/integration/test_video_service_fallback.py
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Preserve public iterator contract while integrating strategy switching in src/services/video_service.py
-- [ ] T034 [US3] Preserve stream cache behavior (`url|quality`) across sequential and fallback paths in src/services/video_service.py
-- [ ] T035 [US3] Implement fail-fast read-error behavior with structured fallback-reason logging in src/services/video_service.py
-- [ ] T036 [US3] Add analysis pipeline regression assertions for unchanged downstream behavior in tests/unit/test_analysis_service.py
+- [X] T033 [US3] Preserve public iterator contract while integrating strategy switching in src/services/video_service.py
+- [X] T034 [US3] Preserve stream cache behavior (`url|quality`) across sequential and fallback paths in src/services/video_service.py
+- [X] T035 [US3] Implement fail-fast read-error behavior with structured fallback-reason logging in src/services/video_service.py
+- [X] T036 [US3] Add analysis pipeline regression assertions for unchanged downstream behavior in tests/unit/test_analysis_service.py
 
 **Checkpoint**: User Story 3 is independently testable and backward compatibility is preserved.
 
@@ -113,10 +113,10 @@
 
 **Purpose**: Finalize validation evidence, documentation, and cleanup across all stories.
 
-- [ ] T037 [P] Add final validation runbook and command sequence updates in specs/002-sequential-frame-sampling/quickstart.md
-- [ ] T038 [P] Document measured benchmark and memory-checkpoint evidence in specs/002-sequential-frame-sampling/research.md
-- [ ] T039 Normalize debug telemetry message fields and reason categories in src/services/video_service.py
-- [ ] T040 Run full regression suite, capture failures, and fix implementation or fixtures as needed; do not relax assertions without explicit approval
+- [X] T037 [P] Add final validation runbook and command sequence updates in specs/002-sequential-frame-sampling/quickstart.md
+- [X] T038 [P] Document measured benchmark and memory-checkpoint evidence in specs/002-sequential-frame-sampling/research.md
+- [X] T039 Normalize debug telemetry message fields and reason categories in src/services/video_service.py
+- [X] T040 Run full regression suite, capture failures, and fix implementation or fixtures as needed; do not relax assertions without explicit approval
 
 ---
 

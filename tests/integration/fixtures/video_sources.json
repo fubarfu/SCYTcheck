@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "id": "h264_1h",
+      "description": "Synthetic H.264 source representing a 1-hour session",
+      "codec": "h264",
+      "container": "mp4",
+      "duration_sec": 3600
+    },
+    {
+      "id": "vp9_2h",
+      "description": "Synthetic VP9 source representing a 2-hour session",
+      "codec": "vp9",
+      "container": "webm",
+      "duration_sec": 7200
+    }
+  ]
+}

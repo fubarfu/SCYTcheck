@@ -14,6 +14,11 @@ pytest tests/unit/test_video_service.py -q
 ```powershell
 pytest tests/integration/test_us1_workflow.py -q
 pytest tests/integration/test_performance_sc001.py -q
+pytest tests/integration/test_video_service_network_stream.py -q
+pytest tests/integration/test_video_service_codec_parity.py -q
+pytest tests/integration/test_video_service_fallback.py -q
+pytest tests/integration/test_video_service_logging_contract.py -q
+pytest tests/integration/test_video_service_memory_stability.py -q
 ```
 
 ## 4) Run full regression suite
@@ -39,3 +44,17 @@ python -m pytest tests/ -q
 - Meets SC-001 through SC-014 in `spec.md`
 - No API/signature changes for `iterate_frames_with_timestamps`
 - All existing tests pass
+
+## 8) Final Validation Runbook
+1. Run focused sequential/fallback unit tests:
+  ```powershell
+  pytest tests/unit/test_video_service.py -q
+  ```
+2. Run expanded performance and compatibility checks:
+  ```powershell
+  pytest tests/integration/test_performance_sc001.py tests/integration/test_us1_workflow.py -q
+  ```
+3. Run full regression:
+  ```powershell
+  python -m pytest tests/ -q
+  ```

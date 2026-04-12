@@ -48,3 +48,16 @@
 - Alternatives considered:
   - Heap-only metrics: rejected because native buffers may dominate memory usage.
   - End-only measurement: rejected due to missed transient growth patterns.
+
+## Validation Evidence (2026-04-12)
+
+- Full regression command:
+  - `python -m pytest tests/ -q`
+  - Result: pass (`170/170` tests)
+- Focused sequential/fallback coverage:
+  - `pytest tests/unit/test_video_service.py tests/integration/test_video_service_network_stream.py tests/integration/test_video_service_fallback.py tests/integration/test_video_service_logging_contract.py tests/integration/test_video_service_codec_parity.py tests/integration/test_video_service_memory_stability.py -q`
+  - Result: pass
+- Memory checkpoint assertion evidence:
+  - Implemented helper checkpoint model at 0/50/100 and integration assertion that max RSS delta remains `<= 10%`
+- Compatibility evidence:
+  - Existing workflow regression (`test_us1_workflow.py`) and analysis regression (`test_analysis_service.py`) pass unchanged API usage
