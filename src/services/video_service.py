@@ -37,20 +37,20 @@ class VideoService:
         return "youtube.com/watch?v=" in lowered or "youtu.be/" in lowered
 
     # Map UI quality labels to yt-dlp format selectors.
-    # Prefer mp4 for OpenCV compatibility; fall through to any format as a last resort.
+    # Prefer progressive video formats for OpenCV compatibility and stable long-run decoding.
     _QUALITY_FORMAT_MAP: dict[str, str] = {
-        "best": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "best": "best[ext=mp4]/best",
         "720p": (
-            "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
-            "best[height<=720][ext=mp4]/best[height<=720]/best"
+            "best[height<=720][ext=mp4]/"
+            "best[height<=720]/best"
         ),
         "480p": (
-            "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/"
-            "best[height<=480][ext=mp4]/best[height<=480]/best"
+            "best[height<=480][ext=mp4]/"
+            "best[height<=480]/best"
         ),
         "360p": (
-            "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/"
-            "best[height<=360][ext=mp4]/best[height<=360]/best"
+            "best[height<=360][ext=mp4]/"
+            "best[height<=360]/best"
         ),
     }
 
@@ -63,6 +63,7 @@ class VideoService:
             "quiet": True,
             "skip_download": True,
             "format": fmt,
+            "remote_components": ["ejs:github"],
         }
 
         # yt-dlp >= 2026 expects js_runtimes as {runtime: {config}} dict
@@ -270,14 +271,35 @@ class VideoService:
         cap: cv2.VideoCapture,
         native_fps: float,
         frame_indexes: list[int],
+        fail_fast: bool = True,
     ) -> Iterator[tuple[float, object]]:
         for frame_index in frame_indexes:
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
             ok, frame = cap.read()
             if not ok:
-                raise VideoAccessError("Could not retrieve frame from requested timestamp.")
-            timestamp_sec = frame_index / native_fps
+                if fail_fast:
+                    raise VideoAccessError("Could not retrieve frame from requested timestamp.")
+                self._emit_iteration_event(
+                    event_type="error",
+                    message="Skipping unreadable fallback sample and continuing.",
+                    frame_index=frame_index,
+                    timestamp_sec=self._resolve_timestamp_sec(cap, frame_index, native_fps),
+                    reason=self._FALLBACK_REASON_DECODE_ERROR,
+                )
+                continue
+            timestamp_sec = self._resolve_timestamp_sec(cap, frame_index, native_fps)
             yield timestamp_sec, frame
+
+    @staticmethod
+    def _resolve_timestamp_sec(
+        cap: cv2.VideoCapture,
+        frame_index: int,
+        native_fps: float,
+    ) -> float:
+        pos_msec = float(cap.get(cv2.CAP_PROP_POS_MSEC) or 0.0)
+        if pos_msec > 0.0:
+            return pos_msec / 1000.0
+        return frame_index / native_fps
 
     def _iterate_frames_sequential(
         self,
@@ -308,7 +330,7 @@ class VideoService:
 
             target_frame = frame_indexes[target_idx]
             if current_frame == target_frame:
-                timestamp_sec = current_frame / native_fps
+                timestamp_sec = self._resolve_timestamp_sec(cap, current_frame, native_fps)
                 yield timestamp_sec, frame
                 target_idx += 1
                 if target_idx % 100 == 0:
@@ -341,6 +363,7 @@ class VideoService:
                 fps=fps,
                 native_fps=native_fps,
             )
+
             frame_indexes = self._build_target_frame_indexes(start_frame, end_frame, step)
             if not frame_indexes:
                 return
@@ -361,11 +384,23 @@ class VideoService:
                     sequential_yield_count += 1
                     yield item
             except VideoAccessError:
+                remaining_frame_indexes = frame_indexes[sequential_yield_count:]
                 if (
-                    sequential_yield_count == 0
+                    remaining_frame_indexes
                     and self._should_fallback(self._FALLBACK_REASON_DECODE_ERROR, source_id)
                 ):
-                    yield from self._iterate_frames_legacy_seek(cap, native_fps, frame_indexes)
+                    recovery_cap = cv2.VideoCapture(stream_url)
+                    if not recovery_cap.isOpened():
+                        raise VideoAccessError("Could not open video stream.")
+                    try:
+                        yield from self._iterate_frames_legacy_seek(
+                            recovery_cap,
+                            native_fps,
+                            remaining_frame_indexes,
+                            fail_fast=False,
+                        )
+                    finally:
+                        recovery_cap.release()
                     return
                 raise
         finally:

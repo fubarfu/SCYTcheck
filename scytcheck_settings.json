@@ -1,19 +1,19 @@
 {
-  "context_patterns": [
-    {
-      "id": "pattern-1",
-      "before_text": null,
-      "after_text": "joined",
-      "enabled": true
-    },
-    {
-      "id": "pattern-2",
-      "before_text": null,
-      "after_text": "connected",
-      "enabled": true
-    }
-  ],
-  "filter_non_matching": true,
-  "event_gap_threshold_sec": 1.0,
-  "ocr_confidence_threshold": 40
+    "context_patterns":  [
+                             {
+                                 "id":  "pattern-1",
+                                 "before_text":  null,
+                                 "after_text":  "joined",
+                                 "enabled":  true
+                             },
+                             {
+                                 "id":  "pattern-2",
+                                 "before_text":  null,
+                                 "after_text":  "connected",
+                                 "enabled":  true
+                             }
+                         ],
+    "filter_non_matching":  false,
+    "event_gap_threshold_sec":  1.0,
+    "ocr_confidence_threshold":  30
 }

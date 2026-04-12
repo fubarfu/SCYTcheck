@@ -20,13 +20,18 @@ class _FakeCapture:
         self.current = 0
         self.set_calls: list[tuple[int, int]] = []
         self.released = False
+        self.pos_msec = 0.0
 
     def isOpened(self) -> bool:
         return True
 
     def get(self, prop: int) -> float:
+        if prop == 0:  # cv2.CAP_PROP_POS_MSEC
+            return self.pos_msec
         if prop == 5:  # cv2.CAP_PROP_FPS
             return self.fps
+        if prop == 7:  # cv2.CAP_PROP_FRAME_COUNT
+            return float(self.total_frames)
         return 0.0
 
     def set(self, prop: int, value: float) -> bool:
@@ -45,6 +50,7 @@ class _FakeCapture:
             return False, None
         if self.current >= self.total_frames:
             return False, None
+        self.pos_msec = (self.current * 1000.0) / max(1e-6, self.fps)
         frame = np.zeros((4, 4, 3), dtype=np.uint8)
         self.current += 1
         return True, frame
@@ -182,7 +188,7 @@ def test_iterate_frames_with_timestamps_falls_back_on_decode_error() -> None:
     assert len(pos_frame_sets) >= 2
 
 
-def test_iterate_frames_with_timestamps_raises_when_legacy_seek_cannot_read() -> None:
+def test_iterate_frames_with_timestamps_handles_unreadable_stream_without_crashing() -> None:
     service = VideoService()
     fake_cap = _FakeCapture(total_frames=5, fps=30.0, fail_at=0)
 
@@ -190,18 +196,16 @@ def test_iterate_frames_with_timestamps_raises_when_legacy_seek_cannot_read() ->
         patch.object(service, "_extract_media_url", return_value=("stream", {})),
         patch("src.services.video_service.cv2.VideoCapture", return_value=fake_cap),
     ):
-        try:
-            list(
-                service.iterate_frames_with_timestamps(
-                    "https://youtube.com/watch?v=abc",
-                    start_time=0.0,
-                    end_time=1.0,
-                    fps=1,
-                )
+        items = list(
+            service.iterate_frames_with_timestamps(
+                "https://youtube.com/watch?v=abc",
+                start_time=0.0,
+                end_time=1.0,
+                fps=1,
             )
-            assert False, "Expected VideoAccessError"
-        except VideoAccessError:
-            assert True
+        )
+
+    assert items == []
 
 
 def test_should_fallback_accepts_supported_reasons_only() -> None:
@@ -231,6 +235,55 @@ def test_iterator_contract_signature_is_unchanged() -> None:
 
     assert isinstance(first, tuple)
     assert len(first) == 2
+
+
+def test_iterate_frames_with_timestamps_recovers_with_fallback_after_midstream_decode_error() -> None:
+    service = VideoService()
+    fake_cap = _FakeCapture(total_frames=120, fps=10.0, fail_at=40, fail_once=True)
+
+    with (
+        patch.object(service, "_extract_media_url", return_value=("stream", {})),
+        patch("src.services.video_service.cv2.VideoCapture", return_value=fake_cap),
+    ):
+        samples = list(
+            service.iterate_frames_with_timestamps(
+                "https://youtube.com/watch?v=abc",
+                start_time=2.0,
+                end_time=10.0,
+                fps=1,
+            )
+        )
+
+    # Expected sampled indexes: 20,30,40,50,60,70,80,90,100
+    assert len(samples) == 9
+    assert samples[-1][0] == 10.0
+
+
+def test_iterate_frames_with_timestamps_gracefully_finishes_when_tail_is_unreadable() -> None:
+    service = VideoService()
+
+    first_cap = _FakeCapture(total_frames=120, fps=10.0, fail_at=40, fail_once=True)
+    recovery_cap = _FakeCapture(total_frames=120, fps=10.0, fail_at=40, fail_once=False)
+
+    with (
+        patch.object(service, "_extract_media_url", return_value=("stream", {})),
+        patch(
+            "src.services.video_service.cv2.VideoCapture",
+            side_effect=[first_cap, recovery_cap],
+        ),
+    ):
+        samples = list(
+            service.iterate_frames_with_timestamps(
+                "https://youtube.com/watch?v=abc",
+                start_time=2.0,
+                end_time=10.0,
+                fps=1,
+            )
+        )
+
+    # We still get frames up to the last readable sample and do not raise.
+    assert samples
+    assert samples[-1][0] == 3.0
 
 
 def test_us2_timestamp_parity_matches_baseline_frame_selector() -> None:
@@ -285,3 +338,25 @@ def test_us3_stream_cache_key_includes_quality_to_preserve_behavior() -> None:
     assert stream_720 == "stream-720"
     assert "https://youtube.com/watch?v=abc|best" in service._stream_cache
     assert "https://youtube.com/watch?v=abc|720p" in service._stream_cache
+
+
+def test_resolve_timestamp_prefers_capture_msec_when_available() -> None:
+    service = VideoService()
+    fake_cap = _FakeCapture(total_frames=120, fps=10.0)
+
+    with (
+        patch.object(service, "_extract_media_url", return_value=("stream", {})),
+        patch("src.services.video_service.cv2.VideoCapture", return_value=fake_cap),
+    ):
+        samples = list(
+            service.iterate_frames_with_timestamps(
+                "https://youtube.com/watch?v=abc",
+                start_time=2.0,
+                end_time=2.0,
+                fps=1,
+            )
+        )
+
+    assert samples
+    timestamp, _frame = samples[0]
+    assert timestamp == 2.0
