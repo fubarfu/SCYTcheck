@@ -22,3 +22,6 @@ Thumbs.db
 # Logs and env
 *.log
 .env*
+
+# Local release dependency bundles (used by build script, not tracked)
+third_party/
