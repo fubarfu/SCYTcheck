@@ -171,9 +171,12 @@ def test_get_advanced_settings_uses_defaults_when_patterns_empty() -> None:
 
     settings = window.get_advanced_settings()
 
-    assert len(settings.context_patterns) == 2
-    assert settings.context_patterns[0]["after_text"] == "joined"
-    assert settings.context_patterns[1]["after_text"] == "connected"
+    assert len(settings.context_patterns) == 4
+    assert settings.context_patterns[0]["before_text"] == "started by"
+    assert settings.context_patterns[0]["after_text"] is None
+    assert settings.context_patterns[1]["after_text"] == "joined"
+    assert settings.context_patterns[2]["after_text"] == "connected"
+    assert settings.context_patterns[3]["after_text"] == "disconnected"
     assert settings.filter_non_matching is True
 
 
