@@ -49,7 +49,7 @@ class MainWindow:
         self.filename_label = ttk.Label(
             container, text="Output Filename", font=("TkDefaultFont", 9, "bold")
         )
-        self.filename_label.grid(row=3, column=0, sticky="w", pady=(12, 2))
+        self.filename_label.grid(row=4, column=0, sticky="w", pady=(12, 2))
 
         self.filename_display = ttk.Label(
             container,
@@ -57,13 +57,13 @@ class MainWindow:
             foreground="gray",
             font=("TkDefaultFont", 9),
         )
-        self.filename_display.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(0, 0))
+        self.filename_display.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(0, 0))
 
         # Advanced settings section (separate from primary workflow controls)
         self.advanced_settings_frame = ttk.LabelFrame(
             container, text="Advanced Settings", padding=8
         )
-        self.advanced_settings_frame.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+        self.advanced_settings_frame.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(12, 0))
         self.advanced_settings_frame.columnconfigure(0, weight=1)
         self.advanced_settings_frame.columnconfigure(1, weight=0)
         self.advanced_settings_frame.columnconfigure(2, weight=0)
@@ -159,16 +159,16 @@ class MainWindow:
         self.low_quality_guidance.grid(row=6, column=0, columnspan=4, sticky="w", pady=(6, 0))
 
         self.progress = ProgressDisplay(container)
-        self.progress.grid(row=6, column=0, columnspan=2)
+        self.progress.grid(row=7, column=0, columnspan=2)
 
         self.status = ttk.Label(container, text="Ready")
-        self.status.grid(row=7, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        self.status.grid(row=8, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.analyze_button = ttk.Button(container, text="Select Regions + Analyze")
-        self.analyze_button.grid(row=8, column=0, sticky="w", pady=(12, 0))
+        self.analyze_button.grid(row=9, column=0, sticky="w", pady=(12, 0))
 
         self.retry_export_button = ttk.Button(container, text="Retry Export", state="disabled")
-        self.retry_export_button.grid(row=8, column=1, sticky="e", pady=(12, 0))
+        self.retry_export_button.grid(row=9, column=1, sticky="e", pady=(12, 0))
 
         self.url_input.entry.bind("<KeyRelease>", self._on_url_changed)
         self.url_input.entry.bind("<FocusOut>", self._on_url_changed)
@@ -223,6 +223,12 @@ class MainWindow:
         if not patterns:
             patterns = [
                 {
+                    "id": "default-started-by",
+                    "before_text": "started by",
+                    "after_text": None,
+                    "enabled": True,
+                },
+                {
                     "id": "default-joined",
                     "before_text": None,
                     "after_text": "joined",
@@ -232,6 +238,12 @@ class MainWindow:
                     "id": "default-connected",
                     "before_text": None,
                     "after_text": "connected",
+                    "enabled": True,
+                },
+                {
+                    "id": "default-disconnected",
+                    "before_text": None,
+                    "after_text": "disconnected",
                     "enabled": True,
                 },
             ]

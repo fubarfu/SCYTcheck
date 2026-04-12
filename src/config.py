@@ -86,11 +86,23 @@ class AdvancedSettings:
 def _default_advanced_settings() -> AdvancedSettings:
     return AdvancedSettings(
         context_patterns=[
+            {
+                "id": "default-started-by",
+                "before_text": "started by",
+                "after_text": None,
+                "enabled": True,
+            },
             {"id": "default-joined", "before_text": None, "after_text": "joined", "enabled": True},
             {
                 "id": "default-connected",
                 "before_text": None,
                 "after_text": "connected",
+                "enabled": True,
+            },
+            {
+                "id": "default-disconnected",
+                "before_text": None,
+                "after_text": "disconnected",
                 "enabled": True,
             },
         ],

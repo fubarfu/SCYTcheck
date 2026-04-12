@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import numpy as np
 
+from tests.integration.helpers.perf_helpers import benchmark_callable
 from src.services.analysis_service import AnalysisService
 from src.services.ocr_service import OCRService
 from src.services.video_service import VideoService
@@ -40,3 +41,68 @@ def test_sc001_analysis_of_ten_minute_video_completes_within_target() -> None:
 
     assert elapsed < 300.0
     assert analysis.player_summaries
+
+
+def test_sc001_one_hour_iteration_target_with_sequential_path() -> None:
+    video_service = Mock(spec=VideoService)
+    ocr_service = Mock(spec=OCRService)
+    ocr_service.detect_text.return_value = ["Player: Alice"]
+    ocr_service.extract_candidates.return_value = [("Alice", "pattern-1")]
+
+    frame_count = 3600
+    frames = [np.zeros((8, 8, 3), dtype=np.uint8) for _ in range(frame_count)]
+
+    def iterate_frames_with_timestamps(
+        url: str, start_time: float, end_time: float, fps: int, quality: str = "best"
+    ):
+        del url, start_time, end_time, fps, quality
+        for i, frame in enumerate(frames):
+            yield float(i), frame
+
+    video_service.iterate_frames_with_timestamps.side_effect = iterate_frames_with_timestamps
+    analysis_service = AnalysisService(video_service=video_service, ocr_service=ocr_service)
+
+    elapsed = benchmark_callable(
+        lambda: analysis_service.analyze(
+            url="https://youtube.com/watch?v=onehour",
+            regions=[(1, 1, 2, 2)],
+            start_time=0.0,
+            end_time=3600.0,
+            fps=1,
+        ),
+        repeat=1,
+    )
+
+    assert elapsed < 180.0
+    kwargs = video_service.iterate_frames_with_timestamps.call_args.kwargs
+    assert kwargs["quality"] == "best"
+
+
+def test_sc001_two_hour_iteration_scaling_target() -> None:
+    video_service = Mock(spec=VideoService)
+    ocr_service = Mock(spec=OCRService)
+    ocr_service.detect_text.return_value = ["Player: Alice"]
+    ocr_service.extract_candidates.return_value = [("Alice", "pattern-1")]
+
+    def iterate_frames_with_timestamps(
+        url: str, start_time: float, end_time: float, fps: int, quality: str = "best"
+    ):
+        del url, start_time, end_time, fps, quality
+        for i in range(7200):
+            yield float(i), np.zeros((4, 4, 3), dtype=np.uint8)
+
+    video_service.iterate_frames_with_timestamps.side_effect = iterate_frames_with_timestamps
+    analysis_service = AnalysisService(video_service=video_service, ocr_service=ocr_service)
+
+    started = time.perf_counter()
+    result = analysis_service.analyze(
+        url="https://youtube.com/watch?v=twohour",
+        regions=[(0, 0, 2, 2)],
+        start_time=0.0,
+        end_time=7200.0,
+        fps=1,
+    )
+    elapsed = time.perf_counter() - started
+
+    assert result.player_summaries
+    assert elapsed < 300.0

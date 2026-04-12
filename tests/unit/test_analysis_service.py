@@ -257,10 +257,26 @@ def test_build_player_summaries_selects_earliest_on_screen_player_name() -> None
     ]
 
     summaries = AnalysisService.build_player_summaries(detections, gap_threshold_sec=5.0)
-
     assert len(summaries) == 1
     # First-seen form (t=1.0) "Alice" must be chosen, not the later "ALICE"
     assert summaries[0].player_name == "Alice"
+
+
+def test_us3_analysis_pipeline_regression_downstream_summary_shape_is_unchanged() -> None:
+    service = AnalysisService(video_service=_VideoServiceStub(), ocr_service=_OCRServiceStub())
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=60.0,
+        fps=1,
+    )
+
+    assert len(analysis.player_summaries) == 1
+    summary = analysis.player_summaries[0]
+    assert summary.player_name == "Raw OCR Name"
+    assert summary.start_timestamp == "00:00:12.000"
 
 
 def test_build_player_summaries_display_name_is_stripped() -> None:
