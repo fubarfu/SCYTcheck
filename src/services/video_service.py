@@ -37,18 +37,24 @@ class VideoService:
         return "youtube.com/watch?v=" in lowered or "youtu.be/" in lowered
 
     # Map UI quality labels to yt-dlp format selectors.
-    # Prefer progressive video formats for OpenCV compatibility and stable long-run decoding.
+    # Prefer separated video+audio for best quality, with fallback to progressive formats.
     _QUALITY_FORMAT_MAP: dict[str, str] = {
-        "best": "best[ext=mp4]/best",
+        "best": (
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/"
+            "best[ext=mp4]/best"
+        ),
         "720p": (
+            "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
             "best[height<=720][ext=mp4]/"
             "best[height<=720]/best"
         ),
         "480p": (
+            "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/"
             "best[height<=480][ext=mp4]/"
             "best[height<=480]/best"
         ),
         "360p": (
+            "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/"
             "best[height<=360][ext=mp4]/"
             "best[height<=360]/best"
         ),
