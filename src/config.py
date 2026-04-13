@@ -22,7 +22,11 @@ def _candidate_tesseract_paths() -> list[Path]:
     candidates: list[Path] = []
 
     if getattr(sys, "frozen", False):
-        candidates.append(Path(sys.executable).resolve().parent / "tesseract.exe")
+        executable_dir = Path(sys.executable).resolve().parent
+        # Portable bundles place Tesseract under a dedicated subfolder.
+        candidates.append(executable_dir / "tesseract" / "tesseract.exe")
+        # Legacy fallback for older bundles that placed the binary next to the app exe.
+        candidates.append(executable_dir / "tesseract.exe")
 
     user_profile = os.getenv("USERPROFILE")
     if user_profile:

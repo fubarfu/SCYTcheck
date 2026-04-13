@@ -4,7 +4,8 @@ param(
     [switch]$BundleOnly,
     [string]$ThirdPartyRoot,
     [string]$SpecPath,
-    [string]$PythonExe = 'python'
+    [string]$PythonExe = 'python',
+    [string]$ReleaseVersion
 )
 
 Set-StrictMode -Version Latest
@@ -42,7 +43,32 @@ function Resolve-PythonCommand {
     return $command.Source
 }
 
+function Resolve-AppVersion {
+    param(
+        [string]$RepoRoot,
+        [string]$ReleaseVersion
+    )
+
+    if ($ReleaseVersion) {
+        return $ReleaseVersion
+    }
+
+    $pyprojectPath = Join-Path $RepoRoot 'pyproject.toml'
+    if (-not (Test-Path $pyprojectPath)) {
+        throw "pyproject.toml not found: $pyprojectPath"
+    }
+
+    foreach ($line in Get-Content -Path $pyprojectPath) {
+        if ($line -match '^\s*version\s*=\s*"([^"]+)"\s*$') {
+            return $Matches[1]
+        }
+    }
+
+    throw "Unable to resolve release version from $pyprojectPath"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$appVersion = Resolve-AppVersion -RepoRoot $repoRoot -ReleaseVersion $ReleaseVersion
 $distDir = Join-Path $repoRoot 'dist'
 $buildRoot = Join-Path $distDir 'build'
 $releaseRoot = Join-Path $distDir 'release'
@@ -52,9 +78,10 @@ $vendorRoot = if ($ThirdPartyRoot) { $ThirdPartyRoot } else { Join-Path $repoRoo
 $ffmpegSource = Join-Path $vendorRoot (Join-Path 'ffmpeg' $Architecture)
 $tesseractSource = Join-Path $vendorRoot (Join-Path 'tesseract' $Architecture)
 $specFile = if ($SpecPath) { $SpecPath } else { Join-Path $repoRoot 'build-config.spec' }
-$zipPath = Join-Path $releaseRoot ("SCYTcheck-{0}.zip" -f $Architecture)
+$zipPath = Join-Path $releaseRoot ("SCYTcheck-{0}-{1}.zip" -f $appVersion, $Architecture)
 
 Write-Host "[build] Architecture: $Architecture"
+Write-Host "[build] Version: $appVersion"
 Write-Host "[build] Repo root: $repoRoot"
 Write-Host "[build] Spec: $specFile"
 
@@ -93,6 +120,17 @@ $tessdataDestination = Join-Path $tesseractDestination 'tessdata'
 Copy-OptionalTree -Source $ffmpegSource -Destination $ffmpegDestination -Label 'FFmpeg'
 Copy-OptionalTree -Source $tesseractSource -Destination $tesseractDestination -Label 'Tesseract'
 Ensure-Directory -Path $tessdataDestination
+
+# Cleanup stale release ZIPs for this architecture (legacy and older versioned naming).
+$staleZipCandidates = @(
+    Get-ChildItem -Path $releaseRoot -Filter ("SCYTcheck-{0}.zip" -f $Architecture) -File -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $releaseRoot -Filter ("SCYTcheck-*-{0}.zip" -f $Architecture) -File -ErrorAction SilentlyContinue
+) | Where-Object { $_.FullName -ne $zipPath } | Sort-Object FullName -Unique
+
+foreach ($staleZip in $staleZipCandidates) {
+    Write-Host "[build] Removing stale ZIP: $($staleZip.FullName)"
+    Remove-Item -Path $staleZip.FullName -Force
+}
 
 if (Test-Path $zipPath) {
     Remove-Item -Path $zipPath -Force

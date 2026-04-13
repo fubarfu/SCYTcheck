@@ -6,7 +6,7 @@ SCYTcheck analyzes text in selected regions of a YouTube video and exports:
 
 ## 60-Second Quick Start
 
-1. Download the latest `SCYTcheck-<arch>.zip` from Releases.
+1. Download the latest `SCYTcheck-<version>-<arch>.zip` from Releases.
 2. Extract the ZIP.
 3. Open the extracted folder and run `SCYTcheck.exe`.
 4. Paste a YouTube URL.

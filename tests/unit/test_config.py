@@ -39,6 +39,36 @@ def test_load_config_discovers_scoop_tesseract(monkeypatch, tmp_path: Path) -> N
     assert config.tessdata_prefix == str(tessdata_dir)
 
 
+def test_load_config_discovers_bundled_tesseract_in_frozen_portable_layout(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("SCYTCHECK_TESSERACT_CMD", raising=False)
+    monkeypatch.delenv("TESSDATA_PREFIX", raising=False)
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.delenv("LOCALAPPDATA", raising=False)
+    monkeypatch.delenv("ProgramFiles", raising=False)
+    monkeypatch.delenv("ProgramFiles(x86)", raising=False)
+
+    app_dir = tmp_path / "SCYTcheck"
+    app_dir.mkdir(parents=True)
+    app_executable = app_dir / "SCYTcheck.exe"
+    app_executable.write_text("", encoding="utf-8")
+    tesseract_exe = app_dir / "tesseract" / "tesseract.exe"
+    tesseract_exe.parent.mkdir(parents=True)
+    tesseract_exe.write_text("", encoding="utf-8")
+    tessdata_dir = tesseract_exe.parent / "tessdata"
+    tessdata_dir.mkdir()
+
+    monkeypatch.setattr("src.config.sys.frozen", True, raising=False)
+    monkeypatch.setattr("src.config.sys.executable", str(app_executable), raising=False)
+    monkeypatch.setattr("src.config.shutil.which", lambda _name: None)
+
+    config = load_config()
+
+    assert config.tesseract_cmd == str(tesseract_exe)
+    assert config.tessdata_prefix == str(tessdata_dir)
+
+
 def test_advanced_settings_roundtrip_includes_video_quality_and_logging(tmp_path: Path) -> None:
     settings = AdvancedSettings(
         context_patterns=[

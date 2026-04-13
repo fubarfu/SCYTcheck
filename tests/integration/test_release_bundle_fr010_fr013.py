@@ -9,8 +9,12 @@ def test_fr010_to_fr013_release_bundle_requirements_are_wired() -> None:
 
     # FR-010/011: portable ZIP artifacts are created and architecture is explicit.
     assert "ValidateSet('x64', 'x86')" in text
-    assert "SCYTcheck-{0}.zip" in text
+    assert "SCYTcheck-{0}-{1}.zip" in text
+    assert "Resolve-AppVersion" in text
+    assert "pyproject.toml" in text
     assert "Compress-Archive" in text
+    assert "Removing stale ZIP" in text
+    assert "SCYTcheck-*-{0}.zip" in text
 
     # FR-012/013: bundled Tesseract and FFmpeg payloads are staged into bundle.
     assert "ffmpeg" in text
