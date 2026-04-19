@@ -26,7 +26,7 @@ Use the portable release package. You do not need to install Python or run pip.
 4. Run `SCYTcheck.exe`.
 5. If Windows SmartScreen appears, select **More info** and then **Run anyway**.
 
-Settings are saved between runs in `%APPDATA%/SCYTcheck/scytcheck_settings.json` when writable, otherwise next to the executable.
+Settings are saved between runs in `%APPDATA%/SCYTcheck/scytcheck_settings.json` when writable, otherwise next to the executable as `scytcheck_settings.json`.
 
 ## First Run Workflow
 
@@ -39,14 +39,14 @@ Settings are saved between runs in `%APPDATA%/SCYTcheck/scytcheck_settings.json`
 7. Open the exported summary CSV.
 8. If logging is enabled, review the matching `_log.csv` sidecar file.
 
-## Robustness Features (New)
+## Robustness and Speed Controls
 
 Advanced Settings now includes controls for OCR robustness and speed:
 
 - `Matching tolerance` (`0.60` to `0.95`, default `0.75`):
 	- Lower values are more lenient and can recover names when OCR introduces character substitutions.
 	- Keep `0.75` for strict/default behavior.
-- `Enable Frame-Change Gating` (default on):
+- `Enable Frame-Change Gating` (default off):
 	- Skips OCR when a region is visually unchanged between sampled frames.
 	- Improves runtime on static overlays while preserving output accuracy.
 - `Gating threshold` (`0.0` to `1.0`, default `0.02`):
@@ -59,6 +59,16 @@ Gating Summary: Evaluated <total>, OCR Executed <executed>, OCR Skipped <skipped
 ```
 
 If export fails after analysis (for example due to file lock or permissions), use **Retry Export** to write output again without re-running OCR.
+
+## Reset Settings to Defaults
+
+To reset all Advanced Settings back to app defaults:
+
+1. Close SCYTcheck.
+2. Delete the persisted settings file:
+	- Preferred location: `%APPDATA%/SCYTcheck/scytcheck_settings.json`
+	- Fallback location (portable/no APPDATA write access): `scytcheck_settings.json` in the same folder as `SCYTcheck.exe`
+3. Start SCYTcheck again. A fresh settings file is created automatically with default values.
 
 ## Output Formats
 
@@ -120,7 +130,7 @@ python -m src.main
 ## Build Portable Bundle (Maintainers)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/release/build.ps1 -Architecture x64
+powershell -ExecutionPolicy Bypass -File scripts/release/build.ps1 -Architecture x64 -ReleaseVersion 1.2
 ```
 
 Optional signing:
@@ -129,15 +139,11 @@ Optional signing:
 powershell -ExecutionPolicy Bypass -File scripts/release/sign.ps1 -InputPath dist/release/x64/SCYTcheck -CertificatePath C:\path\to\certificate.pfx
 ```
 
-## Development Validation
+## Validation
+
+Run validation locally with:
 
 ```powershell
 pytest tests/ -q
 ruff check src tests --select=E,F,W
 ```
-
-## Latest Validation
-
-- Date: 2026-04-12
-- `pytest tests/ -q`: 156 passed
-- `ruff check src tests --select=E,F,W`: all checks passed
