@@ -5,10 +5,11 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from tests.integration.helpers.perf_helpers import benchmark_callable
+from src.data.models import ContextPattern
 from src.services.analysis_service import AnalysisService
 from src.services.ocr_service import OCRService
 from src.services.video_service import VideoService
+from tests.integration.helpers.perf_helpers import benchmark_callable
 
 
 def test_sc001_analysis_of_ten_minute_video_completes_within_target() -> None:
@@ -106,3 +107,34 @@ def test_sc001_two_hour_iteration_scaling_target() -> None:
 
     assert result.player_summaries
     assert elapsed < 300.0
+
+
+def test_sc001_multiline_recall_meets_95_percent_target() -> None:
+    service = OCRService()
+    pattern = ContextPattern(id="joined", before_text="Joined by", after_text="Rank", enabled=True)
+
+    lines = [
+        "Joined by\nAlice\nRank",
+        "Joined by\nBob\nRank",
+        "Joined by\nCarol\nRank",
+        "Joined by\nDora\nRank",
+        "Joined by\nEvan\nRank",
+        "Joined by\nFinn\nRank",
+        "Joined by\nGina\nRank",
+        "Joined by\nHugo\nRank",
+        "Joined by\nIvy\nRank",
+        "Joined by\nJay\nRank",
+    ]
+
+    accepted = 0
+    for line in lines:
+        decisions = service.evaluate_lines(
+            [line],
+            patterns=[pattern],
+            filter_non_matching=True,
+            tolerance_threshold=0.75,
+        )
+        accepted += sum(1 for decision in decisions if bool(decision["accepted"]))
+    recall = accepted / len(lines)
+
+    assert recall >= 0.95

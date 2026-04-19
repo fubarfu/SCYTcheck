@@ -1,0 +1,47 @@
+{
+  "feature": "006-optimize-analysis-hotpaths",
+  "pass": true,
+  "sections": {
+    "gating_decision_parity": {
+      "pass": true,
+      "total_pairs": 8,
+      "matched_pairs": 8,
+      "mismatches": [],
+      "baseline_median_sec": 5.700043402612209e-06,
+      "candidate_median_sec": 2.700020559132099e-06,
+      "speedup_pct": 52.63157894736842
+    },
+    "grayscale_reuse": {
+      "pass": true,
+      "baseline_conversions": 4,
+      "candidate_conversions": 1,
+      "conversion_reduction": 3
+    },
+    "normalization_equivalence": {
+      "pass": true,
+      "total_entries": 26,
+      "normalize_for_matching_matches": 26,
+      "normalize_name_matches": 26,
+      "normalize_for_matching_mismatches": [],
+      "normalize_name_mismatches": [],
+      "baseline_median_sec": 1.200009137392044e-06,
+      "candidate_median_sec": 8.00006091594696e-07
+    },
+    "timing_output": {
+      "pass": true,
+      "logging_disabled_emits_timing": false,
+      "logging_enabled_emits_timing": true,
+      "enabled_total_ms": 0.03779999678954482
+    },
+    "sc013_instrumentation_overhead": {
+      "pass": true,
+      "inconclusive": false,
+      "retried": false,
+      "no_instrumentation_median_sec": 0.12943289999384433,
+      "instrumentation_median_sec": 0.12341300002299249,
+      "no_instrumentation_variance": 0.03497024332114436,
+      "instrumentation_variance": 0.01194687749633977,
+      "overhead_pct": -4.650981296979468
+    }
+  }
+}

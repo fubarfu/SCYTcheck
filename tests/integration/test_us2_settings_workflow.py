@@ -141,8 +141,15 @@ def test_advanced_settings_first_run_defaults_and_persistence(tmp_path) -> None:
     assert loaded.ocr_confidence_threshold == 40
     assert loaded.video_quality == "best"
     assert loaded.logging_enabled is False
-    assert len(loaded.context_patterns) == 2
-    assert loaded.context_patterns[0]["after_text"] == "joined"
+    assert len(loaded.context_patterns) == 4
+    assert loaded.context_patterns[0]["before_text"] is None
+    assert loaded.context_patterns[0]["after_text"] == "has joined"
+    assert loaded.context_patterns[1]["before_text"] == "Party"
+    assert loaded.context_patterns[1]["after_text"] == "connected"
+    assert loaded.context_patterns[2]["before_text"] == "Party"
+    assert loaded.context_patterns[2]["after_text"] == "disconnected"
+    assert loaded.context_patterns[3]["before_text"] == "started by"
+    assert loaded.context_patterns[3]["after_text"] is None
     assert (tmp_path / "scytcheck_settings.json").exists()
 
 

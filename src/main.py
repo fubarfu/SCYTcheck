@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+import contextlib
 import queue
 import threading
 import tkinter as tk
@@ -12,21 +12,19 @@ from src.config import load_advanced_settings, load_config, save_advanced_settin
 from src.data.models import ContextPattern, VideoAnalysis
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
-from src.services.logging import configure_logging, write_sidecar_log
+from src.services.logging import SidecarLogWriter, configure_logging, write_sidecar_log
 from src.services.ocr_service import OCRService
 from src.services.video_service import InvalidURLError, VideoAccessError, VideoService
 
 
 def main() -> None:
     config = load_config()
-    if config.tessdata_prefix and not os.getenv("TESSDATA_PREFIX"):
-        os.environ["TESSDATA_PREFIX"] = config.tessdata_prefix
     logger = configure_logging()
 
     video_service = VideoService()
     ocr_service = OCRService(
         confidence_threshold=config.confidence_threshold,
-        tesseract_cmd=config.tesseract_cmd,
+        paddleocr_model_root=config.paddleocr_model_root,
     )
     analysis_service = AnalysisService(video_service=video_service, ocr_service=ocr_service)
     export_service = ExportService()
@@ -34,7 +32,8 @@ def main() -> None:
 
     root = tk.Tk()
     window = MainWindow(root)
-    window.apply_advanced_settings(load_advanced_settings())
+    advanced_settings = load_advanced_settings()
+    window.apply_advanced_settings(advanced_settings)
     last_analysis: VideoAnalysis | None = None
     last_output_folder: str | None = None
     last_filename: str | None = None
@@ -117,6 +116,9 @@ def main() -> None:
             ocr_service.confidence_threshold = int(
                 max(0, min(advanced.ocr_confidence_threshold, 100))
             )
+            ocr_service.paddleocr_model_root = (
+                advanced.paddleocr_model_root or config.paddleocr_model_root
+            )
             context_patterns = [
                 ContextPattern(
                     id=str(item.get("id", f"pattern-{index}")),
@@ -149,7 +151,10 @@ def main() -> None:
                     # Analyze across the full video timeline. Region selection time is only
                     # for choosing representative ROIs, not for clipping analysis duration.
                     analysis_start_time = 0.0
-                    video_info = video_service.get_video_info(url)
+                    video_info = video_service.get_video_info(
+                        url,
+                        quality=advanced.video_quality,
+                    )
                     duration_value = video_info.get("duration", 0.0)
                     try:
                         analysis_end_time = float(duration_value)
@@ -158,35 +163,54 @@ def main() -> None:
                     if analysis_end_time <= analysis_start_time:
                         analysis_end_time = analysis_start_time + 60.0
 
-                    analysis = analysis_service.analyze(
-                        url=url,
-                        regions=regions,
-                        start_time=analysis_start_time,
-                        end_time=analysis_end_time,
-                        fps=config.sample_fps,
-                        on_progress=lambda value: dispatch_to_ui(
-                            window.progress.set_progress, value
-                        ),
-                        context_patterns=context_patterns,
-                        filter_non_matching=advanced.filter_non_matching,
-                        event_gap_threshold_sec=advanced.event_gap_threshold_sec,
-                        video_quality=advanced.video_quality,
-                        logging_enabled=advanced.logging_enabled,
-                    )
-                    last_analysis = analysis
-                    last_output_folder = output_folder
-                    last_logging_enabled = advanced.logging_enabled
-
-                    dispatch_to_ui(window.progress.set_stage, "Aggregate")
-                    dispatch_to_ui(window.progress.set_progress, 100)
-
+                    # Generate filename early so it can be used for the sidecar log writer
                     filename = export_service.generate_filename(url)
                     last_filename = filename
-                    dispatch_to_ui(window.progress.set_stage, "Export")
-                    exported = export_service.export_to_csv(analysis, output_folder, filename)
-                    if advanced.logging_enabled:
-                        write_sidecar_log(output_folder, filename, analysis.log_records)
-                    dispatch_to_ui(window.set_status, f"Completed: {exported}")
+
+                    # Determine whether to use SidecarLogWriter context
+                    log_writer_ctx = (
+                        SidecarLogWriter(output_folder, filename)
+                        if advanced.logging_enabled
+                        else contextlib.nullcontext()
+                    )
+
+                    with log_writer_ctx as writer:
+                        analysis = analysis_service.analyze(
+                            url=url,
+                            regions=regions,
+                            start_time=analysis_start_time,
+                            end_time=analysis_end_time,
+                            fps=config.sample_fps,
+                            on_progress=lambda value: dispatch_to_ui(
+                                window.progress.set_progress, value
+                            ),
+                            context_patterns=context_patterns,
+                            filter_non_matching=advanced.filter_non_matching,
+                            event_gap_threshold_sec=advanced.event_gap_threshold_sec,
+                            video_quality=advanced.video_quality,
+                            logging_enabled=advanced.logging_enabled,
+                            tolerance_value=advanced.tolerance_value,
+                            gating_enabled=advanced.gating_enabled,
+                            gating_threshold=advanced.gating_threshold,
+                            on_log_record=writer.write_record if advanced.logging_enabled else None,
+                        )
+                        last_analysis = analysis
+                        last_output_folder = output_folder
+                        last_logging_enabled = advanced.logging_enabled
+
+                        dispatch_to_ui(window.progress.set_stage, "Aggregate")
+                        dispatch_to_ui(window.progress.set_progress, 100)
+
+                        dispatch_to_ui(window.progress.set_stage, "Export")
+                        exported = export_service.export_to_csv(analysis, output_folder, filename)
+
+                    gating_summary = ExportService.format_gating_summary(analysis.gating_stats)
+                    timing_summary = ExportService.format_timing_summary(analysis.runtime_metrics)
+
+                    dispatch_to_ui(
+                        window.set_status,
+                        f"Completed: {exported}{gating_summary}{timing_summary}",
+                    )
                     dispatch_to_ui(set_retry_export_command, None)
                     if not analysis.player_summaries:
                         dispatch_to_ui(
@@ -195,14 +219,14 @@ def main() -> None:
                             (
                                 "No matching text was detected. "
                                 "A header-only CSV was exported to:\n"
-                                f"{exported}"
+                                f"{exported}{gating_summary}{timing_summary}"
                             ),
                         )
                     else:
                         dispatch_to_ui(
                             messagebox.showinfo,
                             "Analysis Complete",
-                            f"CSV exported to:\n{exported}",
+                            f"CSV exported to:\n{exported}{gating_summary}{timing_summary}",
                         )
 
                 except InvalidURLError as exc:

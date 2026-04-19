@@ -10,8 +10,8 @@ from src.data.models import ContextPattern
 from src.services.ocr_service import OCRService
 
 
-def test_extract_candidates_selects_longest_span_on_tie() -> None:
-    """When multiple patterns match same text, select longest extracted span."""
+def test_extract_candidates_selects_nearest_span_on_tie() -> None:
+    """When multiple patterns match same text, select nearest valid bounded span."""
     service = OCRService()
     patterns = [
         ContextPattern(
@@ -36,9 +36,9 @@ def test_extract_candidates_selects_longest_span_on_tie() -> None:
         filter_non_matching=True,
     )
 
-    # "long" pattern captures more text between markers ("Alice joined the")
+    # Nearest span is the one with fewer tokens between boundaries.
     assert len(candidates) == 1
-    assert candidates[0][1] == "long"  # Matched pattern: "long"
+    assert candidates[0][1] == "short"
 
 
 def test_extract_candidates_selects_earliest_start_on_span_tie() -> None:
@@ -128,5 +128,5 @@ def test_evaluate_lines_deterministic_resolution_output(tmp_path) -> None:
     assert len(decisions) == 1
     decision = decisions[0]
     assert decision["accepted"] is True
-    # "long" pattern captures "Alice Score" (longer span between markers)
-    assert decision["matched_pattern"] == "long"
+    # Nearest valid bounded span should win.
+    assert decision["matched_pattern"] == "short"

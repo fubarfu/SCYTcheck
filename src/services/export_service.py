@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from src.data.models import PlayerSummary, VideoAnalysis
+from src.data.models import AnalysisRuntimeMetrics, GatingStats, PlayerSummary, VideoAnalysis
 
 
 class ExportService:
@@ -19,6 +19,34 @@ class ExportService:
             summary.player_name,
             summary.start_timestamp,
         ]
+
+    @staticmethod
+    def format_gating_summary(stats: GatingStats | None) -> str:
+        if stats is None:
+            return ""
+        return (
+            "\n"
+            f"Gating Summary: Evaluated {stats.total_frame_region_pairs}, "
+            f"OCR Executed {stats.ocr_executed_count}, "
+            f"OCR Skipped {stats.ocr_skipped_count} ({stats.skip_percentage:.1f}%)."
+        )
+
+    @staticmethod
+    def format_timing_summary(metrics: AnalysisRuntimeMetrics | None) -> str:
+        if metrics is None or not metrics.instrumentation_enabled:
+            return ""
+        timing = metrics.timing_breakdown
+        if timing is None:
+            return ""
+        return (
+            "\n"
+            "Timing Summary (ms): "
+            f"decode={timing.decode_ms:.2f}, "
+            f"gating={timing.gating_ms:.2f}, "
+            f"ocr={timing.ocr_ms:.2f}, "
+            f"post_processing={timing.post_processing_ms:.2f}, "
+            f"total={timing.total_ms:.2f}."
+        )
 
     @staticmethod
     def extract_youtube_video_id(url: str) -> str:

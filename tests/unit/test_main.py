@@ -103,7 +103,7 @@ def _run_main_once(
     with (
         patch(
             "src.main.load_config",
-            return_value=AppConfig(sample_fps=1, confidence_threshold=40, tesseract_cmd=None),
+            return_value=AppConfig(sample_fps=1, confidence_threshold=40),
         ),
         patch("src.main.configure_logging", return_value=logger),
         patch("src.main.VideoService", return_value=video_service),
@@ -280,3 +280,7 @@ def test_main_passes_video_quality_to_region_selector_and_analysis(tmp_path) -> 
     )
     analyze_kwargs = result["analysis_service"].analyze.call_args.kwargs
     assert analyze_kwargs["video_quality"] == "best"
+    result["video_service"].get_video_info.assert_called_once_with(
+        "https://youtube.com/watch?v=test",
+        quality="best",
+    )

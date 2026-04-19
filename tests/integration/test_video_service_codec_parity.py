@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-from tests.integration.helpers.codec_helpers import build_codec_source_id, is_supported_codec
-from tests.integration.helpers.parity_helpers import assert_frame_count_parity, assert_timestamp_parity
+from tests.integration.helpers.codec_helpers import (
+    build_codec_source_id,
+    is_supported_codec,
+)
+from tests.integration.helpers.parity_helpers import (
+    assert_frame_count_parity,
+    assert_timestamp_parity,
+)
 
 
 def test_codec_source_ids_cover_h264_and_vp9() -> None:

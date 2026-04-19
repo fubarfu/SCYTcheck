@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,65 +13,44 @@ SETTINGS_FILE = "scytcheck_settings.json"
 class AppConfig:
     sample_fps: int = 1
     confidence_threshold: int = 40
-    tesseract_cmd: str | None = None
-    tessdata_prefix: str | None = None
+    paddleocr_model_root: str | None = None
 
 
-def _candidate_tesseract_paths() -> list[Path]:
+def _candidate_paddleocr_model_roots() -> list[Path]:
     candidates: list[Path] = []
 
     if getattr(sys, "frozen", False):
         executable_dir = Path(sys.executable).resolve().parent
-        # Portable bundles place Tesseract under a dedicated subfolder.
-        candidates.append(executable_dir / "tesseract" / "tesseract.exe")
-        # Legacy fallback for older bundles that placed the binary next to the app exe.
-        candidates.append(executable_dir / "tesseract.exe")
+        internal_dir = executable_dir / "_internal"
+        candidates.append(executable_dir / "paddleocr_models")
+        candidates.append(executable_dir / "paddleocr")
+        candidates.append(internal_dir / "paddleocr")
+        candidates.append(executable_dir / "third_party" / "paddleocr" / "x64")
 
-    user_profile = os.getenv("USERPROFILE")
-    if user_profile:
-        candidates.append(
-            Path(user_profile) / "scoop" / "apps" / "tesseract" / "current" / "tesseract.exe"
-        )
+    repo_root = Path(__file__).resolve().parent.parent
+    candidates.append(repo_root / "third_party" / "paddleocr" / "x64")
+    candidates.append(Path.cwd() / "third_party" / "paddleocr" / "x64")
 
-    local_app_data = os.getenv("LOCALAPPDATA")
-    if local_app_data:
-        candidates.append(Path(local_app_data) / "Programs" / "Tesseract-OCR" / "tesseract.exe")
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
 
-    for env_key in ("ProgramFiles", "ProgramFiles(x86)"):
-        base = os.getenv(env_key)
-        if base:
-            candidates.append(Path(base) / "Tesseract-OCR" / "tesseract.exe")
-
-    return candidates
+    return deduped
 
 
-def _discover_tesseract_command() -> str | None:
-    configured = os.getenv("SCYTCHECK_TESSERACT_CMD")
+def _discover_paddleocr_model_root() -> str | None:
+    configured = os.getenv("SCYTCHECK_PADDLEOCR_MODEL_ROOT")
     if configured:
         return configured
 
-    discovered_on_path = shutil.which("tesseract")
-    if discovered_on_path:
-        return discovered_on_path
-
-    for candidate in _candidate_tesseract_paths():
-        if candidate.exists():
+    for candidate in _candidate_paddleocr_model_roots():
+        if candidate.exists() and candidate.is_dir():
             return str(candidate)
-
-    return None
-
-
-def _discover_tessdata_prefix(tesseract_cmd: str | None) -> str | None:
-    configured = os.getenv("TESSDATA_PREFIX")
-    if configured:
-        return configured
-
-    if not tesseract_cmd:
-        return None
-
-    tessdata_dir = Path(tesseract_cmd).resolve().parent / "tessdata"
-    if tessdata_dir.exists():
-        return str(tessdata_dir)
 
     return None
 
@@ -83,52 +61,63 @@ class AdvancedSettings:
     filter_non_matching: bool = True
     event_gap_threshold_sec: float = 1.0
     ocr_confidence_threshold: int = 40
+    paddleocr_model_root: str | None = None
     video_quality: str = "best"
     logging_enabled: bool = False
+    tolerance_value: float = 0.75
+    gating_enabled: bool = False
+    gating_threshold: float = 0.02
 
 
 def _default_advanced_settings() -> AdvancedSettings:
     return AdvancedSettings(
         context_patterns=[
             {
-                "id": "default-started-by",
-                "before_text": "started by",
-                "after_text": None,
+                "id": "default-has-joined",
+                "before_text": None,
+                "after_text": "has joined",
                 "enabled": True,
             },
-            {"id": "default-joined", "before_text": None, "after_text": "joined", "enabled": True},
             {
-                "id": "default-connected",
-                "before_text": None,
+                "id": "default-party-connected",
+                "before_text": "Party",
                 "after_text": "connected",
                 "enabled": True,
             },
             {
-                "id": "default-disconnected",
-                "before_text": None,
+                "id": "default-party-disconnected",
+                "before_text": "Party",
                 "after_text": "disconnected",
+                "enabled": True,
+            },
+            {
+                "id": "default-started-by",
+                "before_text": "started by",
+                "after_text": None,
                 "enabled": True,
             },
         ],
         filter_non_matching=True,
         event_gap_threshold_sec=1.0,
         ocr_confidence_threshold=40,
+        paddleocr_model_root=_discover_paddleocr_model_root(),
         video_quality="best",
         logging_enabled=False,
+        tolerance_value=0.75,
+        gating_enabled=False,
+        gating_threshold=0.02,
     )
 
 
 def load_config() -> AppConfig:
     sample_fps = int(os.getenv("SCYTCHECK_SAMPLE_FPS", "1"))
     confidence_threshold = int(os.getenv("SCYTCHECK_OCR_CONFIDENCE", "40"))
-    tesseract_cmd = _discover_tesseract_command()
-    tessdata_prefix = _discover_tessdata_prefix(tesseract_cmd)
+    paddleocr_model_root = _discover_paddleocr_model_root()
 
     return AppConfig(
         sample_fps=max(1, sample_fps),
         confidence_threshold=max(0, min(confidence_threshold, 100)),
-        tesseract_cmd=tesseract_cmd,
-        tessdata_prefix=tessdata_prefix,
+        paddleocr_model_root=paddleocr_model_root,
     )
 
 
@@ -168,6 +157,9 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
         save_advanced_settings(defaults, base_dir)
         return defaults
 
+    if not isinstance(payload, dict):
+        payload = {}
+
     defaults = _default_advanced_settings()
     return AdvancedSettings(
         context_patterns=list(payload.get("context_patterns", defaults.context_patterns)),
@@ -184,8 +176,23 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
                 ),
             )
         ),
+        paddleocr_model_root=(
+            str(payload["paddleocr_model_root"])
+            if payload.get("paddleocr_model_root") not in (None, "")
+            else defaults.paddleocr_model_root
+        ),
         video_quality=str(payload.get("video_quality", defaults.video_quality) or "best"),
         logging_enabled=bool(payload.get("logging_enabled", defaults.logging_enabled)),
+        tolerance_value=float(
+            max(0.60, min(float(payload.get("tolerance_value", defaults.tolerance_value)), 0.95))
+        ),
+        gating_enabled=bool(payload.get("gating_enabled", defaults.gating_enabled)),
+        gating_threshold=float(
+            max(
+                0.0,
+                min(float(payload.get("gating_threshold", defaults.gating_threshold)), 1.0),
+            )
+        ),
     )
 
 
@@ -201,8 +208,12 @@ def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = No
                 "ocr_confidence_threshold": int(
                     max(0, min(settings.ocr_confidence_threshold, 100))
                 ),
+                "paddleocr_model_root": settings.paddleocr_model_root,
                 "video_quality": settings.video_quality,
                 "logging_enabled": settings.logging_enabled,
+                "tolerance_value": float(max(0.60, min(settings.tolerance_value, 0.95))),
+                "gating_enabled": settings.gating_enabled,
+                "gating_threshold": float(max(0.0, min(settings.gating_threshold, 1.0))),
             },
             indent=2,
         ),

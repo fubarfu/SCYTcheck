@@ -61,8 +61,15 @@ class TestRegionSelectorSeeking:
 
     def test_get_video_duration(self, region_selector: RegionSelector) -> None:
         """Test retrieving video duration."""
-        duration = region_selector.get_video_duration("https://youtube.com/watch?v=test")
+        duration = region_selector.get_video_duration(
+            "https://youtube.com/watch?v=test",
+            quality="720p",
+        )
         assert duration == 600.0  # 10 minutes
+        region_selector.video_service.get_video_info.assert_called_with(
+            "https://youtube.com/watch?v=test",
+            quality="720p",
+        )
 
     def test_frame_time_mapping(self, region_selector: RegionSelector) -> None:
         """Test mapping between scrollbar position and frame time."""
@@ -327,3 +334,7 @@ class TestRegionSelectorQualityPropagation:
     def test_load_video_stores_quality(self, region_selector: RegionSelector) -> None:
         region_selector.load_video("https://youtube.com/watch?v=test", quality="360p")
         assert region_selector.quality == "360p"
+        region_selector.video_service.get_video_info.assert_called_with(
+            "https://youtube.com/watch?v=test",
+            quality="360p",
+        )

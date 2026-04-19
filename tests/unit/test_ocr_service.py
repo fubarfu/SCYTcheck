@@ -1,9 +1,10 @@
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
 
 from src.data.models import ContextPattern
-from src.services.ocr_service import OCRService
+from src.services.ocr_service import OCRError, OCRService
 
 
 def test_extract_with_boundaries_before_only() -> None:
@@ -49,11 +50,7 @@ def test_extract_candidates_preserves_all_context_matched_non_empty() -> None:
         filter_non_matching=True,
     )
 
-    assert candidates == [
-        ("Alice", "joined"),
-        ("Alice", "player"),
-        ("Bob", "joined"),
-    ]
+    assert candidates == [("Alice", "joined")]
 
 
 def test_extract_candidates_includes_unmatched_when_filter_disabled() -> None:
@@ -66,7 +63,7 @@ def test_extract_candidates_includes_unmatched_when_filter_disabled() -> None:
         filter_non_matching=False,
     )
 
-    assert candidates == [("Alice", "joined"), ("Raw OCR Name", None)]
+    assert candidates == [("Alice", "joined")]
 
 
 def test_extract_candidates_resolves_multi_pattern_conflicts_deterministically() -> None:
@@ -82,7 +79,7 @@ def test_extract_candidates_resolves_multi_pattern_conflicts_deterministically()
         filter_non_matching=True,
     )
 
-    assert candidates == [("Alice", "long")]
+    assert candidates == [("Alice", "short")]
 
 
 def test_evaluate_lines_marks_rejected_when_filter_requires_pattern_match() -> None:
@@ -108,6 +105,29 @@ def test_evaluate_lines_marks_rejected_when_filter_requires_pattern_match() -> N
     ]
 
 
+def test_build_joined_region_text_collapses_multiline_input() -> None:
+    assert OCRService.build_joined_region_text(
+        [" Joined by", "", "Alice\nRank "]
+    ) == "Joined by Alice Rank"
+
+
+def test_evaluate_lines_joined_only_returns_single_decision_for_multiple_lines() -> None:
+    service = OCRService()
+    patterns = [
+        ContextPattern(id="joined", before_text="Joined by", after_text="Rank", enabled=True),
+    ]
+
+    decisions = service.evaluate_lines(
+        ["Joined", "by", "Alice", "Rank"],
+        patterns=patterns,
+        filter_non_matching=True,
+    )
+
+    assert len(decisions) == 1
+    assert decisions[0]["accepted"] is True
+    assert decisions[0]["extracted_name"] == "Alice"
+
+
 def test_detect_text_with_diagnostics_reports_empty_crop() -> None:
     service = OCRService()
     image = np.zeros((8, 8, 3), dtype=np.uint8)
@@ -122,11 +142,20 @@ def test_detect_text_with_diagnostics_reports_low_confidence() -> None:
     service = OCRService(confidence_threshold=40)
     image = np.zeros((16, 16, 3), dtype=np.uint8)
 
-    with patch("src.services.ocr_service.pytesseract.image_to_data") as image_to_data:
-        image_to_data.return_value = {
-            "text": ["Alice", "Bob"],
-            "conf": ["12", "85"],
-        }
+    fake_engine = type(
+        "FakeEngine",
+        (),
+        {
+            "ocr": lambda *_args, **_kwargs: [
+                [
+                    [None, ("Alice", 0.12)],
+                    [None, ("Bob", 0.85)],
+                ]
+            ]
+        },
+    )()
+
+    with patch.object(service, "_get_ocr_engine", return_value=fake_engine):
         tokens, diagnostics = service.detect_text_with_diagnostics(image, (0, 0, 16, 16))
 
     assert tokens == ["Bob"]
@@ -142,14 +171,20 @@ def test_detect_text_with_diagnostics_aggregates_tokens_to_lines() -> None:
     service = OCRService(confidence_threshold=40)
     image = np.zeros((16, 16, 3), dtype=np.uint8)
 
-    with patch("src.services.ocr_service.pytesseract.image_to_data") as image_to_data:
-        image_to_data.return_value = {
-            "text": ["Alice", "joined", "Bob", "left"],
-            "conf": ["80", "80", "80", "80"],
-            "block_num": [1, 1, 1, 1],
-            "par_num": [1, 1, 1, 1],
-            "line_num": [1, 1, 2, 2],
-        }
+    fake_engine = type(
+        "FakeEngine",
+        (),
+        {
+            "ocr": lambda *_args, **_kwargs: [
+                [
+                    [None, ("Alice joined", 0.80)],
+                    [None, ("Bob left", 0.80)],
+                ]
+            ]
+        },
+    )()
+
+    with patch.object(service, "_get_ocr_engine", return_value=fake_engine):
         tokens, diagnostics = service.detect_text_with_diagnostics(image, (0, 0, 16, 16))
 
     assert tokens == ["Alice joined", "Bob left"]
@@ -157,6 +192,55 @@ def test_detect_text_with_diagnostics_aggregates_tokens_to_lines() -> None:
         "Alice joined",
         "Bob left",
     ]
+
+
+def test_ocr_initialization_failure_raises_clear_error() -> None:
+    service = OCRService(confidence_threshold=40, paddleocr_model_root="Z:/missing/models")
+
+    with patch.object(service, "_notify_ocr_initialization_failure") as notify:
+        with patch("src.services.ocr_service.PaddleOCR", side_effect=RuntimeError("boom")):
+            with patch.object(service, "_resolve_model_dirs", return_value=(None, None, None)):
+                try:
+                    service._create_ocr_engine()
+                except OCRError as exc:
+                    assert "Failed to initialize PaddleOCR" in str(exc)
+                else:  # pragma: no cover - explicit test failure path
+                    raise AssertionError("Expected OCRError")
+
+    notify.assert_called_once()
+
+
+def test_ocr_import_failure_writes_log_hint() -> None:
+    service = OCRService(confidence_threshold=40, paddleocr_model_root="C:/models")
+
+    with patch("src.services.ocr_service.PaddleOCR", None):
+        with patch("src.services.ocr_service._PADDLEOCR_IMPORT_ERROR", None):
+            with patch(
+                "src.services.ocr_service.import_module", side_effect=RuntimeError("missing dll")
+            ):
+                try:
+                    service._create_ocr_engine()
+                except OCRError as exc:
+                    assert "PaddleOCR runtime is not available" in str(exc)
+                    assert "missing dll" in str(exc)
+                else:  # pragma: no cover - explicit test failure path
+                    raise AssertionError("Expected OCRError")
+
+
+def test_resolve_model_dirs_requires_cls(tmp_path: Path) -> None:
+    root = tmp_path / "models"
+    (root / "det_en").mkdir(parents=True)
+    (root / "rec_en").mkdir(parents=True)
+
+    service = OCRService(confidence_threshold=40, paddleocr_model_root=str(root))
+
+    with patch("src.config._candidate_paddleocr_model_roots", return_value=[root]):
+        try:
+            service._resolve_model_dirs()
+        except OCRError as exc:
+            assert "det*, rec*, and cls*" in str(exc)
+        else:  # pragma: no cover - explicit test failure path
+            raise AssertionError("Expected OCRError")
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +258,11 @@ def test_normalize_for_matching_removes_newlines() -> None:
 
 def test_normalize_for_matching_empty_string_returns_empty() -> None:
     assert OCRService.normalize_for_matching("") == ""
+
+
+def test_normalize_for_matching_multiline_irregular_whitespace() -> None:
+    source = "  Name:\n   Alice\r\n   Expert  "
+    assert OCRService.normalize_for_matching(source) == "Name: Alice Expert"
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +375,53 @@ def test_extract_with_boundaries_returns_none_when_marker_not_found() -> None:
         before_text="Player:",
     )
     assert value is None
+
+
+def test_extract_with_boundaries_before_only_on_multiline_text() -> None:
+    value = OCRService.extract_with_boundaries(
+        line="Player:\nAlice Wonder",
+        before_text="Player:",
+    )
+    assert value == "Alice"
+
+
+def test_extract_with_boundaries_after_only_on_multiline_text() -> None:
+    value = OCRService.extract_with_boundaries(
+        line="Alice Wonder\nScore",
+        after_text="Score",
+    )
+    assert value == "Wonder"
+
+
+def test_extract_with_boundaries_both_boundaries_on_multiline_text() -> None:
+    value = OCRService.extract_with_boundaries(
+        line="Joined by\nAlice\nRank",
+        before_text="Joined by",
+        after_text="Rank",
+    )
+    assert value == "Alice"
+
+
+def test_find_in_text_default_threshold_matches_multiline_after_normalization() -> None:
+    normalized = OCRService.normalize_for_matching("Started\nby Alice")
+    span = OCRService._find_in_text("Started by", normalized)
+    assert span == (0, len("Started by"))
+
+
+def test_find_in_text_threshold_sensitivity_across_supported_range() -> None:
+    text = "P1ayer: Alice"
+
+    assert OCRService._find_in_text("Player", text, threshold=0.60) is not None
+    assert OCRService._find_in_text("Player", text, threshold=0.75) is not None
+    assert OCRService._find_in_text("Player", text, threshold=0.95) is None
+
+
+def test_find_in_text_ocr_substitutions_respect_thresholds() -> None:
+    text = "P1ayed by Alice"
+
+    assert OCRService._find_in_text("Played", text, threshold=0.60) is not None
+    assert OCRService._find_in_text("Played", text, threshold=0.75) is not None
+    assert OCRService._find_in_text("Played", text, threshold=0.95) is None
 
 
 # ---------------------------------------------------------------------------

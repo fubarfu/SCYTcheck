@@ -375,7 +375,7 @@ def test_us3_regression_iterate_frames_contract_stays_compatible() -> None:
         with (
             patch(
                 "src.main.load_config",
-                return_value=AppConfig(sample_fps=1, confidence_threshold=40, tesseract_cmd=None),
+                return_value=AppConfig(sample_fps=1, confidence_threshold=40),
             ),
             patch("src.main.configure_logging", return_value=logger),
             patch("src.main.VideoService", return_value=video_service),
@@ -596,7 +596,7 @@ class TestUS1NoRegionAbort:
         with (
             patch(
                 "src.main.load_config",
-                return_value=AppConfig(sample_fps=1, confidence_threshold=40, tesseract_cmd=None),
+                return_value=AppConfig(sample_fps=1, confidence_threshold=40),
             ),
             patch("src.main.configure_logging", return_value=logger),
             patch("src.main.VideoService", return_value=video_service),

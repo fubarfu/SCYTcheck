@@ -1,18 +1,29 @@
 from __future__ import annotations
 
 import re
+from time import perf_counter
 from collections.abc import Callable
+
+import cv2
+import numpy as np
 
 from src.data.models import (
     AppearanceEvent,
+    AnalysisRuntimeMetrics,
     ContextPattern,
+    GatingStats,
     LogRecord,
     PlayerSummary,
+    TimingBreakdown,
     TextDetection,
     VideoAnalysis,
 )
+from src.services.logging import should_write_detailed_sidecar
 from src.services.ocr_service import OCRService
 from src.services.video_service import VideoService
+
+# T020: Precompile whitespace regex for reuse in normalize_name
+_RE_WHITESPACE = re.compile(r"\s+")
 
 
 class AnalysisService:
@@ -24,6 +35,75 @@ class AnalysisService:
     def _estimate_total_frames(start_time: float, end_time: float, fps: int) -> int:
         duration = max(0.0, float(end_time) - float(start_time))
         return max(1, int(duration * max(1, fps)) + 1)
+
+    @staticmethod
+    def _crop_region_gray(
+        frame: np.ndarray | list[list[int]],
+        region: tuple[int, int, int, int],
+        frame_gray: np.ndarray | None = None,
+    ) -> np.ndarray | None:
+        """Crop a region from frame as grayscale.
+        
+        Args:
+            frame: BGR or grayscale frame array or image-like object
+            region: (x, y, width, height) tuple
+            frame_gray: Optional pre-computed grayscale of the full frame.
+                       If provided, crops from this instead of converting frame.
+                       
+        Returns:
+            Cropped grayscale region as uint8 ndarray, or None if invalid.
+        """
+        x, y, width, height = region
+        if width <= 0 or height <= 0:
+            return None
+        
+        # Use pre-computed grayscale if provided and valid
+        if frame_gray is not None and frame_gray.ndim == 2 and frame_gray.dtype == np.uint8:
+            if frame_gray.size == 0:
+                return None
+            cropped = frame_gray[y : y + height, x : x + width]
+            if cropped.size == 0:
+                return None
+            return cropped
+        
+        # Fallback: convert frame (original behavior)
+        array = np.asarray(frame)
+        if array.size == 0:
+            return None
+        cropped = array[y : y + height, x : x + width]
+        if cropped.size == 0:
+            return None
+        if cropped.ndim == 3:
+            return cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+        return cropped
+
+    @staticmethod
+    def _compute_frame_region_change(
+        prev_crop: np.ndarray,
+        curr_crop: np.ndarray,
+        gating_threshold: float = 0.02,
+    ) -> dict[str, object]:
+        if prev_crop.shape != curr_crop.shape:
+            return {
+                "pixel_diff": 1.0,
+                "decision_action": "execute_ocr",
+                "reason": "shape_changed",
+            }
+
+        pixel_diff = float(cv2.mean(cv2.absdiff(prev_crop, curr_crop))[0] / 255.0)
+        pixel_diff = max(0.0, min(pixel_diff, 1.0))
+        if pixel_diff < gating_threshold:
+            return {
+                "pixel_diff": pixel_diff,
+                "decision_action": "skip_ocr",
+                "reason": "diff_below_threshold",
+            }
+
+        return {
+            "pixel_diff": pixel_diff,
+            "decision_action": "execute_ocr",
+            "reason": "diff_above_threshold",
+        }
 
     def analyze(
         self,
@@ -38,7 +118,17 @@ class AnalysisService:
         event_gap_threshold_sec: float = 1.0,
         video_quality: str = "best",
         logging_enabled: bool = False,
+        tolerance_value: float = 0.75,
+        gating_enabled: bool = True,
+        gating_threshold: float = 0.02,
+        on_log_record: Callable[[LogRecord], None] | None = None,
     ) -> VideoAnalysis:
+        tolerance_value = max(0.60, min(float(tolerance_value), 0.95))
+        gating_threshold = max(0.0, min(float(gating_threshold), 1.0))
+        gating_stats = GatingStats(
+            gating_enabled=gating_enabled,
+            gating_threshold=gating_threshold,
+        )
         analysis = VideoAnalysis(
             url=url,
             context_patterns=context_patterns or [],
@@ -46,86 +136,184 @@ class AnalysisService:
             event_gap_threshold_sec=event_gap_threshold_sec,
             video_quality=video_quality,
             logging_enabled=logging_enabled,
+            gating_stats=gating_stats,
         )
         frames = self.video_service.iterate_frames_with_timestamps(
             url, start_time, end_time, fps, quality=video_quality
         )
         total_frames = self._estimate_total_frames(start_time, end_time, fps)
         processed_frames = 0
+        previous_region_crops: dict[str, np.ndarray] = {}
+        previous_region_accepts: dict[str, list[tuple[str, str, str | None]]] = {}
+        detailed_logging_enabled = should_write_detailed_sidecar(logging_enabled)
+        timing_enabled = detailed_logging_enabled
+        decode_ms = 0.0
+        gating_ms = 0.0
+        ocr_ms = 0.0
+        post_processing_ms = 0.0
+        total_start = perf_counter() if timing_enabled else 0.0
 
         for idx, (frame_time, frame) in enumerate(frames, start=1):
             processed_frames = idx
+            frame_start = perf_counter() if timing_enabled else 0.0
+            
+            # T012 & T013: Compute grayscale once per frame when gating enabled (for reuse)
+            # Guard: skip when gating disabled or frame is invalid
+            frame_gray: np.ndarray | None = None
+            if gating_enabled:
+                frame_array = np.asarray(frame)
+                if frame_array.size > 0:
+                    # For BGR frames (3 channels), convert to grayscale once
+                    if frame_array.ndim == 3 and frame_array.shape[2] == 3:
+                        frame_gray = cv2.cvtColor(frame_array, cv2.COLOR_BGR2GRAY)
+                    elif frame_array.ndim == 2:
+                        # Already grayscale
+                        frame_gray = frame_array
+            if timing_enabled:
+                decode_ms += (perf_counter() - frame_start) * 1000.0
+            
             for region in regions:
                 ocr_diagnostics: list[dict[str, object]] = []
-                if logging_enabled and hasattr(self.ocr_service, "detect_text_with_diagnostics"):
-                    tokens, ocr_diagnostics = self.ocr_service.detect_text_with_diagnostics(
-                        frame, region
+                region_id = f"{region[0]}:{region[1]}:{region[2]}:{region[3]}"
+                gating_stats.total_frame_region_pairs += 1
+
+                gating_start = perf_counter() if timing_enabled else 0.0
+                current_crop = self._crop_region_gray(frame, region, frame_gray=frame_gray)
+                should_skip = False
+                decision: dict[str, object] = {
+                    "pixel_diff": 1.0,
+                    "decision_action": "execute_ocr",
+                    "reason": "gating_disabled",
+                }
+                if (
+                    gating_enabled
+                    and current_crop is not None
+                    and region_id in previous_region_crops
+                ):
+                    decision = self._compute_frame_region_change(
+                        previous_region_crops[region_id],
+                        current_crop,
+                        gating_threshold=gating_threshold,
                     )
-                else:
-                    tokens = self.ocr_service.detect_text(frame, region)
+                    should_skip = decision["decision_action"] == "skip_ocr"
+                elif gating_enabled:
+                    decision = {
+                        "pixel_diff": 1.0,
+                        "decision_action": "execute_ocr",
+                        "reason": "no_previous_frame",
+                    }
+                if timing_enabled:
+                    gating_ms += (perf_counter() - gating_start) * 1000.0
+
                 decision_rows: list[dict[str, object]] | None = None
                 accepted_rows: list[tuple[str, str, str | None]] = []
-                if logging_enabled and hasattr(self.ocr_service, "evaluate_lines"):
-                    decision_rows = self.ocr_service.evaluate_lines(
-                        tokens,
-                        patterns=analysis.context_patterns,
-                        filter_non_matching=analysis.filter_non_matching,
-                    )
-                    for decision in decision_rows:
-                        if bool(decision["accepted"]):
-                            accepted_rows.append(
-                                (
-                                    str(decision["raw_string"]),
-                                    str(decision["extracted_name"]),
-                                    decision["matched_pattern"]
-                                    if isinstance(decision["matched_pattern"], str)
-                                    else None,
-                                )
-                            )
+                if should_skip:
+                    gating_stats.ocr_skipped_count += 1
+                    accepted_rows = list(previous_region_accepts.get(region_id, []))
                 else:
-                    candidates = self.ocr_service.extract_candidates(
-                        tokens,
-                        patterns=analysis.context_patterns,
-                        filter_non_matching=analysis.filter_non_matching,
-                    )
-                    for candidate, pattern_id in candidates:
-                        cleaned_candidate = candidate.strip()
-                        if cleaned_candidate:
-                            accepted_rows.append((cleaned_candidate, cleaned_candidate, pattern_id))
+                    ocr_start = perf_counter() if timing_enabled else 0.0
+                    gating_stats.ocr_executed_count += 1
+                    if detailed_logging_enabled and hasattr(
+                        self.ocr_service,
+                        "detect_text_with_diagnostics",
+                    ):
+                        tokens, ocr_diagnostics = self.ocr_service.detect_text_with_diagnostics(
+                            frame, region
+                        )
+                    else:
+                        tokens = self.ocr_service.detect_text(frame, region)
 
-                region_id = f"{region[0]}:{region[1]}:{region[2]}:{region[3]}"
-                if logging_enabled:
+                    if detailed_logging_enabled and hasattr(self.ocr_service, "evaluate_lines"):
+                        try:
+                            decision_rows = self.ocr_service.evaluate_lines(
+                                tokens,
+                                patterns=analysis.context_patterns,
+                                filter_non_matching=analysis.filter_non_matching,
+                                tolerance_threshold=tolerance_value,
+                            )
+                        except TypeError:
+                            decision_rows = self.ocr_service.evaluate_lines(
+                                tokens,
+                                patterns=analysis.context_patterns,
+                                filter_non_matching=analysis.filter_non_matching,
+                            )
+                        for decision in decision_rows:
+                            if bool(decision["accepted"]):
+                                accepted_rows.append(
+                                    (
+                                        str(decision["raw_string"]),
+                                        str(decision["extracted_name"]),
+                                        decision["matched_pattern"]
+                                        if isinstance(decision["matched_pattern"], str)
+                                        else None,
+                                    )
+                                )
+                    else:
+                        try:
+                            candidates = self.ocr_service.extract_candidates(
+                                tokens,
+                                patterns=analysis.context_patterns,
+                                filter_non_matching=analysis.filter_non_matching,
+                                tolerance_threshold=tolerance_value,
+                            )
+                        except TypeError:
+                            candidates = self.ocr_service.extract_candidates(
+                                tokens,
+                                patterns=analysis.context_patterns,
+                                filter_non_matching=analysis.filter_non_matching,
+                            )
+                        for candidate, pattern_id in candidates:
+                            cleaned_candidate = candidate.strip()
+                            if cleaned_candidate:
+                                accepted_rows.append(
+                                    (cleaned_candidate, cleaned_candidate, pattern_id)
+                                )
+
+                    if timing_enabled:
+                        ocr_ms += (perf_counter() - ocr_start) * 1000.0
+
+                    previous_region_accepts[region_id] = list(accepted_rows)
+
+                if current_crop is not None:
+                    previous_region_crops[region_id] = current_crop
+
+                post_start = perf_counter() if timing_enabled else 0.0
+
+                if detailed_logging_enabled:
                     for diagnostic in ocr_diagnostics:
                         if bool(diagnostic.get("accepted")):
                             continue
                         raw = str(diagnostic.get("raw_string", ""))
-                        analysis.add_log_record(
-                            LogRecord(
-                                timestamp_sec=self.format_timestamp(frame_time),
-                                raw_string=raw,
-                                tested_string_raw=str(
-                                    diagnostic.get("tested_string_raw", raw)
-                                ),
-                                tested_string_normalized=str(
-                                    diagnostic.get(
-                                        "tested_string_normalized",
-                                        OCRService.normalize_for_matching(raw),
-                                    )
-                                ),
-                                accepted=False,
-                                rejection_reason=str(
-                                    diagnostic.get("rejection_reason", "ocr_rejected")
-                                ),
-                                extracted_name="",
-                                region_id=region_id,
-                                matched_pattern="",
-                                normalized_name="",
-                                occurrence_count=0,
-                                start_timestamp="",
-                                end_timestamp="",
-                                representative_region="",
-                            )
+                        if not raw.strip():
+                            continue
+                        log_record = LogRecord(
+                            timestamp_sec=self.format_timestamp(frame_time),
+                            raw_string=raw,
+                            tested_string_raw=str(
+                                diagnostic.get("tested_string_raw", raw)
+                            ),
+                            tested_string_normalized=str(
+                                diagnostic.get(
+                                    "tested_string_normalized",
+                                    OCRService.normalize_for_matching(raw),
+                                )
+                            ),
+                            accepted=False,
+                            rejection_reason=str(
+                                diagnostic.get("rejection_reason", "ocr_rejected")
+                            ),
+                            extracted_name="",
+                            region_id=region_id,
+                            matched_pattern="",
+                            normalized_name="",
+                            occurrence_count=0,
+                            start_timestamp="",
+                            end_timestamp="",
+                            representative_region="",
                         )
+                        analysis.add_log_record(log_record)
+                        if on_log_record is not None:
+                            on_log_record(log_record)
 
                 for raw_text, extracted_name, pattern_id in accepted_rows:
                     cleaned = extracted_name.strip()
@@ -145,37 +333,42 @@ class AnalysisService:
                         )
                     )
 
-                if logging_enabled and decision_rows is not None:
+                if detailed_logging_enabled and decision_rows is not None:
                     for decision in decision_rows:
                         if bool(decision["accepted"]):
                             continue
-                        analysis.add_log_record(
-                            LogRecord(
-                                timestamp_sec=self.format_timestamp(frame_time),
-                                raw_string=str(decision["raw_string"]),
-                                tested_string_raw=str(
-                                    decision.get("tested_string_raw", decision["raw_string"])
-                                ),
-                                tested_string_normalized=str(
-                                    decision.get(
-                                        "tested_string_normalized",
-                                        OCRService.normalize_for_matching(
-                                            str(decision["raw_string"])
-                                        ),
-                                    )
-                                ),
-                                accepted=False,
-                                rejection_reason=str(decision["rejection_reason"]),
-                                extracted_name="",
-                                region_id=region_id,
-                                matched_pattern="",
-                                normalized_name="",
-                                occurrence_count=0,
-                                start_timestamp="",
-                                end_timestamp="",
-                                representative_region="",
-                            )
+                        raw_string = str(decision.get("raw_string", ""))
+                        if not raw_string.strip():
+                            continue
+                        log_record = LogRecord(
+                            timestamp_sec=self.format_timestamp(frame_time),
+                            raw_string=raw_string,
+                            tested_string_raw=str(
+                                decision.get("tested_string_raw", raw_string)
+                            ),
+                            tested_string_normalized=str(
+                                decision.get(
+                                    "tested_string_normalized",
+                                    OCRService.normalize_for_matching(raw_string),
+                                )
+                            ),
+                            accepted=False,
+                            rejection_reason=str(decision["rejection_reason"]),
+                            extracted_name="",
+                            region_id=region_id,
+                            matched_pattern="",
+                            normalized_name="",
+                            occurrence_count=0,
+                            start_timestamp="",
+                            end_timestamp="",
+                            representative_region="",
                         )
+                        analysis.add_log_record(log_record)
+                        if on_log_record is not None:
+                            on_log_record(log_record)
+
+                if timing_enabled:
+                    post_processing_ms += (perf_counter() - post_start) * 1000.0
 
             if on_progress:
                 percentage = int((idx / total_frames) * 100)
@@ -187,6 +380,7 @@ class AnalysisService:
         if on_progress:
             on_progress(100)
 
+        summary_start = perf_counter() if timing_enabled else 0.0
         analysis.set_player_summaries(
             self.build_player_summaries(
                 analysis.detections, gap_threshold_sec=analysis.event_gap_threshold_sec
@@ -199,25 +393,41 @@ class AnalysisService:
             summary = summary_by_name.get(detection.normalized_name)
             if summary is None:
                 continue
-            analysis.add_log_record(
-                LogRecord(
-                    timestamp_sec=self.format_timestamp(detection.frame_time_sec),
-                    raw_string=detection.raw_ocr_text,
-                    tested_string_raw=detection.raw_ocr_text,
-                    tested_string_normalized=OCRService.normalize_for_matching(
-                        detection.raw_ocr_text
-                    ),
-                    accepted=True,
-                    rejection_reason="",
-                    extracted_name=detection.extracted_name,
-                    region_id=detection.region_id,
-                    matched_pattern=detection.matched_pattern_id or "",
-                    normalized_name=detection.normalized_name,
-                    occurrence_count=summary.occurrence_count,
-                    start_timestamp=summary.start_timestamp,
-                    end_timestamp=self.format_timestamp(summary.last_seen_sec),
-                    representative_region=summary.representative_region,
-                )
+            log_record = LogRecord(
+                timestamp_sec=self.format_timestamp(detection.frame_time_sec),
+                raw_string=detection.raw_ocr_text,
+                tested_string_raw=detection.raw_ocr_text,
+                tested_string_normalized=OCRService.normalize_for_matching(
+                    detection.raw_ocr_text
+                ),
+                accepted=True,
+                rejection_reason="",
+                extracted_name=detection.extracted_name,
+                region_id=detection.region_id,
+                matched_pattern=detection.matched_pattern_id or "",
+                normalized_name=detection.normalized_name,
+                occurrence_count=summary.occurrence_count,
+                start_timestamp=summary.start_timestamp,
+                end_timestamp=self.format_timestamp(summary.last_seen_sec),
+                representative_region=summary.representative_region,
+            )
+            analysis.add_log_record(log_record)
+            if on_log_record is not None:
+                on_log_record(log_record)
+
+        if timing_enabled:
+            post_processing_ms += (perf_counter() - summary_start) * 1000.0
+            total_ms = (perf_counter() - total_start) * 1000.0
+            analysis.runtime_metrics = AnalysisRuntimeMetrics(
+                timing_breakdown=TimingBreakdown(
+                    decode_ms=max(0.0, decode_ms),
+                    gating_ms=max(0.0, gating_ms),
+                    ocr_ms=max(0.0, ocr_ms),
+                    post_processing_ms=max(0.0, post_processing_ms),
+                    total_ms=max(0.0, total_ms),
+                ),
+                instrumentation_enabled=True,
+                instrumentation_overhead_pct=0.0,
             )
 
         return analysis
@@ -225,7 +435,7 @@ class AnalysisService:
     @staticmethod
     def normalize_name(name: str) -> str:
         """Normalize names for deduplication: lowercase + trim + collapse spaces."""
-        collapsed = re.sub(r"\s+", " ", (name or "").strip())
+        collapsed = _RE_WHITESPACE.sub(" ", (name or "").strip())
         return collapsed.lower()
 
     @staticmethod

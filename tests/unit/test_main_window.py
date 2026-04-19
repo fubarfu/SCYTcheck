@@ -132,6 +132,9 @@ def _make_window_stub(
     confidence: int = 40,
     video_quality: str = "best",
     logging_enabled: bool = False,
+    tolerance_value: float = 0.75,
+    gating_enabled: bool = False,
+    gating_threshold: float = 0.02,
 ) -> MainWindow:
     window = MainWindow.__new__(MainWindow)
     window.patterns_text = _TextStub(patterns)
@@ -140,6 +143,9 @@ def _make_window_stub(
     window.ocr_confidence_var = _VarStub(confidence)
     window.video_quality_var = _VarStub(video_quality)
     window.logging_enabled_var = _VarStub(logging_enabled)
+    window.tolerance_var = _VarStub(tolerance_value)
+    window.gating_enabled_var = _VarStub(gating_enabled)
+    window.gating_threshold_var = _VarStub(gating_threshold)
     window.filename_display = MagicMock()
     window.url_input = SimpleNamespace(get=lambda: "")
     return window
@@ -172,11 +178,14 @@ def test_get_advanced_settings_uses_defaults_when_patterns_empty() -> None:
     settings = window.get_advanced_settings()
 
     assert len(settings.context_patterns) == 4
-    assert settings.context_patterns[0]["before_text"] == "started by"
-    assert settings.context_patterns[0]["after_text"] is None
-    assert settings.context_patterns[1]["after_text"] == "joined"
-    assert settings.context_patterns[2]["after_text"] == "connected"
-    assert settings.context_patterns[3]["after_text"] == "disconnected"
+    assert settings.context_patterns[0]["before_text"] is None
+    assert settings.context_patterns[0]["after_text"] == "has joined"
+    assert settings.context_patterns[1]["before_text"] == "Party"
+    assert settings.context_patterns[1]["after_text"] == "connected"
+    assert settings.context_patterns[2]["before_text"] == "Party"
+    assert settings.context_patterns[2]["after_text"] == "disconnected"
+    assert settings.context_patterns[3]["before_text"] == "started by"
+    assert settings.context_patterns[3]["after_text"] is None
     assert settings.filter_non_matching is True
 
 
@@ -222,6 +231,24 @@ def test_advanced_settings_round_trip_preserves_quality_and_logging() -> None:
     assert reapplied.filter_non_matching is True
 
 
+def test_advanced_settings_round_trip_preserves_tolerance_and_gating() -> None:
+    source = _make_window_stub(
+        patterns="Player:||true",
+        tolerance_value=0.63,
+        gating_enabled=False,
+        gating_threshold=0.18,
+    )
+    target = _make_window_stub()
+
+    settings = source.get_advanced_settings()
+    target.apply_advanced_settings(settings)
+
+    reapplied = target.get_advanced_settings()
+    assert reapplied.tolerance_value == 0.63
+    assert reapplied.gating_enabled is False
+    assert reapplied.gating_threshold == 0.18
+
+
 def test_advanced_settings_defaults_include_best_quality_and_logging_off() -> None:
     window = _make_window_stub()
 
@@ -230,6 +257,9 @@ def test_advanced_settings_defaults_include_best_quality_and_logging_off() -> No
     assert settings.filter_non_matching is True
     assert settings.video_quality == "best"
     assert settings.logging_enabled is False
+    assert settings.tolerance_value == 0.75
+    assert settings.gating_enabled is False
+    assert settings.gating_threshold == 0.02
 
 
 def test_apply_advanced_settings_keeps_selected_video_quality() -> None:
@@ -314,6 +344,19 @@ def test_layout_labels_do_not_overlap_controls_at_min_window_size() -> None:
         window.ocr_sensitivity_label.grid_kwargs["column"]
         < window.ocr_sensitivity_spinbox.grid_kwargs["column"]
     )
+    assert window.tolerance_label.grid_kwargs["row"] == window.tolerance_spinbox.grid_kwargs["row"]
+    assert (
+        window.tolerance_label.grid_kwargs["column"]
+        < window.tolerance_spinbox.grid_kwargs["column"]
+    )
+    assert (
+        window.gating_enabled_check.grid_kwargs["row"]
+        > window.tolerance_spinbox.grid_kwargs["row"]
+    )
+    assert (
+        window.gating_threshold_label.grid_kwargs["row"]
+        == window.gating_threshold_spinbox.grid_kwargs["row"]
+    )
 
 
 def test_primary_workflow_controls_and_shortcuts_are_wired() -> None:
@@ -353,7 +396,7 @@ def test_primary_workflow_controls_and_shortcuts_are_wired() -> None:
     assert window.file_selector.entry.focused is True
 
 
-def test_low_quality_guidance_text_is_visible() -> None:
+def test_tooltip_guidance_contains_low_quality_help() -> None:
     with (
         patch("src.components.main_window.URLInput", _URLInputStub),
         patch("src.components.main_window.FileSelector", _FileSelectorStub),
@@ -373,7 +416,63 @@ def test_low_quality_guidance_text_is_visible() -> None:
     ):
         window = MainWindow(_RootStub())
 
-    assert (
-        "Low-quality videos can reduce OCR reliability"
-        in window.low_quality_guidance.options["text"]
+    tooltip_texts = [tooltip.text for tooltip in window._tooltips]
+    assert any(
+        "Lower values may catch faint text but add false positives." in text
+        for text in tooltip_texts
     )
+
+
+def test_tolerance_spinbox_range_is_configured() -> None:
+    with (
+        patch("src.components.main_window.URLInput", _URLInputStub),
+        patch("src.components.main_window.FileSelector", _FileSelectorStub),
+        patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub),
+        patch("src.components.main_window.ttk.Frame", _WidgetStub),
+        patch("src.components.main_window.ttk.LabelFrame", _WidgetStub),
+        patch("src.components.main_window.ttk.Label", _WidgetStub),
+        patch("src.components.main_window.ttk.Button", _WidgetStub),
+        patch("src.components.main_window.ttk.Checkbutton", _WidgetStub),
+        patch("src.components.main_window.ttk.Combobox", _WidgetStub),
+        patch("src.components.main_window.ttk.Spinbox", _WidgetStub),
+        patch("src.components.main_window.tk.Text", _WidgetStub),
+        patch("src.components.main_window.tk.BooleanVar", _VarStub),
+        patch("src.components.main_window.tk.DoubleVar", _VarStub),
+        patch("src.components.main_window.tk.IntVar", _VarStub),
+        patch("src.components.main_window.tk.StringVar", _VarStub),
+    ):
+        window = MainWindow(_RootStub())
+
+    assert window.tolerance_spinbox.options["from_"] == 0.60
+    assert window.tolerance_spinbox.options["to"] == 0.95
+    assert window.tolerance_spinbox.options["increment"] == 0.01
+    tooltip_texts = [tooltip.text for tooltip in window._tooltips]
+    assert any("more permissive" in text for text in tooltip_texts)
+
+
+def test_gating_controls_are_configured() -> None:
+    with (
+        patch("src.components.main_window.URLInput", _URLInputStub),
+        patch("src.components.main_window.FileSelector", _FileSelectorStub),
+        patch("src.components.main_window.ProgressDisplay", _ProgressDisplayStub),
+        patch("src.components.main_window.ttk.Frame", _WidgetStub),
+        patch("src.components.main_window.ttk.LabelFrame", _WidgetStub),
+        patch("src.components.main_window.ttk.Label", _WidgetStub),
+        patch("src.components.main_window.ttk.Button", _WidgetStub),
+        patch("src.components.main_window.ttk.Checkbutton", _WidgetStub),
+        patch("src.components.main_window.ttk.Combobox", _WidgetStub),
+        patch("src.components.main_window.ttk.Spinbox", _WidgetStub),
+        patch("src.components.main_window.tk.Text", _WidgetStub),
+        patch("src.components.main_window.tk.BooleanVar", _VarStub),
+        patch("src.components.main_window.tk.DoubleVar", _VarStub),
+        patch("src.components.main_window.tk.IntVar", _VarStub),
+        patch("src.components.main_window.tk.StringVar", _VarStub),
+    ):
+        window = MainWindow(_RootStub())
+
+    assert "Frame-Change Gating" in window.gating_enabled_check.options["text"]
+    assert window.gating_threshold_spinbox.options["from_"] == 0.0
+    assert window.gating_threshold_spinbox.options["to"] == 1.0
+    assert window.gating_threshold_spinbox.options["increment"] == 0.01
+    tooltip_texts = [tooltip.text.lower() for tooltip in window._tooltips]
+    assert any("skips ocr" in text for text in tooltip_texts)

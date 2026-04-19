@@ -1,7 +1,8 @@
-import numpy as np
 from unittest.mock import patch
 
-from src.services.video_service import VideoAccessError, VideoService
+import numpy as np
+
+from src.services.video_service import VideoService
 
 
 class _FakeCapture:
@@ -110,13 +111,18 @@ def test_validate_youtube_url_handles_unreachable_video() -> None:
 def test_build_ydl_opts_selects_format_based_on_quality() -> None:
     opts_best = VideoService._build_ydl_opts("best")
     assert "height" not in opts_best["format"]
+    assert "+bestaudio" not in opts_best["format"]
+    assert "vcodec^=avc1" in opts_best["format"]
+    assert opts_best["format"].startswith("bestvideo")
 
     opts_720 = VideoService._build_ydl_opts("720p")
     assert "720" in opts_720["format"]
     assert "height<=720" in opts_720["format"]
+    assert "+bestaudio" not in opts_720["format"]
 
     opts_480 = VideoService._build_ydl_opts("480p")
     assert "height<=480" in opts_480["format"]
+    assert "+bestaudio" not in opts_480["format"]
 
     opts_unknown = VideoService._build_ydl_opts("9999p")
     assert opts_unknown["format"] == opts_best["format"]
@@ -237,7 +243,8 @@ def test_iterator_contract_signature_is_unchanged() -> None:
     assert len(first) == 2
 
 
-def test_iterate_frames_with_timestamps_recovers_with_fallback_after_midstream_decode_error() -> None:
+def test_iterate_frames_with_timestamps_recovers_with_fallback_after_midstream_decode_error(
+) -> None:
     service = VideoService()
     fake_cap = _FakeCapture(total_frames=120, fps=10.0, fail_at=40, fail_once=True)
 
@@ -312,6 +319,19 @@ def test_us2_frame_count_parity_tolerance_within_one_frame() -> None:
     assert abs(baseline_count - candidate_count) <= 1
 
 
+def test_get_video_info_uses_requested_quality() -> None:
+    service = VideoService()
+
+    with patch.object(
+        service,
+        "_extract_media_url",
+        return_value=("stream", {"duration": 10.0}),
+    ) as extract_mock:
+        service.get_video_info("https://youtube.com/watch?v=abc", quality="720p")
+
+    extract_mock.assert_called_once_with("https://youtube.com/watch?v=abc", quality="720p")
+
+
 def test_us2_deterministic_timestamp_fixture_across_repeated_calls() -> None:
     args = dict(start_time=2.0, end_time=10.0, fps=1, native_fps=24.0)
     first = VideoService._compute_sampling_parameters(**args)
@@ -331,8 +351,14 @@ def test_us3_stream_cache_key_includes_quality_to_preserve_behavior() -> None:
             {"url": "stream-best"},
             {"url": "stream-720"},
         ]
-        stream_best, _ = service._extract_media_url("https://youtube.com/watch?v=abc", quality="best")
-        stream_720, _ = service._extract_media_url("https://youtube.com/watch?v=abc", quality="720p")
+        stream_best, _ = service._extract_media_url(
+            "https://youtube.com/watch?v=abc",
+            quality="best",
+        )
+        stream_720, _ = service._extract_media_url(
+            "https://youtube.com/watch?v=abc",
+            quality="720p",
+        )
 
     assert stream_best == "stream-best"
     assert stream_720 == "stream-720"

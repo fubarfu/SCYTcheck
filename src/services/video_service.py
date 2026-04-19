@@ -37,24 +37,35 @@ class VideoService:
         return "youtube.com/watch?v=" in lowered or "youtu.be/" in lowered
 
     # Map UI quality labels to yt-dlp format selectors.
-    # Prefer separated video+audio for best quality, with fallback to progressive formats.
+    # OpenCV consumes video frames only, so avoid merged video+audio selectors.
+    # Prefer higher-quality video-only MP4/H.264 streams first, then progressively
+    # relax constraints for compatibility.
     _QUALITY_FORMAT_MAP: dict[str, str] = {
         "best": (
-            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/"
-            "best[ext=mp4]/best"
+            "bestvideo[ext=mp4][vcodec^=avc1]/"
+            "best[ext=mp4][vcodec^=avc1]/"
+            "bestvideo[ext=mp4]/"
+            "best[ext=mp4]/"
+            "bestvideo/best"
         ),
         "720p": (
-            "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/"
+            "bestvideo[height<=720][ext=mp4][vcodec^=avc1]/"
+            "best[height<=720][ext=mp4][vcodec^=avc1]/"
+            "bestvideo[height<=720][ext=mp4]/"
             "best[height<=720][ext=mp4]/"
             "best[height<=720]/best"
         ),
         "480p": (
-            "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/"
+            "bestvideo[height<=480][ext=mp4][vcodec^=avc1]/"
+            "best[height<=480][ext=mp4][vcodec^=avc1]/"
+            "bestvideo[height<=480][ext=mp4]/"
             "best[height<=480][ext=mp4]/"
             "best[height<=480]/best"
         ),
         "360p": (
-            "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/"
+            "bestvideo[height<=360][ext=mp4][vcodec^=avc1]/"
+            "best[height<=360][ext=mp4][vcodec^=avc1]/"
+            "bestvideo[height<=360][ext=mp4]/"
             "best[height<=360][ext=mp4]/"
             "best[height<=360]/best"
         ),
@@ -130,8 +141,8 @@ class VideoService:
         self._stream_cache[cache_key] = (stream_url, info)
         return stream_url, info
 
-    def get_video_info(self, url: str) -> dict:
-        _, info = self._extract_media_url(url)
+    def get_video_info(self, url: str, quality: str = "best") -> dict:
+        _, info = self._extract_media_url(url, quality=quality)
         return {
             "title": info.get("title"),
             "duration": info.get("duration"),
@@ -389,7 +400,7 @@ class VideoService:
                 for item in self._iterate_frames_sequential(cap, native_fps, frame_indexes):
                     sequential_yield_count += 1
                     yield item
-            except VideoAccessError:
+            except VideoAccessError as exc:
                 remaining_frame_indexes = frame_indexes[sequential_yield_count:]
                 if (
                     remaining_frame_indexes
@@ -397,7 +408,7 @@ class VideoService:
                 ):
                     recovery_cap = cv2.VideoCapture(stream_url)
                     if not recovery_cap.isOpened():
-                        raise VideoAccessError("Could not open video stream.")
+                        raise VideoAccessError("Could not open video stream.") from exc
                     try:
                         yield from self._iterate_frames_legacy_seek(
                             recovery_cap,

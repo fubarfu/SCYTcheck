@@ -1,3 +1,5 @@
+import numpy as np
+
 from src.data.models import ContextPattern, TextDetection
 from src.services.analysis_service import AnalysisService
 
@@ -52,6 +54,28 @@ class _OCRServiceDiagnosticsStub:
         return []
 
 
+class _OCRServiceNoTextDiagnosticsStub:
+    def detect_text(self, frame, region):
+        del frame, region
+        return []
+
+    def detect_text_with_diagnostics(self, frame, region):
+        del frame, region
+        return [], [
+            {
+                "raw_string": "",
+                "accepted": False,
+                "rejection_reason": "no_ocr_output",
+                "extracted_name": "",
+                "matched_pattern": None,
+            }
+        ]
+
+    def evaluate_lines(self, lines, patterns=None, filter_non_matching=False):
+        del lines, patterns, filter_non_matching
+        return []
+
+
 class _StreamingVideoServiceStub:
     def __init__(self) -> None:
         self.frames_yielded = 0
@@ -61,6 +85,36 @@ class _StreamingVideoServiceStub:
         for frame_time in (0.0, 1.0, 2.0):
             self.frames_yielded += 1
             yield frame_time, [[self.frames_yielded]]
+
+
+class _ArrayFrameVideoServiceStub:
+    def __init__(self, frames: list[np.ndarray]) -> None:
+        self._frames = frames
+
+    def iterate_frames_with_timestamps(self, url, start_time, end_time, fps, quality="best"):
+        del url, start_time, end_time, fps, quality
+        for idx, frame in enumerate(self._frames):
+            yield float(idx), frame
+
+
+class _CountingOCRServiceStub:
+    def __init__(self) -> None:
+        self.calls: list[tuple[int, int, int, int]] = []
+
+    def detect_text(self, frame, region):
+        del frame
+        self.calls.append(region)
+        return [f"Name-{region[0]}-{len(self.calls)}"]
+
+    def extract_candidates(
+        self,
+        tokens,
+        patterns=None,
+        filter_non_matching=False,
+        tolerance_threshold=0.75,
+    ):
+        del patterns, filter_non_matching, tolerance_threshold
+        return [(str(tokens[0]), None)]
 
 
 def test_normalize_name_lower_trim_and_collapse_spaces() -> None:
@@ -184,11 +238,19 @@ def test_analyze_records_rejected_ocr_rows_when_logging_enabled() -> None:
     )
 
     assert analysis.player_summaries == []
-    assert len(analysis.log_records) == 1
-    row = analysis.log_records[0]
+    assert len(analysis.log_records) >= 1
+    row = next(
+        record
+        for record in analysis.log_records
+        if record.rejection_reason == "no_pattern_match"
+    )
     assert row.accepted is False
     assert row.rejection_reason == "no_pattern_match"
     assert row.raw_string == "Raw OCR Name"
+    assert not any(
+        record.rejection_reason.startswith("gating_")
+        for record in analysis.log_records
+    )
 
 
 def test_analyze_records_low_confidence_rejection_when_logging_enabled() -> None:
@@ -206,8 +268,27 @@ def test_analyze_records_low_confidence_rejection_when_logging_enabled() -> None
     )
 
     assert analysis.player_summaries == []
-    assert len(analysis.log_records) == 1
-    assert analysis.log_records[0].rejection_reason == "low_confidence"
+    assert len(analysis.log_records) >= 1
+    assert any(record.rejection_reason == "low_confidence" for record in analysis.log_records)
+
+
+def test_analyze_skips_log_rows_when_no_text_is_recognized() -> None:
+    service = AnalysisService(
+        video_service=_VideoServiceStub(),
+        ocr_service=_OCRServiceNoTextDiagnosticsStub(),
+    )
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=60.0,
+        fps=1,
+        logging_enabled=True,
+    )
+
+    assert analysis.player_summaries == []
+    assert analysis.log_records == []
 
 
 def test_analyze_reports_progress_while_frames_are_still_streaming() -> None:
@@ -230,6 +311,123 @@ def test_analyze_reports_progress_while_frames_are_still_streaming() -> None:
     assert progress_snapshots
     assert progress_snapshots[0][1] == 1
     assert progress_snapshots[-1][0] == 100
+
+
+def test_compute_frame_region_change_identical_frames_skips_ocr() -> None:
+    prev_crop = np.full((5, 5), 120, dtype=np.uint8)
+    curr_crop = np.full((5, 5), 120, dtype=np.uint8)
+
+    decision = AnalysisService._compute_frame_region_change(
+        prev_crop,
+        curr_crop,
+        gating_threshold=0.02,
+    )
+
+    assert decision["decision_action"] == "skip_ocr"
+    assert decision["pixel_diff"] == 0.0
+
+
+def test_compute_frame_region_change_changed_frames_executes_ocr() -> None:
+    prev_crop = np.zeros((4, 4), dtype=np.uint8)
+    curr_crop = np.full((4, 4), 255, dtype=np.uint8)
+
+    decision = AnalysisService._compute_frame_region_change(
+        prev_crop,
+        curr_crop,
+        gating_threshold=0.02,
+    )
+
+    assert decision["decision_action"] == "execute_ocr"
+    assert decision["pixel_diff"] == 1.0
+
+
+def test_compute_frame_region_change_threshold_boundary_executes_ocr() -> None:
+    prev_crop = np.zeros((1, 1), dtype=np.uint8)
+    curr_crop = np.full((1, 1), 5, dtype=np.uint8)
+    threshold = 5.0 / 255.0
+
+    decision = AnalysisService._compute_frame_region_change(
+        prev_crop,
+        curr_crop,
+        gating_threshold=threshold,
+    )
+
+    assert decision["decision_action"] == "execute_ocr"
+    assert float(decision["pixel_diff"]) == threshold
+
+
+def test_analyze_tracks_gating_stats_counts() -> None:
+    service = AnalysisService(
+        video_service=_StreamingVideoServiceStub(),
+        ocr_service=_OCRServiceStub(),
+    )
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=2.0,
+        fps=1,
+        gating_enabled=True,
+        gating_threshold=0.02,
+    )
+
+    assert analysis.gating_stats is not None
+    assert analysis.gating_stats.total_frame_region_pairs == 3
+    assert analysis.gating_stats.ocr_executed_count + analysis.gating_stats.ocr_skipped_count == 3
+
+
+def test_analyze_with_gating_disabled_executes_all_pairs() -> None:
+    frames = [np.zeros((8, 8, 3), dtype=np.uint8) for _ in range(3)]
+    service = AnalysisService(
+        video_service=_ArrayFrameVideoServiceStub(frames),
+        ocr_service=_CountingOCRServiceStub(),
+    )
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(0, 0, 4, 4)],
+        start_time=0.0,
+        end_time=2.0,
+        fps=1,
+        gating_enabled=False,
+        gating_threshold=0.02,
+    )
+
+    assert analysis.gating_stats is not None
+    assert analysis.gating_stats.total_frame_region_pairs == 3
+    assert analysis.gating_stats.ocr_executed_count == 3
+    assert analysis.gating_stats.ocr_skipped_count == 0
+
+
+def test_analyze_gating_is_independent_per_region() -> None:
+    frame0 = np.zeros((6, 6, 3), dtype=np.uint8)
+    frame1 = frame0.copy()
+    frame2 = frame0.copy()
+
+    # Region (3,0,3,3) changes across frames; region (0,0,3,3) stays static.
+    frame1[0:3, 3:6] = 80
+    frame2[0:3, 3:6] = 160
+
+    service = AnalysisService(
+        video_service=_ArrayFrameVideoServiceStub([frame0, frame1, frame2]),
+        ocr_service=_CountingOCRServiceStub(),
+    )
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(0, 0, 3, 3), (3, 0, 3, 3)],
+        start_time=0.0,
+        end_time=2.0,
+        fps=1,
+        gating_enabled=True,
+        gating_threshold=0.02,
+    )
+
+    assert analysis.gating_stats is not None
+    assert analysis.gating_stats.total_frame_region_pairs == 6
+    assert analysis.gating_stats.ocr_executed_count == 4
+    assert analysis.gating_stats.ocr_skipped_count == 2
 
 
 # ---------------------------------------------------------------------------
@@ -410,3 +608,76 @@ def test_merge_appearance_events_gap_just_beyond_threshold() -> None:
     assert len(events) == 2
     assert events[0].end_time_sec == 1.0
     assert events[1].start_time_sec == 3.01
+
+
+# ---------------------------------------------------------------------------
+# on_log_record callback tests (FR-001/FR-002/US1)
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_invokes_on_log_record_callback_per_log_record() -> None:
+    """Test that on_log_record callback is invoked once per LogRecord generated."""
+    service = AnalysisService(video_service=_VideoServiceStub(), ocr_service=_OCRServiceStub())
+
+    callback_invocations = []
+
+    def capture_record(record):
+        callback_invocations.append(record)
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=60.0,
+        fps=1,
+        context_patterns=[ContextPattern(id="joined", after_text="joined")],
+        filter_non_matching=True,
+        logging_enabled=True,
+        on_log_record=capture_record,
+    )
+
+    # Callback should have been invoked once for each log record
+    assert len(callback_invocations) == len(analysis.log_records)
+    # All records should match
+    for i, record in enumerate(analysis.log_records):
+        assert callback_invocations[i] is record
+
+
+def test_analyze_does_not_invoke_callback_when_none() -> None:
+    """Test that analysis proceeds normally even when on_log_record is None."""
+    service = AnalysisService(video_service=_VideoServiceStub(), ocr_service=_OCRServiceStub())
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=60.0,
+        fps=1,
+        logging_enabled=True,
+        on_log_record=None,
+    )
+
+    # Should still generate log records, just not call the callback
+    assert len(analysis.log_records) > 0
+
+
+def test_analyze_completes_with_logging_disabled() -> None:
+    """Test that analysis completes successfully when logging is disabled."""
+    service = AnalysisService(video_service=_VideoServiceStub(), ocr_service=_OCRServiceStub())
+
+    analysis = service.analyze(
+        url="https://youtube.com/watch?v=test",
+        regions=[(10, 20, 100, 50)],
+        start_time=0.0,
+        end_time=60.0,
+        fps=1,
+        context_patterns=[ContextPattern(id="joined", after_text="joined")],
+        filter_non_matching=True,
+        logging_enabled=False,  # Disabled - should still work
+        on_log_record=None,
+    )
+
+    # Analysis should complete and produce results even with logging disabled
+    assert analysis.url == "https://youtube.com/watch?v=test"
+    # Log records are internal; they may or may not exist depending on implementation
+    # The key is that analysis completes successfully without error

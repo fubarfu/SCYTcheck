@@ -25,3 +25,11 @@ Thumbs.db
 
 # Local release dependency bundles (used by build script, not tracked)
 third_party/
+!third_party/
+!third_party/paddleocr/
+!third_party/paddleocr/x64/
+third_party/paddleocr/x64/*
+!third_party/paddleocr/x64/README.md
+third_party/ffmpeg/x64/ffmpeg.exe
+third_party/ffmpeg/x64/ffplay.exe
+third_party/ffmpeg/x64/ffprobe.exe

@@ -10,6 +10,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 function Ensure-Directory {
     param([string]$Path)
@@ -31,6 +32,25 @@ function Copy-OptionalTree {
         Write-Host "[build] Bundled $Label from $Source"
     } else {
         Write-Warning "[build] $Label bundle not found at $Source. Continuing without bundled assets."
+    }
+}
+
+function Test-RequiredPaddleOCRAssets {
+    param([string]$Source)
+
+    if (-not (Test-Path $Source)) {
+        throw "PaddleOCR bundle is required for portable release but was not found at $Source. Run scripts/download_paddleocr_models.ps1 first."
+    }
+
+    $detDir = Get-ChildItem -Path $Source -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name.ToLower().StartsWith('det') } |
+        Select-Object -First 1
+    $recDir = Get-ChildItem -Path $Source -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name.ToLower().StartsWith('rec') } |
+        Select-Object -First 1
+
+    if ($null -eq $detDir -or $null -eq $recDir) {
+        throw "PaddleOCR bundle at $Source is incomplete. Expected both det* and rec* model directories."
     }
 }
 
@@ -67,6 +87,37 @@ function Resolve-AppVersion {
     throw "Unable to resolve release version from $pyprojectPath"
 }
 
+function Resolve-PythonModuleFile {
+    param(
+        [string]$PythonCommand,
+        [string]$ModuleName
+    )
+
+    $modulePath = & $PythonCommand -c "import $ModuleName; print($ModuleName.__file__)"
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($modulePath)) {
+        throw "Unable to resolve Python module path for $ModuleName"
+    }
+    return $modulePath.Trim()
+}
+
+function New-ZipFromDirectory {
+    param(
+        [string]$SourceDirectory,
+        [string]$DestinationZipPath
+    )
+
+    if (Test-Path $DestinationZipPath) {
+        Remove-Item -Path $DestinationZipPath -Force
+    }
+
+    [System.IO.Compression.ZipFile]::CreateFromDirectory(
+        $SourceDirectory,
+        $DestinationZipPath,
+        [System.IO.Compression.CompressionLevel]::Optimal,
+        $false
+    )
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $appVersion = Resolve-AppVersion -RepoRoot $repoRoot -ReleaseVersion $ReleaseVersion
 $distDir = Join-Path $repoRoot 'dist'
@@ -74,9 +125,13 @@ $buildRoot = Join-Path $distDir 'build'
 $releaseRoot = Join-Path $distDir 'release'
 $bundleRoot = Join-Path $releaseRoot $Architecture
 $appRoot = Join-Path $bundleRoot 'SCYTcheck'
+$stagingBaseRoot = Join-Path $buildRoot ("release-staging-{0}" -f $Architecture)
+$stagingRoot = $stagingBaseRoot
+$stagingBundleRoot = Join-Path $stagingRoot $Architecture
+$stagingAppRoot = Join-Path $stagingBundleRoot 'SCYTcheck'
 $vendorRoot = if ($ThirdPartyRoot) { $ThirdPartyRoot } else { Join-Path $repoRoot 'third_party' }
 $ffmpegSource = Join-Path $vendorRoot (Join-Path 'ffmpeg' $Architecture)
-$tesseractSource = Join-Path $vendorRoot (Join-Path 'tesseract' $Architecture)
+$paddleocrSource = Join-Path $vendorRoot (Join-Path 'paddleocr' $Architecture)
 $specFile = if ($SpecPath) { $SpecPath } else { Join-Path $repoRoot 'build-config.spec' }
 $zipPath = Join-Path $releaseRoot ("SCYTcheck-{0}-{1}.zip" -f $appVersion, $Architecture)
 
@@ -88,8 +143,23 @@ Write-Host "[build] Spec: $specFile"
 Ensure-Directory -Path $distDir
 Ensure-Directory -Path $buildRoot
 Ensure-Directory -Path $releaseRoot
-Ensure-Directory -Path $bundleRoot
-Ensure-Directory -Path $appRoot
+if (Test-Path $stagingRoot) {
+    try {
+        Remove-Item -Path $stagingRoot -Recurse -Force
+    } catch {
+        $suffix = Get-Date -Format 'yyyyMMdd-HHmmss'
+        $stagingRoot = Join-Path $buildRoot ("release-staging-{0}-{1}" -f $Architecture, $suffix)
+        $stagingBundleRoot = Join-Path $stagingRoot $Architecture
+        $stagingAppRoot = Join-Path $stagingBundleRoot 'SCYTcheck'
+        Write-Warning "[build] Could not clear staging directory due to locked files. Using $stagingRoot instead."
+    }
+}
+Ensure-Directory -Path $stagingBundleRoot
+Ensure-Directory -Path $stagingAppRoot
+
+Test-RequiredPaddleOCRAssets -Source $paddleocrSource
+
+$pythonCommand = $null
 
 if (-not $BundleOnly) {
     if (-not (Test-Path $specFile)) {
@@ -110,16 +180,22 @@ if (-not $BundleOnly) {
         throw "PyInstaller did not produce the expected bundle directory: $builtApp"
     }
 
-    Copy-Item -Path $builtApp -Destination $bundleRoot -Recurse -Force
+    Copy-Item -Path $builtApp -Destination $stagingBundleRoot -Recurse -Force
 }
 
-$ffmpegDestination = Join-Path $appRoot 'ffmpeg'
-$tesseractDestination = Join-Path $appRoot 'tesseract'
-$tessdataDestination = Join-Path $tesseractDestination 'tessdata'
+$ffmpegDestination = Join-Path $stagingAppRoot 'ffmpeg'
+$paddleocrDestination = Join-Path $stagingAppRoot 'paddleocr_models'
+$internalDestination = Join-Path $stagingAppRoot '_internal'
+
+if (-not $pythonCommand) {
+    $pythonCommand = Resolve-PythonCommand -PythonExe $PythonExe
+}
+
+$decoratorSource = Resolve-PythonModuleFile -PythonCommand $pythonCommand -ModuleName 'decorator'
 
 Copy-OptionalTree -Source $ffmpegSource -Destination $ffmpegDestination -Label 'FFmpeg'
-Copy-OptionalTree -Source $tesseractSource -Destination $tesseractDestination -Label 'Tesseract'
-Ensure-Directory -Path $tessdataDestination
+Copy-OptionalTree -Source $paddleocrSource -Destination $paddleocrDestination -Label 'PaddleOCR'
+Copy-Item -Path $decoratorSource -Destination (Join-Path $internalDestination 'decorator.py') -Force
 
 # Cleanup stale release ZIPs for this architecture (legacy and older versioned naming).
 $staleZipCandidates = @(
@@ -132,10 +208,26 @@ foreach ($staleZip in $staleZipCandidates) {
     Remove-Item -Path $staleZip.FullName -Force
 }
 
-if (Test-Path $zipPath) {
-    Remove-Item -Path $zipPath -Force
-}
-Compress-Archive -Path (Join-Path $bundleRoot '*') -DestinationPath $zipPath -Force
+New-ZipFromDirectory -SourceDirectory $stagingBundleRoot -DestinationZipPath $zipPath
 
-Write-Host "[build] Release bundle ready: $bundleRoot"
+$releaseBundleRefreshed = $true
+if (Test-Path $bundleRoot) {
+    try {
+        Remove-Item -Path $bundleRoot -Recurse -Force
+    } catch {
+        $releaseBundleRefreshed = $false
+        Write-Warning "[build] Could not refresh $bundleRoot because existing files are locked. Portable ZIP was created from staging."
+    }
+}
+
+if ($releaseBundleRefreshed) {
+    Ensure-Directory -Path $bundleRoot
+    Copy-Item -Path $stagingAppRoot -Destination $bundleRoot -Recurse -Force
+}
+
+if ($releaseBundleRefreshed) {
+    Write-Host "[build] Release bundle ready: $bundleRoot"
+} else {
+    Write-Host "[build] Release staging bundle ready: $stagingBundleRoot"
+}
 Write-Host "[build] Portable ZIP ready: $zipPath"

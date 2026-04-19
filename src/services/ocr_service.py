@@ -1,13 +1,29 @@
 from __future__ import annotations
 
 import re
+import ctypes
+import os
+from importlib import import_module
+from pathlib import Path
+from tkinter import messagebox
 
 import cv2
 import numpy as np
-import pytesseract
 from thefuzz import fuzz as _fuzz
 
+_PADDLEOCR_IMPORT_ERROR: Exception | None = None
+
+try:
+    from paddleocr import PaddleOCR
+except Exception as exc:  # pragma: no cover - optional dependency in test environments
+    PaddleOCR = None  # type: ignore[assignment]
+    _PADDLEOCR_IMPORT_ERROR = exc
+
 from src.data.models import ContextPattern
+
+
+# T018: Precompile whitespace regex for reuse in normalize_for_matching
+_RE_WHITESPACE = re.compile(r"\s+")
 
 
 class OCRError(RuntimeError):
@@ -19,10 +35,14 @@ class PatternValidationError(ValueError):
 
 
 class OCRService:
-    def __init__(self, confidence_threshold: int = 40, tesseract_cmd: str | None = None) -> None:
+    def __init__(
+        self,
+        confidence_threshold: int = 40,
+        paddleocr_model_root: str | None = None,
+    ) -> None:
         self.confidence_threshold = confidence_threshold
-        if tesseract_cmd:
-            pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+        self.paddleocr_model_root = paddleocr_model_root
+        self._ocr_engine: object | None = None
 
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -53,12 +73,8 @@ class OCRService:
         preprocessed = self.preprocess_image(cropped)
 
         try:
-            data = pytesseract.image_to_data(
-                preprocessed,
-                output_type=pytesseract.Output.DICT,
-                config="--psm 6",
-            )
-        except Exception as exc:  # pragma: no cover - pytesseract failures are environment-specific
+            data = self._get_ocr_engine().ocr(preprocessed, cls=False)
+        except Exception as exc:
             raise OCRError(str(exc)) from exc
 
         tokens: list[str] = []
@@ -109,71 +125,190 @@ class OCRService:
         return tokens, diagnostics
 
     @staticmethod
-    def _build_line_entries(data: dict[str, object]) -> list[tuple[str, int]]:
-        """Build OCR line strings with average confidence.
+    def _build_line_entries(data: object) -> list[tuple[str, int]]:
+        """Build OCR line entries from PaddleOCR predictions.
 
-        Prefer grouping by Tesseract line metadata when available. If line metadata is
-        missing, fall back to token-level entries to preserve current behavior in tests
-        and simplified OCR outputs.
+        PaddleOCR returns per-line predictions with confidence in the 0.0..1.0 range.
+        This function normalizes confidence to the application's 0..100 scale.
         """
-        texts = list(data.get("text", []) if isinstance(data, dict) else [])
-        confs = list(data.get("conf", []) if isinstance(data, dict) else [])
-        block_nums = data.get("block_num")
-        par_nums = data.get("par_num")
-        line_nums = data.get("line_num")
 
-        line_meta_available = (
-            isinstance(block_nums, list)
-            and isinstance(par_nums, list)
-            and isinstance(line_nums, list)
-        )
-
-        def parse_conf(raw: object) -> int:
+        def to_confidence(value: object) -> int:
             try:
-                return int(float(str(raw)))
-            except ValueError:
+                numeric = float(value)
+            except (TypeError, ValueError):
                 return 0
 
-        if line_meta_available:
-            grouped: dict[tuple[int, int, int], list[tuple[int, str, int]]] = {}
-            for index, text in enumerate(texts):
-                value = str(text).strip()
-                if not value:
-                    continue
-                try:
-                    key = (
-                        int(block_nums[index]),
-                        int(par_nums[index]),
-                        int(line_nums[index]),
-                    )
-                except (IndexError, TypeError, ValueError):
-                    # If metadata is inconsistent, fall back to token-level output.
-                    line_meta_available = False
-                    break
-                conf = parse_conf(confs[index] if index < len(confs) else "0")
-                grouped.setdefault(key, []).append((index, value, conf))
+            if numeric <= 1.0:
+                return int(round(max(0.0, min(numeric, 1.0)) * 100.0))
+            return int(round(max(0.0, min(numeric, 100.0))))
 
-            if line_meta_available:
-                lines: list[tuple[str, int]] = []
-                for key in sorted(grouped.keys()):
-                    ordered_tokens = sorted(grouped[key], key=lambda item: item[0])
-                    line_text = " ".join(token for _, token, _ in ordered_tokens).strip()
-                    if not line_text:
-                        continue
-                    avg_conf = int(
-                        round(sum(conf for _, _, conf in ordered_tokens) / len(ordered_tokens))
-                    )
-                    lines.append((line_text, avg_conf))
-                return lines
+        if not isinstance(data, list):
+            return []
 
-        fallback_lines: list[tuple[str, int]] = []
-        for index, text in enumerate(texts):
-            value = str(text).strip()
-            if not value:
+        predictions = data[0] if len(data) == 1 and isinstance(data[0], list) else data
+        entries: list[tuple[str, int]] = []
+
+        for item in predictions:
+            if not isinstance(item, list | tuple) or len(item) < 2:
                 continue
-            conf = parse_conf(confs[index] if index < len(confs) else "0")
-            fallback_lines.append((value, conf))
-        return fallback_lines
+            text_info = item[1]
+            if not isinstance(text_info, list | tuple) or len(text_info) < 2:
+                continue
+
+            line_text = str(text_info[0]).strip()
+            if not line_text:
+                continue
+
+            entries.append((line_text, to_confidence(text_info[1])))
+
+        return entries
+
+    def _notify_ocr_initialization_failure(self, message: str) -> None:
+        try:
+            messagebox.showerror("OCR Initialization Error", message)
+        except Exception:
+            # UI may not be initialized in tests or CLI execution paths.
+            return
+
+    @staticmethod
+    def _to_windows_short_path(path_value: str | None) -> str | None:
+        if not path_value or os.name != "nt":
+            return path_value
+
+        get_short_path_name = getattr(ctypes.windll.kernel32, "GetShortPathNameW", None)
+        if get_short_path_name is None:
+            return path_value
+
+        input_path = str(Path(path_value))
+        required = get_short_path_name(input_path, None, 0)
+        if required <= 0:
+            return path_value
+
+        buffer = ctypes.create_unicode_buffer(required)
+        result = get_short_path_name(input_path, buffer, required)
+        if result <= 0:
+            return path_value
+
+        short_path = buffer.value
+        return short_path or path_value
+
+    def _resolve_model_dirs(self) -> tuple[str | None, str | None, str | None]:
+        def resolve_from_root(root: Path) -> tuple[str, str, str] | None:
+            if not root.exists() or not root.is_dir():
+                return None
+
+            detection_dir: Path | None = None
+            recognition_dir: Path | None = None
+            classification_dir: Path | None = None
+
+            for child in root.iterdir():
+                if not child.is_dir():
+                    continue
+                name = child.name.lower()
+                if detection_dir is None and name.startswith("det"):
+                    detection_dir = child
+                if classification_dir is None and name.startswith("cls"):
+                    classification_dir = child
+                if name == "rec_en":
+                    recognition_dir = child
+                elif recognition_dir is None and name.startswith("rec"):
+                    recognition_dir = child
+
+            if not detection_dir or not recognition_dir or not classification_dir:
+                return None
+
+            required_files = (
+                detection_dir / "inference.pdmodel",
+                detection_dir / "inference.pdiparams",
+                recognition_dir / "inference.pdmodel",
+                recognition_dir / "inference.pdiparams",
+                classification_dir / "inference.pdmodel",
+                classification_dir / "inference.pdiparams",
+            )
+            if not all(path.exists() for path in required_files):
+                return None
+
+            return str(detection_dir), str(recognition_dir), str(classification_dir)
+
+        candidate_roots: list[Path] = []
+        if self.paddleocr_model_root:
+            candidate_roots.append(Path(self.paddleocr_model_root))
+
+        try:
+            from src import config as app_config
+
+            candidate_roots.extend(app_config._candidate_paddleocr_model_roots())
+        except Exception:
+            pass
+
+        deduped: list[Path] = []
+        seen: set[str] = set()
+        for candidate in candidate_roots:
+            key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(candidate)
+
+        for root in deduped:
+            resolved = resolve_from_root(root)
+            if resolved:
+                self.paddleocr_model_root = str(root)
+                return resolved
+
+        checked = ", ".join(str(path) for path in deduped) if deduped else "<none>"
+        raise OCRError(
+            "PaddleOCR model assets are incomplete. Expected det*, rec*, and cls* "
+            "directories each containing inference.pdmodel and inference.pdiparams. "
+            f"Checked: {checked}"
+        )
+
+    def _create_ocr_engine(self) -> object:
+        global PaddleOCR, _PADDLEOCR_IMPORT_ERROR
+
+        if PaddleOCR is None:
+            try:
+                PaddleOCR = getattr(import_module("paddleocr"), "PaddleOCR")
+                _PADDLEOCR_IMPORT_ERROR = None
+            except Exception as exc:  # pragma: no cover - runtime init path
+                _PADDLEOCR_IMPORT_ERROR = exc
+
+        if PaddleOCR is None:
+            details = f" ({_PADDLEOCR_IMPORT_ERROR})" if _PADDLEOCR_IMPORT_ERROR else ""
+            raise OCRError(
+                "PaddleOCR runtime is not available. Install paddleocr and paddlepaddle "
+                "for source runs or ensure the portable bundle includes OCR dependencies."
+                f"{details}"
+            )
+
+        det_model_dir, rec_model_dir, cls_model_dir = self._resolve_model_dirs()
+        kwargs: dict[str, object] = {
+            "use_angle_cls": False,
+            "lang": "en",
+            "use_gpu": False,
+            "show_log": False,
+        }
+        if det_model_dir:
+            kwargs["det_model_dir"] = self._to_windows_short_path(det_model_dir)
+        if rec_model_dir:
+            kwargs["rec_model_dir"] = self._to_windows_short_path(rec_model_dir)
+        if cls_model_dir:
+            kwargs["cls_model_dir"] = self._to_windows_short_path(cls_model_dir)
+
+        try:
+            return PaddleOCR(**kwargs)
+        except Exception as exc:  # pragma: no cover - runtime init path
+            message = (
+                "Failed to initialize PaddleOCR. "
+                "Verify bundled OCR assets are available and not blocked."
+            )
+            self._notify_ocr_initialization_failure(message)
+            raise OCRError(f"{message} ({exc})") from exc
+
+    def _get_ocr_engine(self) -> object:
+        if self._ocr_engine is None:
+            self._ocr_engine = self._create_ocr_engine()
+        return self._ocr_engine
 
     @staticmethod
     def validate_pattern(before_text: str | None, after_text: str | None) -> None:
@@ -185,7 +320,17 @@ class OCRService:
     def normalize_for_matching(text: str) -> str:
         """Normalize OCR text for pattern matching: remove newlines, collapse whitespace."""
         text = (text or "").replace("\n", " ").replace("\r", " ")
-        return re.sub(r"\s+", " ", text).strip()
+        return _RE_WHITESPACE.sub(" ", text).strip()
+
+    @staticmethod
+    def build_joined_region_text(lines: list[str]) -> str:
+        """Build canonical joined text for one frame-region OCR result."""
+        kept = [str(line).strip() for line in lines if str(line).strip()]
+        return OCRService.normalize_for_matching(" ".join(kept))
+
+    @staticmethod
+    def _is_valid_candidate_token(token: str) -> bool:
+        return bool(re.search(r"[A-Za-z0-9]", token or ""))
 
     @staticmethod
     def _find_in_text(
@@ -258,9 +403,8 @@ class OCRService:
     ) -> tuple[str, int, int] | None:
         """Find marker positions fuzzily and extract single player-name token.
 
-        Returns (token, name_start_pos, full_span_len) for tie-break purposes,
-        where full_span_len is the pre-tokenisation span to preserve tie-break
-        correctness, or None if no match.
+        Returns (token, name_start_pos, token_count_between_boundaries),
+        or None if no match.
         """
         OCRService.validate_pattern(before_text, after_text)
         norm = OCRService.normalize_for_matching(line)
@@ -279,10 +423,12 @@ class OCRService:
             if not span_text:
                 return None
             tokens = span_text.split()
+            if len(tokens) > 6:
+                return None
             token = tokens[0] if tokens else ""  # both-boundary: first token between markers
             if not token:
                 return None
-            return token, b_range[1], len(span_text)
+            return token, b_range[1], len(tokens)
 
         if before:
             b_range = OCRService._find_in_text(before, norm, threshold)
@@ -295,7 +441,7 @@ class OCRService:
             token = tokens[0] if tokens else ""  # before-only: first token after marker
             if not token:
                 return None
-            return token, b_range[1], len(span_text)
+            return token, b_range[1], 1
 
         # after-only
         a_range = OCRService._find_in_text(after or "", norm, threshold)
@@ -308,13 +454,14 @@ class OCRService:
         token = tokens[-1] if tokens else ""  # after-only: last token before marker
         if not token:
             return None
-        return token, 0, len(span_text)
+        return token, 0, 1
 
     def extract_candidates(
         self,
         lines: list[str],
         patterns: list[ContextPattern] | None = None,
         filter_non_matching: bool = False,
+        tolerance_threshold: float = 0.75,
     ) -> list[tuple[str, str | None]]:
         """Extract candidate names from OCR lines using optional context patterns.
 
@@ -324,6 +471,7 @@ class OCRService:
             lines,
             patterns=patterns,
             filter_non_matching=filter_non_matching,
+            tolerance_threshold=tolerance_threshold,
         )
         return [
             (str(decision["extracted_name"]), decision["matched_pattern"])
@@ -336,6 +484,7 @@ class OCRService:
         lines: list[str],
         patterns: list[ContextPattern] | None = None,
         filter_non_matching: bool = False,
+        tolerance_threshold: float = 0.75,
     ) -> list[dict[str, object]]:
         """Evaluate OCR lines and return accept/reject decisions with reasons.
 
@@ -343,75 +492,82 @@ class OCRService:
         accepted, rejection_reason, extracted_name, matched_pattern.
         """
         active_patterns = [pattern for pattern in (patterns or []) if pattern.enabled]
-        decisions: list[dict[str, object]] = []
+        source_lines = [str(line).strip() for line in lines if str(line).strip()]
+        if not source_lines:
+            return []
 
-        for line in lines:
-            source = (line or "").strip()
-            if not source:
+        source_raw = "\n".join(source_lines)
+        tested_normalized = OCRService.build_joined_region_text(source_lines)
+
+        matched_candidates: list[tuple[str, str, int, int, int]] = []
+        for pattern_index, pattern in enumerate(active_patterns):
+            try:
+                meta = self._extract_with_boundaries_meta(
+                    tested_normalized,
+                    before_text=pattern.before_text,
+                    after_text=pattern.after_text,
+                    threshold=tolerance_threshold,
+                )
+            except PatternValidationError:
                 continue
 
-            tested_normalized = OCRService.normalize_for_matching(source)
-
-            matched_candidates: list[tuple[str, str, int, int, int]] = []
-            for pattern_index, pattern in enumerate(active_patterns):
-                threshold = getattr(pattern, "similarity_threshold", 0.75)
-                try:
-                    meta = self._extract_with_boundaries_meta(
-                        source,
-                        before_text=pattern.before_text,
-                        after_text=pattern.after_text,
-                        threshold=threshold,
-                    )
-                except PatternValidationError:
-                    continue
-
-                if meta:
-                    extracted, start_pos, span_len = meta
-                    matched_candidates.append(
-                        (extracted, pattern.id, span_len, start_pos, pattern_index)
-                    )
-
-            if matched_candidates:
-                # Deterministic conflict resolution:
-                # longest span, then earliest start, then pattern order.
-                selected = sorted(
-                    matched_candidates, key=lambda item: (-item[2], item[3], item[4])
-                )[0]
-                extracted_name = selected[0].strip()
-                decisions.append(
-                    {
-                        "raw_string": source,
-                        "tested_string_raw": source,
-                        "tested_string_normalized": tested_normalized,
-                        "accepted": True,
-                        "rejection_reason": "",
-                        "extracted_name": extracted_name,
-                        "matched_pattern": selected[1],
-                    }
+            if meta:
+                extracted, start_pos, token_count = meta
+                matched_candidates.append(
+                    (extracted, pattern.id, token_count, start_pos, pattern_index)
                 )
-            elif not filter_non_matching:
-                decisions.append(
+
+        if matched_candidates:
+            # Deterministic conflict resolution: nearest span (fewest tokens),
+            # then earliest start, then pattern order.
+            selected = sorted(matched_candidates, key=lambda item: (item[2], item[3], item[4]))[0]
+            extracted_name = selected[0].strip()
+            if not OCRService._is_valid_candidate_token(extracted_name):
+                return [
                     {
-                        "raw_string": source,
-                        "tested_string_raw": source,
-                        "tested_string_normalized": tested_normalized,
-                        "accepted": True,
-                        "rejection_reason": "",
-                        "extracted_name": source,
-                        "matched_pattern": None,
-                    }
-                )
-            else:
-                decisions.append(
-                    {
-                        "raw_string": source,
-                        "tested_string_raw": source,
+                        "raw_string": source_raw,
+                        "tested_string_raw": source_raw,
                         "tested_string_normalized": tested_normalized,
                         "accepted": False,
-                        "rejection_reason": "no_pattern_match",
+                        "rejection_reason": "invalid_token",
                         "extracted_name": "",
-                        "matched_pattern": None,
+                        "matched_pattern": selected[1],
                     }
-                )
+                ]
 
-        return decisions
+            return [
+                {
+                    "raw_string": source_raw,
+                    "tested_string_raw": source_raw,
+                    "tested_string_normalized": tested_normalized,
+                    "accepted": True,
+                    "rejection_reason": "",
+                    "extracted_name": extracted_name,
+                    "matched_pattern": selected[1],
+                }
+            ]
+
+        if not filter_non_matching:
+            return [
+                {
+                    "raw_string": source_raw,
+                    "tested_string_raw": source_raw,
+                    "tested_string_normalized": tested_normalized,
+                    "accepted": True,
+                    "rejection_reason": "",
+                    "extracted_name": tested_normalized,
+                    "matched_pattern": None,
+                }
+            ]
+
+        return [
+            {
+                "raw_string": source_raw,
+                "tested_string_raw": source_raw,
+                "tested_string_normalized": tested_normalized,
+                "accepted": False,
+                "rejection_reason": "no_pattern_match",
+                "extracted_name": "",
+                "matched_pattern": None,
+            }
+        ]

@@ -26,6 +26,70 @@ class _FallbackWidget:
         return
 
 
+class _Tooltip:
+    """Simple hover tooltip for Tk widgets."""
+
+    def __init__(self, widget: tk.Widget, text: str, delay_ms: int = 350) -> None:
+        self.widget = widget
+        self.text = text
+        self.delay_ms = delay_ms
+        self._after_id: str | None = None
+        self._window: tk.Toplevel | None = None
+
+        self.widget.bind("<Enter>", self._on_enter, add="+")
+        self.widget.bind("<Leave>", self._on_leave, add="+")
+        self.widget.bind("<ButtonPress>", self._on_leave, add="+")
+
+    def _on_enter(self, _event: object | None = None) -> None:
+        self._schedule_show()
+
+    def _on_leave(self, _event: object | None = None) -> None:
+        self._cancel_scheduled_show()
+        self._hide()
+
+    def _schedule_show(self) -> None:
+        self._cancel_scheduled_show()
+        self._after_id = self.widget.after(self.delay_ms, self._show)
+
+    def _cancel_scheduled_show(self) -> None:
+        if self._after_id is None:
+            return
+        self.widget.after_cancel(self._after_id)
+        self._after_id = None
+
+    def _show(self) -> None:
+        if self._window is not None:
+            return
+
+        try:
+            x, y = self.widget.winfo_pointerxy()
+            window = tk.Toplevel(self.widget)
+            window.wm_overrideredirect(True)
+            window.wm_geometry(f"+{x + 12}+{y + 12}")
+            label = tk.Label(
+                window,
+                text=self.text,
+                justify="left",
+                relief="solid",
+                borderwidth=1,
+                background="#ffffe0",
+                foreground="#222222",
+                padx=8,
+                pady=5,
+                wraplength=420,
+            )
+            label.pack()
+            self._window = window
+        except Exception:
+            self._window = None
+
+    def _hide(self) -> None:
+        if self._window is None:
+            return
+        self._window.destroy()
+        self._window = None
+
+
 class MainWindow:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -113,10 +177,46 @@ class MainWindow:
         )
         self.logging_enabled_check.grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
+        self.tolerance_label = ttk.Label(self.advanced_settings_frame, text="Matching tolerance")
+        self.tolerance_label.grid(row=3, column=2, sticky="e", pady=(8, 0))
+        self.tolerance_var = tk.DoubleVar(value=0.75)
+        self.tolerance_spinbox = ttk.Spinbox(
+            self.advanced_settings_frame,
+            from_=0.60,
+            to=0.95,
+            increment=0.01,
+            textvariable=self.tolerance_var,
+            width=8,
+        )
+        self.tolerance_spinbox.grid(row=3, column=3, sticky="w", padx=(8, 0), pady=(8, 0))
+
+        self.gating_enabled_var = tk.BooleanVar(value=False)
+        self.gating_enabled_check = ttk.Checkbutton(
+            self.advanced_settings_frame,
+            text="Enable Frame-Change Gating",
+            variable=self.gating_enabled_var,
+        )
+        self.gating_enabled_check.grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+
+        self.gating_threshold_label = ttk.Label(
+            self.advanced_settings_frame, text="Gating threshold"
+        )
+        self.gating_threshold_label.grid(row=4, column=2, sticky="e", pady=(8, 0))
+        self.gating_threshold_var = tk.DoubleVar(value=0.02)
+        self.gating_threshold_spinbox = ttk.Spinbox(
+            self.advanced_settings_frame,
+            from_=0.0,
+            to=1.0,
+            increment=0.01,
+            textvariable=self.gating_threshold_var,
+            width=8,
+        )
+        self.gating_threshold_spinbox.grid(row=4, column=3, sticky="w", padx=(8, 0), pady=(8, 0))
+
         self.event_gap_label = ttk.Label(
             self.advanced_settings_frame, text="Event merge gap (seconds)"
         )
-        self.event_gap_label.grid(row=4, column=0, sticky="w", pady=(8, 0))
+        self.event_gap_label.grid(row=5, column=0, sticky="w", pady=(8, 0))
 
         self.event_gap_var = tk.DoubleVar(value=1.0)
         self.event_gap_spinbox = ttk.Spinbox(
@@ -127,12 +227,12 @@ class MainWindow:
             textvariable=self.event_gap_var,
             width=8,
         )
-        self.event_gap_spinbox.grid(row=4, column=1, sticky="w", pady=(8, 0))
+        self.event_gap_spinbox.grid(row=5, column=1, sticky="w", pady=(8, 0))
 
         self.ocr_sensitivity_label = ttk.Label(
             self.advanced_settings_frame, text="OCR sensitivity (confidence 0-100)"
         )
-        self.ocr_sensitivity_label.grid(row=5, column=0, sticky="w", pady=(8, 0))
+        self.ocr_sensitivity_label.grid(row=6, column=0, sticky="w", pady=(8, 0))
 
         self.ocr_confidence_var = tk.IntVar(value=40)
         self.ocr_sensitivity_spinbox = ttk.Spinbox(
@@ -143,20 +243,7 @@ class MainWindow:
             textvariable=self.ocr_confidence_var,
             width=8,
         )
-        self.ocr_sensitivity_spinbox.grid(row=5, column=1, sticky="w", pady=(8, 0))
-
-        self.low_quality_guidance = ttk.Label(
-            self.advanced_settings_frame,
-            text=(
-                "Low-quality videos can reduce OCR reliability. "
-                "Lower confidence to improve recall, "
-                "or raise it to reduce false positives."
-            ),
-            foreground="gray",
-            wraplength=620,
-            justify="left",
-        )
-        self.low_quality_guidance.grid(row=6, column=0, columnspan=4, sticky="w", pady=(6, 0))
+        self.ocr_sensitivity_spinbox.grid(row=6, column=1, sticky="w", pady=(8, 0))
 
         self.progress = ProgressDisplay(container)
         self.progress.grid(row=7, column=0, columnspan=2)
@@ -177,6 +264,126 @@ class MainWindow:
         self.root.bind("<Control-Return>", self._on_analyze_shortcut)
         self.root.bind("<Alt-u>", self._focus_url_input)
         self.root.bind("<Alt-o>", self._focus_output_folder)
+
+        self._tooltips: list[_Tooltip] = []
+        self._attach_setting_tooltips()
+
+    def _add_tooltip(self, widget: object, text: str) -> None:
+        bind_method = getattr(widget, "bind", None)
+        if bind_method is None:
+            return
+        self._tooltips.append(_Tooltip(widget, text))
+
+    def _attach_setting_tooltips(self) -> None:
+        self._add_tooltip(
+            self.pattern_help,
+            (
+                "Context patterns define text expected around player names. "
+                "More accurate patterns improve precision, but very strict patterns "
+                "can miss valid names."
+            ),
+        )
+        self._add_tooltip(
+            self.patterns_text,
+            (
+                "One pattern per line: before|after|enabled. "
+                "Good patterns reduce false positives and speed post-filtering by "
+                "discarding irrelevant OCR matches earlier."
+            ),
+        )
+        self._add_tooltip(
+            self.filter_non_matching_check,
+            (
+                "When enabled, names that do not match context patterns are removed. "
+                "Usually improves quality, but can lower recall if patterns are incomplete."
+            ),
+        )
+        self._add_tooltip(
+            self.video_quality_label,
+            (
+                "Higher video quality improves OCR readability and matching quality, "
+                "but increases download time and processing cost."
+            ),
+        )
+        self._add_tooltip(
+            self.video_quality_combo,
+            (
+                "best gives highest visual fidelity for OCR. "
+                "Lower resolutions can be faster to fetch/process but may hurt text clarity."
+            ),
+        )
+        self._add_tooltip(
+            self.logging_enabled_check,
+            (
+                "Writes a detailed sidecar log for diagnostics and tuning. "
+                "Helps troubleshooting, with small additional disk I/O overhead."
+            ),
+        )
+        self._add_tooltip(
+            self.tolerance_label,
+            (
+                "Matching tolerance controls fuzzy-name matching strictness. "
+                "Lower values increase recall (and potential false positives); "
+                "higher values improve precision."
+            ),
+        )
+        self._add_tooltip(
+            self.tolerance_spinbox,
+            (
+                "Lower tolerance is more permissive and may require more downstream filtering. "
+                "Higher tolerance is stricter and can miss noisy OCR names."
+            ),
+        )
+        self._add_tooltip(
+            self.gating_enabled_check,
+            (
+                "Frame-change gating skips OCR on visually unchanged frames. "
+                "This can significantly improve speed while preserving quality in stable scenes."
+            ),
+        )
+        self._add_tooltip(
+            self.gating_threshold_label,
+            (
+                "Threshold for deciding whether a frame changed enough to run OCR. "
+                "Higher values skip more OCR (faster) but risk missing subtle text updates."
+            ),
+        )
+        self._add_tooltip(
+            self.gating_threshold_spinbox,
+            (
+                "Lower threshold runs OCR more often (slower, safer for quality). "
+                "Higher threshold runs OCR less often (faster, higher miss risk)."
+            ),
+        )
+        self._add_tooltip(
+            self.event_gap_label,
+            (
+                "Events within this gap are merged into one detection interval. "
+                "Higher values produce fewer merged events and less output noise, "
+                "but can hide rapid separate changes."
+            ),
+        )
+        self._add_tooltip(
+            self.event_gap_spinbox,
+            (
+                "Lower gap preserves fine-grained timing details. "
+                "Higher gap smooths fragmented detections and can simplify results."
+            ),
+        )
+        self._add_tooltip(
+            self.ocr_sensitivity_label,
+            (
+                "Minimum OCR confidence score to accept text. "
+                "Lower confidence improves recall; higher confidence improves precision."
+            ),
+        )
+        self._add_tooltip(
+            self.ocr_sensitivity_spinbox,
+            (
+                "Lower values may catch faint text but add false positives. "
+                "Higher values reduce noise but may drop legitimate low-confidence text."
+            ),
+        )
 
     @staticmethod
     def _parse_bool(value: str) -> bool:
@@ -223,27 +430,27 @@ class MainWindow:
         if not patterns:
             patterns = [
                 {
-                    "id": "default-started-by",
-                    "before_text": "started by",
-                    "after_text": None,
+                    "id": "default-has-joined",
+                    "before_text": None,
+                    "after_text": "has joined",
                     "enabled": True,
                 },
                 {
-                    "id": "default-joined",
-                    "before_text": None,
-                    "after_text": "joined",
-                    "enabled": True,
-                },
-                {
-                    "id": "default-connected",
-                    "before_text": None,
+                    "id": "default-party-connected",
+                    "before_text": "Party",
                     "after_text": "connected",
                     "enabled": True,
                 },
                 {
-                    "id": "default-disconnected",
-                    "before_text": None,
+                    "id": "default-party-disconnected",
+                    "before_text": "Party",
                     "after_text": "disconnected",
+                    "enabled": True,
+                },
+                {
+                    "id": "default-started-by",
+                    "before_text": "started by",
+                    "after_text": None,
                     "enabled": True,
                 },
             ]
@@ -257,6 +464,25 @@ class MainWindow:
                 getattr(self, "video_quality_var", _FallbackVar("best")).get() or "best"
             ),
             logging_enabled=bool(getattr(self, "logging_enabled_var", _FallbackVar(False)).get()),
+            tolerance_value=float(
+                max(
+                    0.60,
+                    min(
+                        float(getattr(self, "tolerance_var", _FallbackVar(0.75)).get()),
+                        0.95,
+                    ),
+                )
+            ),
+            gating_enabled=bool(getattr(self, "gating_enabled_var", _FallbackVar(True)).get()),
+            gating_threshold=float(
+                max(
+                    0.0,
+                    min(
+                        float(getattr(self, "gating_threshold_var", _FallbackVar(0.02)).get()),
+                        1.0,
+                    ),
+                )
+            ),
         )
 
     def apply_advanced_settings(self, settings: AdvancedSettings) -> None:
@@ -277,6 +503,13 @@ class MainWindow:
         )
         getattr(self, "logging_enabled_var", _FallbackVar(False)).set(
             bool(settings.logging_enabled)
+        )
+        getattr(self, "tolerance_var", _FallbackVar(0.75)).set(
+            float(max(0.60, min(settings.tolerance_value, 0.95)))
+        )
+        getattr(self, "gating_enabled_var", _FallbackVar(True)).set(bool(settings.gating_enabled))
+        getattr(self, "gating_threshold_var", _FallbackVar(0.02)).set(
+            float(max(0.0, min(settings.gating_threshold, 1.0)))
         )
 
     def _on_url_changed(self, _event: object | None = None) -> None:

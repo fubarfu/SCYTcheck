@@ -39,6 +39,25 @@ Settings are saved between runs in `%APPDATA%/SCYTcheck/scytcheck_settings.json`
 7. Open the exported summary CSV.
 8. If logging is enabled, review the matching `_log.csv` sidecar file.
 
+## Robustness Features (New)
+
+Advanced Settings now includes controls for OCR robustness and speed:
+
+- `Matching tolerance` (`0.60` to `0.95`, default `0.75`):
+	- Lower values are more lenient and can recover names when OCR introduces character substitutions.
+	- Keep `0.75` for strict/default behavior.
+- `Enable Frame-Change Gating` (default on):
+	- Skips OCR when a region is visually unchanged between sampled frames.
+	- Improves runtime on static overlays while preserving output accuracy.
+- `Gating threshold` (`0.0` to `1.0`, default `0.02`):
+	- Lower values are stricter about detecting change.
+
+Completion status now includes a gating summary:
+
+```text
+Gating Summary: Evaluated <total>, OCR Executed <executed>, OCR Skipped <skipped> (<skip_pct>%).
+```
+
 If export fails after analysis (for example due to file lock or permissions), use **Retry Export** to write output again without re-running OCR.
 
 ## Output Formats
@@ -65,6 +84,11 @@ No text detected:
 - Re-check selected regions.
 - Lower OCR confidence in Advanced Settings.
 - Choose a clearer video quality.
+- Lower matching tolerance (for example from `0.75` to `0.65`) if OCR substitutions are common.
+
+Analysis feels slow on static overlays:
+- Keep frame-change gating enabled.
+- Verify gating threshold is near the default (`0.02`).
 
 YouTube URL rejected or inaccessible:
 - Confirm the URL is a standard YouTube link.
@@ -77,7 +101,7 @@ Use this path only if you are developing SCYTcheck.
 Requirements:
 - Python 3.11+
 - Windows
-- Tesseract OCR available on PATH or installed in a standard location
+- PaddleOCR model assets available under `third_party/paddleocr/x64` (or configured with `SCYTCHECK_PADDLEOCR_MODEL_ROOT`)
 
 Setup:
 

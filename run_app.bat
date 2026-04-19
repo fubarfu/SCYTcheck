@@ -1,14 +1,11 @@
 @echo off
 REM SCYTcheck Application Launcher
-REM This batch file ensures Scoop tools and Tesseract language data are configured
+REM This batch file ensures Scoop tools are configured
 
 setlocal enabledelayedexpansion
 
 REM Add Scoop shims to PATH
 set PATH=C:\Users\SteSt\scoop\shims;!PATH!
-
-REM Set Tesseract language data location
-set TESSDATA_PREFIX=C:\Users\SteSt\scoop\apps\tesseract\current\tessdata
 
 REM Change to project directory
 cd /d "C:\Users\SteSt\source\SCYTcheck"

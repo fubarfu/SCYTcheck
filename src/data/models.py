@@ -33,6 +33,14 @@ class ContextPattern:
 
 
 @dataclass
+class NormalizedOCRLine:
+    """Represents OCR line content before and after normalization."""
+
+    raw_lines: list[str] = field(default_factory=list)
+    normalized_text: str = ""
+
+
+@dataclass
 class TextDetection:
     """Per-frame candidate extracted from OCR output."""
 
@@ -66,6 +74,43 @@ class PlayerSummary:
     first_seen_sec: float = 0.0
     last_seen_sec: float = 0.0
     representative_region: str = ""
+
+
+@dataclass
+class GatingStats:
+    """Aggregate counters for frame-region gating behavior."""
+
+    total_frame_region_pairs: int = 0
+    ocr_executed_count: int = 0
+    ocr_skipped_count: int = 0
+    gating_enabled: bool = True
+    gating_threshold: float = 0.02
+
+    @property
+    def skip_percentage(self) -> float:
+        if self.total_frame_region_pairs <= 0:
+            return 0.0
+        return (self.ocr_skipped_count / self.total_frame_region_pairs) * 100.0
+
+
+@dataclass
+class TimingBreakdown:
+    """Per-stage elapsed times for one analysis run, in milliseconds."""
+
+    decode_ms: float = 0.0
+    gating_ms: float = 0.0
+    ocr_ms: float = 0.0
+    post_processing_ms: float = 0.0
+    total_ms: float = 0.0
+
+
+@dataclass
+class AnalysisRuntimeMetrics:
+    """Runtime instrumentation metadata for one analysis execution."""
+
+    timing_breakdown: TimingBreakdown | None = None
+    instrumentation_enabled: bool = False
+    instrumentation_overhead_pct: float = 0.0
 
 
 @dataclass
@@ -110,6 +155,8 @@ class VideoAnalysis:
     filter_non_matching: bool = False
     video_quality: str = "best"
     logging_enabled: bool = False
+    gating_stats: GatingStats | None = None
+    runtime_metrics: AnalysisRuntimeMetrics | None = None
     event_gap_threshold_sec: float = 1.0
     detections: list[TextDetection] = field(default_factory=list)
     log_records: list[LogRecord] = field(default_factory=list)

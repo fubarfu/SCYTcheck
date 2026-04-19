@@ -261,16 +261,16 @@ class RegionSelector:
         """Get a video frame at specific time (supports seek-to-time)."""
         return self.video_service.get_frame_at_time(url, time_seconds, quality=quality)
 
-    def get_video_duration(self, url: str) -> float:
+    def get_video_duration(self, url: str, quality: str = "best") -> float:
         """Get video duration in seconds."""
-        info = self.video_service.get_video_info(url)
+        info = self.video_service.get_video_info(url, quality=quality)
         return info.get("duration", 0.0)
 
     def load_video(self, url: str, quality: str = "best") -> None:
         """Load video metadata for scrollbar-based navigation."""
         self.url = url
         self.quality = quality
-        self.video_duration = self.get_video_duration(url)
+        self.video_duration = self.get_video_duration(url, quality=quality)
         self.current_frame_time = 0.0
         self.current_frame = self.get_frame_at_time(url, 0.0, quality=quality)
 
