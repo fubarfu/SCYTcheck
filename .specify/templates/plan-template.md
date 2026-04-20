@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Confirm the plan preserves simple, modular design and avoids unnecessary dependencies.
+- Identify required tests for non-trivial business logic and workflow-critical behavior.
+- For web UI features, confirm the active Google Stitch project/screens/design system were
+  consulted and are treated as authoritative for UI design decisions.
+- Document any deliberate deviation from approved Stitch artifacts and the technical reason.
 
 ## Project Structure
 
@@ -99,6 +103,6 @@ directories captured above]
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+| --------- | ---------- | ----------------------------------- |
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

@@ -108,6 +108,11 @@ YouTube URL rejected or inaccessible:
 
 Use this path only if you are developing SCYTcheck.
 
+For web UI features, Google Stitch is the authoritative source for UI design decisions.
+Feature specs define behavior and acceptance criteria, but developers should consult the
+active Stitch project/screens/design system whenever making UI decisions and document any
+necessary implementation deviation.
+
 Requirements:
 - Python 3.11+
 - Windows

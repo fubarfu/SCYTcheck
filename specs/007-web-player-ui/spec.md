@@ -111,10 +111,10 @@ The user has multiple analysis result files (from different videos or runs). The
 ### Edge Cases
 
 - What happens when the loaded result file contains zero text candidates?
-- What happens when the user edits a candidate name to an empty string?
-- What happens when two candidates in different groups have identical text after inline editing?
-- How does the system handle result files that are malformed or from an incompatible format version?
-- What happens if the user closes the browser tab mid-review without saving?
+- If the user clears a candidate's corrected name, the UI must reject the empty value inline, preserve the previous non-empty value, and require either a valid replacement or edit cancellation.
+- If inline editing changes a candidate's normalized text so it now matches a different group better, grouping must be recomputed immediately, the candidate must move automatically to the best-matching group, and the UI must show a clear notice explaining the move.
+- Result files that are malformed or from an incompatible format version must be rejected before the review session opens; the UI shows a clear error state and does not create a partial session.
+- If the user closes the browser tab mid-review, all accepted changes up to the most recent mutating action must already be persisted and restored when the session is reopened.
 
 ## Requirements *(mandatory)*
 
@@ -125,19 +125,21 @@ The user has multiple analysis result files (from different videos or runs). The
 - **FR-003**: Users MUST be able to mark any candidate as "Confirmed" (verified player name) or "Rejected" (not a player name).
 - **FR-004**: Users MUST be able to reverse a confirm or reject decision at any time before export.
 - **FR-005**: Users MUST be able to edit the displayed text of a candidate inline to correct OCR errors; the corrected text is used in place of the original in exports.
+- **FR-005**: Users MUST be able to edit the displayed text of a candidate inline to correct OCR errors; the corrected text is used in place of the original in exports. Empty corrected values MUST be rejected inline; the prior non-empty value remains in effect until the user enters a valid replacement or cancels the edit.
 - **FR-006**: The UI MUST provide a real-time search/filter input that narrows the visible candidate list to entries matching a user-supplied substring.
 - **FR-007**: The UI MUST visually group candidates by similarity using two signals: (1) fuzzy text similarity (threshold ≥ 80% by default, user-adjustable 50–100%), and (2) temporal proximity — occurrences found close together in time are treated as stronger candidates for belonging to the same group. The similarity threshold MUST be user-adjustable via a UI control; changing it re-computes groupings immediately.
+- **FR-007**: The UI MUST visually group candidates by similarity using two signals: (1) fuzzy text similarity (threshold ≥ 80% by default, user-adjustable 50–100%), and (2) temporal proximity — occurrences found close together in time are treated as stronger candidates for belonging to the same group. The similarity threshold MUST be user-adjustable via a UI control; changing it re-computes groupings immediately. Inline text edits that change grouping eligibility MUST also trigger immediate regrouping.
 - **FR-008**: Users MUST be able to confirm or reject an entire group of near-identical candidates in a single action. Users MUST also be able to select one or more specific candidates within a group as correct (confirmed); non-selected group members MUST remain unchanged unless explicitly actioned by the user.
 - **FR-009**: Users MUST be able to expand a group to review and individually override individual candidates within it.
 - **FR-010**: The UI MUST allow users to export two output files upon completing a review: (1) a deduplicated player names CSV — one row per unique confirmed name (using corrected text where edited), and (2) a full occurrences CSV — one row per confirmed candidate occurrence, retaining timestamp and source frame reference columns.
-- **FR-011**: The review state (confirmed, rejected, edited values) MUST be persisted by the Python server as a JSON sidecar file written alongside the source CSV; state is restored automatically when the same result file is loaded in a future session.
+- **FR-011**: The review state (confirmed, rejected, edited values) MUST be persisted by the Python server as a JSON sidecar file written alongside the source CSV; state is restored automatically when the same result file is loaded in a future session. Persistence MUST occur immediately after each user action that mutates session state so no explicit save step is required.
 - **FR-012**: The UI MUST visually differentiate between unreviewed, confirmed, and rejected candidates at a glance.
 - **FR-013**: The UI MUST display a progress indicator showing how many candidates have been reviewed vs. total.
 - **FR-014**: The UI MUST support loading multiple result files and switching between them without losing review state.
 - **FR-015**: The UI MUST be accessible and functional on a standard desktop browser without requiring installation of any browser extension.
 - **FR-016**: The portable executable MUST start the local HTTP server automatically on launch and open the user's default browser to the UI without any manual steps.
 - **FR-017**: The web UI MUST provide controls to enter a YouTube URL or select a local video file as the analysis source.
-- **FR-018**: The web UI MUST expose all analysis configuration options available in the former Tkinter UI (full parity — no existing setting may be dropped). Additional settings may be introduced in this feature if they naturally arise during implementation.
+- **FR-018**: The web UI MUST expose all analysis configuration options and operational controls available in the former Tkinter UI (full parity — no existing setting or legacy workflow control may be dropped). Additional settings may be introduced in this feature if they naturally arise during implementation.
 - **FR-019**: The web UI MUST display real-time analysis progress (frames processed vs. estimated total) while analysis is running.
 - **FR-020**: Users MUST be able to stop a running analysis from within the web UI; any partial results produced up to that point MUST be preserved and reviewable.
 - **FR-021**: The web UI MUST read and write user preferences (analysis settings) using the existing `scytcheck_settings.json` file (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, with local fallback). No new settings file is introduced.
@@ -152,6 +154,29 @@ The user has multiple analysis result files (from different videos or runs). The
 - **FR-030**: The user MUST be able to permanently remove a candidate from the Review view. Removal is a hard delete from the session (distinct from "Rejected" which is reversible); the only recovery path is undo (FR-027). Removed candidates are not included in exports.
 - **FR-031**: The Review view MUST provide system recommendations indicating which candidate names are most likely correct, displayed as non-blocking suggestions to assist user decisions. Recommendations MUST NOT auto-confirm, auto-reject, or otherwise change candidate state unless the user explicitly performs an action. Recommendation scores MUST be computed from a combined signal including occurrence frequency, OCR confidence, temporal consistency, and text-quality heuristics. Recommendations MUST be surfaced at both levels: (1) group-level ranking/prioritization, and (2) candidate-level confidence badges within each group. The user MUST be able to adjust a recommendation threshold in the Review UI (0-100, default 70) and see recommendation ranking/badges update immediately.
 - **FR-032**: The web UI MUST support both dark mode and light mode. Dark mode MUST be the default theme on first launch. The selected theme MUST be persisted in the existing `scytcheck_settings.json` settings file; dark mode is only used when no prior user preference exists. On first run with no saved preference, the UI MUST ignore OS/browser color-scheme preference and start in dark mode. Theme switching MUST be available through a single global toggle in the persistent top navigation and apply across all views. Theme changes MUST apply immediately across the active UI without page reload. Both themes MUST meet WCAG AA contrast requirements for text and interactive controls.
+- **FR-033**: The web UI MUST validate every loaded result CSV against the required schema and supported format version before opening a review session. Malformed or incompatible files MUST be rejected as a whole with a clear error state; the system MUST NOT load partial candidate data from such files.
+- **FR-034**: When an inline text edit changes a candidate's normalized text sufficiently to affect grouping, the system MUST recompute grouping immediately, move the candidate to the best-matching group automatically, and display a clear non-blocking UI notice describing the regrouping change.
+
+### Legacy UI Parity Inventory
+
+All legacy Tkinter capabilities MUST remain available in the Stitch-designed web UI. The legacy surface maps to the **Analysis** view unless explicitly noted otherwise.
+
+- **LP-001 Analysis**: YouTube URL input.
+- **LP-002 Analysis**: Output folder picker with the same validation expectations (selected, exists, is a directory, writable).
+- **LP-003 Analysis**: Auto-generated output filename preview derived from the source video identity.
+- **LP-004 Analysis**: Primary analysis action that launches region selection and starts analysis.
+- **LP-005 Analysis**: Export retry action when export fails after analysis.
+- **LP-006 Analysis**: Live progress display including stage label, percent/progress indicator, and status text.
+- **LP-007 Analysis**: Context pattern editor supporting one pattern per line with before/after/enabled semantics.
+- **LP-008 Analysis**: Toggle to extract only names matching a context pattern.
+- **LP-009 Analysis**: Video quality selector.
+- **LP-010 Analysis**: Detailed sidecar log toggle.
+- **LP-011 Analysis**: Matching tolerance control.
+- **LP-012 Analysis**: Frame-change gating enable/disable toggle.
+- **LP-013 Analysis**: Frame-change gating threshold control.
+- **LP-014 Analysis**: Event merge gap control (seconds).
+- **LP-015 Analysis**: OCR confidence/sensitivity control (0-100).
+- **LP-016 Review**: No legacy-only controls originate in the former UI; the Review view is net-new functionality added by this feature and must coexist with, not replace, Analysis parity obligations.
 
 ### Key Entities
 
@@ -244,3 +269,11 @@ The user has multiple analysis result files (from different videos or runs). The
 - Q: Should dark and light themes meet a specific contrast accessibility target? → A: Yes — require WCAG AA contrast compliance for text and interactive controls in both themes.
 - Q: If no saved theme preference exists, should the app follow OS/browser scheme? → A: No — always start in dark mode on first run; ignore OS/browser scheme until user changes theme.
 - Q: Should theme changes apply immediately without page reload? → A: Yes — apply theme instantly across the active UI.
+
+### Session 2026-04-21
+
+- Q: How should parity with the former UI be captured in the spec? → A: Add an explicit legacy parity inventory that lists every old UI capability/control and maps it to Analysis or Review.
+- Q: When should review-state changes be persisted? → A: Persist review-state changes immediately after each user action that changes session state.
+- Q: How should malformed or incompatible result files be handled? → A: Reject them entirely with a clear error state; do not create a partial review session.
+- Q: What should happen if a user edits a candidate name to an empty string? → A: Reject the empty value inline and keep the previous value until the user enters a non-empty replacement or cancels.
+- Q: What should happen when an inline edit makes a candidate fit another group better? → A: Recompute grouping immediately, move the candidate automatically to the best-matching group, and show a clear UI notice.
