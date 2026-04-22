@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SCYTcheck Review View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-error-container": "#ff9993",
+                "primary-container": "#0e69dc",
+                "primary-dim": "#699cff",
+                "secondary-container": "#333b4d",
+                "primary-fixed-dim": "#317bef",
+                "on-background": "#e2e5f0",
+                "primary-fixed": "#4388fd",
+                "on-tertiary-fixed-variant": "#5e4c75",
+                "inverse-primary": "#005bc4",
+                "on-tertiary-container": "#54436b",
+                "surface": "#0c0e12",
+                "outline-variant": "#444851",
+                "surface-dim": "#0c0e12",
+                "surface-container-low": "#111318",
+                "tertiary-dim": "#d6c0f0",
+                "surface-tint": "#adc6ff",
+                "on-tertiary": "#5d4c74",
+                "tertiary-fixed": "#e5ceff",
+                "surface-container-lowest": "#000000",
+                "error-dim": "#c54d4a",
+                "surface-container-highest": "#22262e",
+                "secondary-fixed": "#dae2f9",
+                "on-primary-container": "#ffffff",
+                "tertiary-container": "#e5ceff",
+                "outline": "#72757f",
+                "tertiary": "#f0dfff",
+                "background": "#0c0e12",
+                "tertiary-fixed-dim": "#d6c0f0",
+                "on-secondary-container": "#b7bfd5",
+                "error-container": "#871f21",
+                "primary": "#adc6ff",
+                "on-primary-fixed": "#000000",
+                "inverse-surface": "#f9f9fe",
+                "secondary-dim": "#b1b9ce",
+                "on-surface-variant": "#a8abb5",
+                "error": "#fa746f",
+                "surface-bright": "#282c34",
+                "on-secondary": "#384052",
+                "on-primary": "#003d88",
+                "surface-container-high": "#1c2026",
+                "on-error": "#490006",
+                "surface-container": "#171a20",
+                "on-primary-fixed-variant": "#001435",
+                "surface-variant": "#22262e",
+                "on-surface": "#e2e5f0",
+                "inverse-on-surface": "#53555a",
+                "secondary": "#bec6dd",
+                "secondary-fixed-dim": "#ccd4eb",
+                "on-secondary-fixed-variant": "#535b6e",
+                "on-tertiary-fixed": "#413057",
+                "on-secondary-fixed": "#373f51"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {},
+        "fontFamily": {
+                "headline": [
+                        "Plus Jakarta Sans"
+                ],
+                "body": [
+                        "Inter"
+                ],
+                "label": [
+                        "Inter"
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6, .headline {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col pt-16">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 h-16 bg-surface border-b border-surface-variant shadow-xl shadow-black/40 font-headline selection:bg-primary/30">
+<div class="flex items-center justify-between px-8 w-full max-w-[1440px] mx-auto h-full">
+<div class="flex items-center space-x-8 h-full">
+<span class="text-xl font-black tracking-tighter text-on-surface">SCYTcheck</span>
+<div class="hidden md:flex h-full space-x-6">
+<a class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-1 flex items-center" href="#">Analysis</a>
+<a class="text-primary border-b-2 border-primary h-full flex items-center px-1 font-bold" href="#">Review</a>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<button class="text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-full p-2 transition-all">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+</div>
+</div>
+</nav>
+<main class="flex-grow flex flex-col w-full max-w-[1440px] mx-auto px-8 py-6 space-y-6">
+<!-- Top Bar -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-surface-container rounded-xl p-4 border border-surface-variant gap-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant">folder</span>
+<select class="bg-surface border border-outline-variant text-on-surface rounded-lg text-sm focus:ring-primary focus:border-primary py-1.5 pl-3 pr-8 font-body">
+<option>dQw4w9WgXcQ_2026-04-21.csv</option>
+<option>Load Result File...</option>
+</select>
+</div>
+<div class="flex items-center gap-6 w-full md:w-auto">
+<div class="flex flex-col items-end gap-1.5 w-48">
+<span class="text-xs text-on-surface-variant font-medium">47 / 120 reviewed</span>
+<div class="w-full bg-surface-variant rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full" style="width: 39%"></div>
+</div>
+</div>
+<div class="flex items-center gap-3 border-l border-surface-variant pl-6">
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-on-surface hover:bg-surface-variant rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]">undo</span>
+            Undo
+          </button>
+<button class="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-primary-container text-on-primary-container hover:bg-primary-fixed-dim rounded-lg transition-colors shadow-sm">
+            Export
+          </button>
+</div>
+</div>
+</div>
+<!-- Search & Filter Bar -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 bg-surface-container rounded-xl p-4 border border-surface-variant">
+<div class="lg:col-span-4 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full bg-surface border border-outline-variant text-on-surface rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-primary focus:border-primary placeholder-on-surface-variant/50" placeholder="Search candidates..." type="text"/>
+</div>
+<div class="lg:col-span-3 flex items-center gap-4 bg-surface px-3 py-2 border border-outline-variant rounded-lg">
+<div class="flex flex-col w-full gap-1">
+<div class="flex justify-between items-center">
+<label class="text-xs text-on-surface-variant font-medium">Group Similarity</label>
+<span class="text-xs bg-surface-variant text-on-surface px-1.5 rounded font-mono">80%</span>
+</div>
+<input class="w-full h-1 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-primary" max="100" min="50" type="range" value="80"/>
+</div>
+</div>
+<div class="lg:col-span-3 flex items-center gap-4 bg-surface px-3 py-2 border border-outline-variant rounded-lg">
+<div class="flex flex-col w-full gap-1">
+<div class="flex justify-between items-center">
+<label class="text-xs text-on-surface-variant font-medium">Recommendations</label>
+<span class="text-xs bg-surface-variant text-on-surface px-1.5 rounded font-mono">70</span>
+</div>
+<input class="w-full h-1 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-primary" max="100" min="0" type="range" value="70"/>
+</div>
+</div>
+<div class="lg:col-span-2">
+<select class="w-full bg-surface border border-outline-variant text-on-surface rounded-lg text-sm focus:ring-primary focus:border-primary py-2 pl-3 pr-8 h-full">
+<option>All</option>
+<option>Unreviewed</option>
+<option>Confirmed</option>
+<option>Rejected</option>
+</select>
+</div>
+</div>
+<!-- Main Content List -->
+<div class="flex flex-col gap-4">
+<!-- Expanded Card -->
+<div class="bg-surface-container border border-surface-variant rounded-xl overflow-hidden shadow-sm">
+<div class="flex items-center justify-between p-4 bg-surface border-b border-surface-variant">
+<div class="flex items-center gap-4">
+<h3 class="text-lg font-bold text-on-surface headline">PlayerAlpha</h3>
+<span class="text-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full font-medium">8 occurrences</span>
+<span class="text-xs text-primary-container bg-primary-container/10 border border-primary-container/20 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> High Confidence
+            </span>
+</div>
+<div class="flex items-center gap-3">
+<button class="text-sm font-medium text-primary-container hover:bg-primary-container/10 px-3 py-1.5 rounded-lg transition-colors">Confirm All</button>
+<button class="text-sm font-medium text-error hover:bg-error/10 px-3 py-1.5 rounded-lg transition-colors">Reject All</button>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer ml-2">expand_less</span>
+</div>
+</div>
+<div class="p-2 space-y-1 bg-surface-container-low">
+<!-- Row 1 -->
+<div class="flex items-center justify-between p-2 hover:bg-surface-variant/50 rounded-lg group transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-16 h-10 bg-surface border border-surface-variant rounded flex items-center justify-center relative overflow-hidden group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] opacity-70">play_circle</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-on-surface">PlayerAlpha</span>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs text-on-surface-variant font-mono">00:02:14</span>
+<span class="material-symbols-outlined text-primary text-[14px]">link</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-xs text-secondary-fixed bg-secondary-fixed/10 border border-secondary-fixed/20 px-2 py-1 rounded font-medium">Unreviewed</span>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-primary-container/10 hover:text-primary-container transition-colors"><span class="material-symbols-outlined text-[20px]">check</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-error/10 hover:text-error transition-colors"><span class="material-symbols-outlined text-[20px]">close</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors"><span class="material-symbols-outlined text-[20px]">delete</span></button>
+</div>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between p-2 hover:bg-surface-variant/50 rounded-lg group transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-16 h-10 bg-surface border border-surface-variant rounded flex items-center justify-center relative overflow-hidden group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] opacity-70">play_circle</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-on-surface">PlayerAlpha</span>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs text-on-surface-variant font-mono">00:04:32</span>
+<span class="material-symbols-outlined text-primary text-[14px]">link</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-xs text-on-primary-container bg-primary-container px-2 py-1 rounded font-medium flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">check</span> Confirmed</span>
+<div class="flex items-center gap-1 opacity-50 pointer-events-none">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant"><span class="material-symbols-outlined text-[20px]">check</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant"><span class="material-symbols-outlined text-[20px]">close</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant"><span class="material-symbols-outlined text-[20px]">delete</span></button>
+</div>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between p-2 hover:bg-surface-variant/50 rounded-lg group transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-16 h-10 bg-surface border border-surface-variant rounded flex items-center justify-center relative overflow-hidden group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] opacity-70">play_circle</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-on-surface">Playe rAlpha</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[14px]">edit</span></button>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="text-xs text-on-surface-variant font-mono">00:12:05</span>
+<span class="material-symbols-outlined text-primary text-[14px]">link</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-xs text-secondary-fixed bg-secondary-fixed/10 border border-secondary-fixed/20 px-2 py-1 rounded font-medium">Unreviewed</span>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-primary-container/10 hover:text-primary-container transition-colors"><span class="material-symbols-outlined text-[20px]">check</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-error/10 hover:text-error transition-colors"><span class="material-symbols-outlined text-[20px]">close</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors"><span class="material-symbols-outlined text-[20px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Collapsed Card 1 -->
+<div class="bg-surface-container border border-surface-variant rounded-xl overflow-hidden shadow-sm hover:border-outline-variant transition-colors cursor-pointer">
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-4">
+<h3 class="text-lg font-bold text-on-surface headline">GAMERTAG99</h3>
+<span class="text-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full font-medium">3 occurrences</span>
+<span class="text-xs text-secondary-fixed bg-secondary-fixed/10 border border-secondary-fixed/20 px-2 py-0.5 rounded font-medium">Medium Confidence</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">expand_more</span>
+</div>
+</div>
+<!-- Collapsed Card 2 -->
+<div class="bg-surface-container border border-surface-variant rounded-xl overflow-hidden shadow-sm hover:border-outline-variant transition-colors cursor-pointer">
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-4">
+<h3 class="text-lg font-bold text-on-surface headline">TeamBadge_123</h3>
+<span class="text-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full font-medium">2 occurrences</span>
+<span class="text-xs text-error bg-error/10 border border-error/20 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span> Low Confidence
+            </span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">expand_more</span>
+</div>
+</div>
+</div>
+</main>
+</body></html>
