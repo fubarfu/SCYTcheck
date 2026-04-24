@@ -4,6 +4,7 @@ import contextlib
 import queue
 import threading
 import tkinter as tk
+from pathlib import Path
 from tkinter import messagebox
 
 from src.components.main_window import MainWindow
@@ -193,6 +194,7 @@ def main() -> None:
                             gating_enabled=advanced.gating_enabled,
                             gating_threshold=advanced.gating_threshold,
                             on_log_record=writer.write_record if advanced.logging_enabled else None,
+                            output_csv_path=Path(output_folder) / filename,
                         )
                         last_analysis = analysis
                         last_output_folder = output_folder

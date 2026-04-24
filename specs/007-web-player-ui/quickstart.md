@@ -74,3 +74,8 @@
   - `specs/007-web-player-ui/stitch/screens/review-view.html`
   - `specs/007-web-player-ui/stitch/screens/thumbnail-modal.html`
   - `specs/007-web-player-ui/stitch/screens/region-selector-modal.html`
+
+## Stitch Deviation Notes (T069)
+- Current implementation preserves required flow and contracts from Stitch screens, with simplified visual treatment in some controls.
+- Region selector modal currently uses numeric coordinate inputs rather than drag-canvas selection; this keeps schema-correct region capture while reducing implementation risk.
+- Group review cards include separate temporal proximity and recommendation badges (FR-026/FR-031), but typography/spacing is an approximation of final Stitch polish.

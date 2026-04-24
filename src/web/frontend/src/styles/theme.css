@@ -1,0 +1,44 @@
+:root {
+  --bg: #081f2f;
+  --panel: #103046;
+  --text: #f5fbff;
+  --muted: #b5ccdc;
+  --accent: #f28f16;
+  --accent-strong: #c66e09;
+  --border: #2a4a62;
+  --danger: #e3494d;
+  --focus-ring: #ffd166;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7fafc;
+  --panel: #ffffff;
+  --text: #112433;
+  --muted: #4b6072;
+  --accent: #b65c0f;
+  --accent-strong: #8c4308;
+  --border: #cfd9e2;
+  --danger: #b4232e;
+  --focus-ring: #7c3aed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(242, 143, 22, 0.14), transparent 35%),
+    radial-gradient(circle at 90% 25%, rgba(17, 36, 51, 0.4), transparent 50%),
+    var(--bg);
+  color: var(--text);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}

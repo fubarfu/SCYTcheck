@@ -1,0 +1,134 @@
+.app-shell {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-nav h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.app-nav-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.app-nav-actions button {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.app-nav-actions button.active {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  color: white;
+}
+
+.page-panel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.primary-action {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+.analysis-form,
+.settings-grid,
+.review-layout,
+.candidate-list,
+.review-toolbar,
+.review-filter-bar {
+  display: grid;
+  gap: 10px;
+}
+
+.review-layout {
+  grid-template-columns: 280px 1fr;
+}
+
+.session-item,
+.candidate-row,
+.candidate-group-card,
+.progress-panel,
+.session-load-error {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 90%, #fff 10%);
+}
+
+.candidate-actions,
+.group-actions,
+.candidate-list-actions,
+.modal-actions,
+.app-nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.error-banner {
+  border: 1px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 16%, transparent 84%);
+  color: var(--text);
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.modal-panel {
+  width: min(720px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.thumbnail-image {
+  width: 100%;
+  max-height: 55vh;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.chip {
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+@media (max-width: 900px) {
+  .review-layout {
+    grid-template-columns: 1fr;
+  }
+}

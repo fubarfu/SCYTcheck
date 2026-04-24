@@ -1,0 +1,116 @@
+import { useEffect, useRef, useState } from "react";
+
+export interface Candidate {
+  candidate_id: string;
+  extracted_name: string;
+  corrected_text?: string;
+  start_timestamp?: string;
+  status?: "pending" | "confirmed" | "rejected";
+}
+
+interface Props {
+  candidate: Candidate;
+  sourceType: "local_file" | "youtube_url";
+  sourceValue: string;
+  onAction: (action: {
+    action_type: string;
+    target_ids: string[];
+    payload?: Record<string, unknown>;
+  }) => void;
+  onOpenThumbnail: (candidateId: string) => void;
+  thumbnailUrl?: string | null;
+}
+
+export function CandidateRow({
+  candidate,
+  sourceType,
+  sourceValue,
+  onAction,
+  onOpenThumbnail,
+  thumbnailUrl,
+}: Props) {
+  const [editing, setEditing] = useState(false);
+  const [editedText, setEditedText] = useState(candidate.corrected_text ?? candidate.extracted_name);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [thumbnailVisible, setThumbnailVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") {
+      setThumbnailVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          setThumbnailVisible(true);
+          observer.disconnect();
+          return;
+        }
+      }
+    });
+    if (rowRef.current) {
+      observer.observe(rowRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  const currentText = candidate.corrected_text ?? candidate.extracted_name;
+  const deepLink =
+    sourceType === "youtube_url" && sourceValue
+      ? `${sourceValue}${sourceValue.includes("?") ? "&" : "?"}t=${Math.max(0, Math.floor(Number(candidate.start_timestamp ?? "0")))}s`
+      : null;
+
+  return (
+    <div className="candidate-row" ref={rowRef}>
+      <div className="candidate-main">
+        <strong>{currentText}</strong>
+        <span className={`status-chip ${candidate.status ?? "pending"}`}>{candidate.status ?? "pending"}</span>
+      </div>
+      <div className="candidate-meta">
+        <span>Start: {candidate.start_timestamp ?? "-"}s</span>
+        {thumbnailVisible && thumbnailUrl && (
+          <img
+            src={thumbnailUrl}
+            alt={`Thumbnail ${candidate.candidate_id}`}
+            width={84}
+            height={48}
+            loading="lazy"
+          />
+        )}
+        {deepLink && (
+          <a href={deepLink} target="_blank" rel="noreferrer">
+            Open in YouTube
+          </a>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="candidate-edit-row">
+          <input value={editedText} onChange={(e) => setEditedText(e.target.value)} />
+          <button
+            type="button"
+            onClick={() => {
+              onAction({
+                action_type: "edit",
+                target_ids: [candidate.candidate_id],
+                payload: { corrected_text: editedText },
+              });
+              setEditing(false);
+            }}
+          >
+            Save
+          </button>
+          <button type="button" onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      ) : (
+        <div className="candidate-actions">
+          <button type="button" onClick={() => onAction({ action_type: "confirm", target_ids: [candidate.candidate_id] })}>Confirm</button>
+          <button type="button" onClick={() => onAction({ action_type: "reject", target_ids: [candidate.candidate_id] })}>Reject</button>
+          <button type="button" onClick={() => setEditing(true)}>Edit</button>
+          <button type="button" onClick={() => onAction({ action_type: "remove", target_ids: [candidate.candidate_id] })}>Remove</button>
+          <button type="button" onClick={() => onOpenThumbnail(candidate.candidate_id)}>Thumbnail</button>
+        </div>
+      )}
+    </div>
+  );
+}

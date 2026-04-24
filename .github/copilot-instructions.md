@@ -1,6 +1,6 @@
 ﻿# SCYTcheck Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-18
+Auto-generated from all feature plans. Last updated: 2026-04-21
 
 ## Active Technologies
 - Python 3.11 + opencv-python (video processing), pytesseract (OCR), yt-dlp (YouTube streaming), tkinter (UI) (001-youtube-text-analyzer)
@@ -30,6 +30,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-18
 - N/A — no persistence changes (008-improve-analysis-speed)
 - Python 3.11 + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`, `tkinter` (stdlib) (feature/008-improve-analysis-speed)
 - CSV outputs + local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, fallback local) + optional sidecar CSV (feature/008-improve-analysis-speed)
+- Python 3.11 (backend), JavaScript/HTML/CSS (frontend) + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`, local HTTP API layer under `src/web/api`, browser UI assets under `src/web/frontend` (feature/007-web-based-player-ui)
+- CSV outputs, sidecar JSON session state (`<result>.review.json`), thumbnail/frame image files in sibling folder, existing `scytcheck_settings.json` for settings/theme (feature/007-web-based-player-ui)
 
 - Python 3.11 + opencv-python (video processing), pytesseract (OCR), tkinter (UI) (001-youtube-text-analyzer)
 
@@ -49,9 +51,9 @@ cd src; pytest; ruff check .
 Python 3.11: Follow standard conventions
 
 ## Recent Changes
+- feature/007-web-based-player-ui: Added Python 3.11 (backend), JavaScript/HTML/CSS (frontend) + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`, local HTTP API layer under `src/web/api`, browser UI assets under `src/web/frontend`
 - feature/008-improve-analysis-speed: Added Python 3.11 + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`, `tkinter` (stdlib)
 - 008-improve-analysis-speed: Added Python 3.11 + `opencv-python` (cv2), `numpy`, `re` (stdlib), `pytest` (tests)
-- 007-improve-analysis-robustness: Added Python 3.11 + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `tkinter` (stdlib)
 
 
 <!-- MANUAL ADDITIONS START -->

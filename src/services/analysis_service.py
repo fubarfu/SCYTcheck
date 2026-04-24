@@ -1,21 +1,22 @@
 from __future__ import annotations
 
 import re
-from time import perf_counter
 from collections.abc import Callable
+from pathlib import Path
+from time import perf_counter
 
 import cv2
 import numpy as np
 
 from src.data.models import (
-    AppearanceEvent,
     AnalysisRuntimeMetrics,
+    AppearanceEvent,
     ContextPattern,
     GatingStats,
     LogRecord,
     PlayerSummary,
-    TimingBreakdown,
     TextDetection,
+    TimingBreakdown,
     VideoAnalysis,
 )
 from src.services.logging import should_write_detailed_sidecar
@@ -43,20 +44,20 @@ class AnalysisService:
         frame_gray: np.ndarray | None = None,
     ) -> np.ndarray | None:
         """Crop a region from frame as grayscale.
-        
+
         Args:
             frame: BGR or grayscale frame array or image-like object
             region: (x, y, width, height) tuple
             frame_gray: Optional pre-computed grayscale of the full frame.
                        If provided, crops from this instead of converting frame.
-                       
+
         Returns:
             Cropped grayscale region as uint8 ndarray, or None if invalid.
         """
         x, y, width, height = region
         if width <= 0 or height <= 0:
             return None
-        
+
         # Use pre-computed grayscale if provided and valid
         if frame_gray is not None and frame_gray.ndim == 2 and frame_gray.dtype == np.uint8:
             if frame_gray.size == 0:
@@ -65,7 +66,7 @@ class AnalysisService:
             if cropped.size == 0:
                 return None
             return cropped
-        
+
         # Fallback: convert frame (original behavior)
         array = np.asarray(frame)
         if array.size == 0:
@@ -122,6 +123,7 @@ class AnalysisService:
         gating_enabled: bool = True,
         gating_threshold: float = 0.02,
         on_log_record: Callable[[LogRecord], None] | None = None,
+        output_csv_path: str | Path | None = None,
     ) -> VideoAnalysis:
         tolerance_value = max(0.60, min(float(tolerance_value), 0.95))
         gating_threshold = max(0.0, min(float(gating_threshold), 1.0))
@@ -152,11 +154,16 @@ class AnalysisService:
         ocr_ms = 0.0
         post_processing_ms = 0.0
         total_start = perf_counter() if timing_enabled else 0.0
+        frames_output_dir: Path | None = None
+        if output_csv_path is not None:
+            output_csv = Path(output_csv_path)
+            frames_output_dir = output_csv.parent / f"{output_csv.stem}_frames"
+            frames_output_dir.mkdir(parents=True, exist_ok=True)
 
         for idx, (frame_time, frame) in enumerate(frames, start=1):
             processed_frames = idx
             frame_start = perf_counter() if timing_enabled else 0.0
-            
+
             # T012 & T013: Compute grayscale once per frame when gating enabled (for reuse)
             # Guard: skip when gating disabled or frame is invalid
             frame_gray: np.ndarray | None = None
@@ -171,7 +178,7 @@ class AnalysisService:
                         frame_gray = frame_array
             if timing_enabled:
                 decode_ms += (perf_counter() - frame_start) * 1000.0
-            
+
             for region in regions:
                 ocr_diagnostics: list[dict[str, object]] = []
                 region_id = f"{region[0]}:{region[1]}:{region[2]}:{region[3]}"
@@ -289,9 +296,7 @@ class AnalysisService:
                         log_record = LogRecord(
                             timestamp_sec=self.format_timestamp(frame_time),
                             raw_string=raw,
-                            tested_string_raw=str(
-                                diagnostic.get("tested_string_raw", raw)
-                            ),
+                            tested_string_raw=str(diagnostic.get("tested_string_raw", raw)),
                             tested_string_normalized=str(
                                 diagnostic.get(
                                     "tested_string_normalized",
@@ -333,6 +338,26 @@ class AnalysisService:
                         )
                     )
 
+                    if frames_output_dir is not None:
+                        x, y, width, height = region
+                        frame_array = np.asarray(frame)
+                        if frame_array.size > 0 and frame_array.ndim >= 2:
+                            max_h, max_w = frame_array.shape[0], frame_array.shape[1]
+                            x0, y0 = max(0, x), max(0, y)
+                            x1, y1 = min(max_w, x + width), min(max_h, y + height)
+                            if x1 > x0 and y1 > y0:
+                                crop = frame_array[y0:y1, x0:x1]
+                                if crop.size > 0:
+                                    candidate_key = re.sub(
+                                        r"[^a-zA-Z0-9_-]+",
+                                        "_",
+                                        f"{normalized_name}_{int(frame_time * 1000)}_{region_id}",
+                                    )
+                                    cv2.imwrite(
+                                        str(frames_output_dir / f"{candidate_key}.png"),
+                                        crop,
+                                    )
+
                 if detailed_logging_enabled and decision_rows is not None:
                     for decision in decision_rows:
                         if bool(decision["accepted"]):
@@ -343,9 +368,7 @@ class AnalysisService:
                         log_record = LogRecord(
                             timestamp_sec=self.format_timestamp(frame_time),
                             raw_string=raw_string,
-                            tested_string_raw=str(
-                                decision.get("tested_string_raw", raw_string)
-                            ),
+                            tested_string_raw=str(decision.get("tested_string_raw", raw_string)),
                             tested_string_normalized=str(
                                 decision.get(
                                     "tested_string_normalized",
@@ -397,9 +420,7 @@ class AnalysisService:
                 timestamp_sec=self.format_timestamp(detection.frame_time_sec),
                 raw_string=detection.raw_ocr_text,
                 tested_string_raw=detection.raw_ocr_text,
-                tested_string_normalized=OCRService.normalize_for_matching(
-                    detection.raw_ocr_text
-                ),
+                tested_string_normalized=OCRService.normalize_for_matching(detection.raw_ocr_text),
                 accepted=True,
                 rejection_reason="",
                 extracted_name=detection.extracted_name,
