@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from src.web.api.routes.analysis import AnalysisHandler
+from src.web.api.routes.fs import FsHandler
 from src.web.api.routes.review_actions import ReviewActionsHandler
 from src.web.api.routes.review_assets import ReviewAssetsHandler
 from src.web.api.routes.review_export import ReviewExportHandler
@@ -27,6 +28,7 @@ class _AppServices:
         session_manager = SessionManager()
         self.settings = SettingsHandler()
         self.analysis = AnalysisHandler()
+        self.fs = FsHandler()
         self.review_sessions = ReviewSessionHandler(session_manager=session_manager)
         self.review_actions = ReviewActionsHandler(session_manager=session_manager)
         self.review_assets = ReviewAssetsHandler(session_manager=session_manager)
@@ -157,6 +159,13 @@ class _RequestHandler(SimpleHTTPRequestHandler):
         session_match = re.fullmatch(r"/api/review/sessions/([^/]+)", path)
         if session_match and method == "GET":
             status, body = self._services.review_sessions.get_session(session_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/fs/pick-folder" and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            initial_dir = query.get("initial_dir", [""])[0]
+            status, body = self._services.fs.get_pick_folder(initial_dir)
             self._send_json(status, body)
             return True
 

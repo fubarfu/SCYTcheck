@@ -46,14 +46,24 @@ interface DragState {
 }
 
 function deriveFilename(sourceType: SourceType, sourceValue: string): string {
-  if (!sourceValue.trim()) return "output.csv";
+  const now = new Date();
+  const ts =
+    String(now.getFullYear()) +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0") +
+    "_" +
+    String(now.getHours()).padStart(2, "0") +
+    String(now.getMinutes()).padStart(2, "0") +
+    String(now.getSeconds()).padStart(2, "0");
+
+  if (!sourceValue.trim()) return `output_${ts}.csv`;
   if (sourceType === "youtube_url") {
     const match = sourceValue.match(/[?&]v=([^&]+)/);
     const id = match ? match[1] : sourceValue.slice(-11);
-    return `yt_${id}.csv`;
+    return `yt_${id}_${ts}.csv`;
   }
-  const base = sourceValue.split(/[/\\]/).pop() ?? "output";
-  return base.replace(/\.[^.]+$/, "") + ".csv";
+  const base = (sourceValue.split(/[/\\]/).pop() ?? "output").replace(/\.[^.]+$/, "");
+  return `${base}_${ts}.csv`;
 }
 
 function formatTime(seconds: number): string {
@@ -392,11 +402,16 @@ export function AnalysisPage() {
 
   const handleStart = async () => {
     setStartError(null);
+    // Re-derive filename at start time so the timestamp reflects when the run begins.
+    const filename = derivedFilenameRef.current
+      ? deriveFilename(sourceType, sourceValue)
+      : outputFilename.trim();
+    if (derivedFilenameRef.current) setOutputFilename(filename);
     const payload = {
       source_type: sourceType,
       source_value: sourceValue.trim(),
       output_folder: outputFolder.trim(),
-      output_filename: outputFilename.trim(),
+      output_filename: filename,
       scan_region: scanRegions[0],
       scan_regions: scanRegions,
       ...settings,
@@ -567,12 +582,40 @@ export function AnalysisPage() {
               <div className="panel-card-body form-stack">
                 <label>
                   Output folder
-                  <input
-                    type="text"
-                    value={outputFolder}
-                    onChange={(e) => setOutputFolder(e.target.value)}
-                    placeholder="C:/output"
-                  />
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <input
+                      type="text"
+                      value={outputFolder}
+                      onChange={(e) => setOutputFolder(e.target.value)}
+                      placeholder="C:/output"
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ flexShrink: 0 }}
+                      onClick={async () => {
+                        const params = outputFolder.trim()
+                          ? `?initial_dir=${encodeURIComponent(outputFolder.trim())}`
+                          : "";
+                        const controller = new AbortController();
+                        const timeout = setTimeout(() => controller.abort(), 180_000);
+                        try {
+                          const res = await fetch(`/api/fs/pick-folder${params}`, { signal: controller.signal });
+                          if (res.ok) {
+                            const data = await res.json();
+                            if (data.path) setOutputFolder(data.path);
+                          }
+                        } catch {
+                          // user cancelled or dialog timed out — ignore
+                        } finally {
+                          clearTimeout(timeout);
+                        }
+                      }}
+                    >
+                      Browse…
+                    </button>
+                  </div>
                 </label>
                 <label>
                   Output filename
