@@ -15,12 +15,12 @@
 
 **Purpose**: Prepare test scaffolding, authoritative Stitch exports, and review-group feature anchors inside the existing web review stack.
 
-- [ ] T001 Export and document authoritative Stitch artifacts for the review-group states in `specs/010-collapse-player-groups/stitch/README.md`, `specs/010-collapse-player-groups/stitch/review-candidate-groups.html`, `specs/010-collapse-player-groups/stitch/review-validation-error-state.html`, and `specs/010-collapse-player-groups/stitch/review-expanded-candidate-group.html`
-- [ ] T002 [P] Create feature-specific review-group fixtures and payload builders in `tests/fixtures/review_groups_010/__init__.py`
-- [ ] T003 [P] Create review-group contract test scaffold in `tests/contract/test_review_groups_api_010.py`
-- [ ] T004 [P] Create review-group integration test scaffolds in `tests/integration/test_review_groups_consensus_flow_010.py`, `tests/integration/test_review_groups_conflict_flow_010.py`, `tests/integration/test_review_groups_validation_flow_010.py`, and `tests/integration/test_review_groups_toggle_persistence_010.py`
-- [ ] T005 [P] Create backend unit test scaffolds for foundation, mutation, and uniqueness coverage in `tests/unit/test_review_group_foundation_010.py`, `tests/unit/test_review_group_mutations_010.py`, and `tests/unit/test_review_group_uniqueness_010.py`
-- [ ] T006 [P] Create frontend Vitest scaffolds for group card, candidate row, and review store behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`, `src/web/frontend/tests/review/CandidateRow.test.tsx`, and `src/web/frontend/tests/review/reviewStore.test.ts`
+- [X] T001 Export and document authoritative Stitch artifacts for the review-group states in `specs/010-collapse-player-groups/stitch/README.md`, `specs/010-collapse-player-groups/stitch/review-candidate-groups.html`, `specs/010-collapse-player-groups/stitch/review-validation-error-state.html`, and `specs/010-collapse-player-groups/stitch/review-expanded-candidate-group.html`
+- [X] T002 [P] Create feature-specific review-group fixtures and payload builders in `tests/fixtures/review_groups_010/__init__.py`
+- [X] T003 [P] Create review-group contract test scaffold in `tests/contract/test_review_groups_api_010.py`
+- [X] T004 [P] Create review-group integration test scaffolds in `tests/integration/test_review_groups_consensus_flow_010.py`, `tests/integration/test_review_groups_conflict_flow_010.py`, `tests/integration/test_review_groups_validation_flow_010.py`, and `tests/integration/test_review_groups_toggle_persistence_010.py`
+- [X] T005 [P] Create backend unit test scaffolds for foundation, mutation, and uniqueness coverage in `tests/unit/test_review_group_foundation_010.py`, `tests/unit/test_review_group_mutations_010.py`, and `tests/unit/test_review_group_uniqueness_010.py`
+- [X] T006 [P] Create frontend Vitest scaffolds for group card, candidate row, and review store behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`, `src/web/frontend/tests/review/CandidateRow.test.tsx`, and `src/web/frontend/tests/review/reviewStore.test.ts`
 
 ---
 
