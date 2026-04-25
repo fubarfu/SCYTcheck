@@ -25,7 +25,7 @@ class GroupingService:
         groups: list[dict] = []
         for candidate in candidates:
             name = str(candidate.get("corrected_text") or candidate.get("extracted_name") or "")
-            ts = float(candidate.get("start_timestamp") or 0.0)
+            ts = _parse_timestamp_seconds(candidate.get("start_timestamp"))
             assigned = False
             for group in groups:
                 ref_name = str(group["display_name"])
@@ -53,3 +53,34 @@ class GroupingService:
                     }
                 )
         return groups
+
+
+def _parse_timestamp_seconds(raw: object) -> float:
+    if raw is None:
+        return 0.0
+
+    value = str(raw).strip()
+    if not value:
+        return 0.0
+
+    try:
+        return float(value)
+    except ValueError:
+        pass
+
+    if ":" not in value:
+        return 0.0
+
+    parts = value.split(":")
+    total = 0.0
+    for index, part in enumerate(parts):
+        try:
+            piece = float(part)
+        except ValueError:
+            return 0.0
+        if piece < 0:
+            return 0.0
+        multiplier = 60 ** (len(parts) - index - 1)
+        total += piece * multiplier
+
+    return total

@@ -26,3 +26,18 @@ def test_grouping_recompute_changes_group_count_when_threshold_changes() -> None
     strict = GroupingService.build_groups(candidates, GroupingThresholds(similarity_threshold=95))
     loose = GroupingService.build_groups(candidates, GroupingThresholds(similarity_threshold=50))
     assert len(strict) >= len(loose)
+
+
+def test_grouping_accepts_clock_format_timestamps() -> None:
+    candidates = [
+        {"candidate_id": "c1", "extracted_name": "Grynal", "start_timestamp": "00:00:04.000"},
+        {"candidate_id": "c2", "extracted_name": "Grynal", "start_timestamp": "00:00:05.000"},
+    ]
+
+    groups = GroupingService.build_groups(
+        candidates,
+        GroupingThresholds(similarity_threshold=70, temporal_window_seconds=3.0),
+    )
+
+    assert len(groups) == 1
+    assert len(groups[0]["candidates"]) == 2

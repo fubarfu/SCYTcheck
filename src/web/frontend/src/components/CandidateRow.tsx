@@ -6,6 +6,9 @@ export interface Candidate {
   corrected_text?: string;
   start_timestamp?: string;
   status?: "pending" | "confirmed" | "rejected";
+  temporal_proximity?: number;
+  recommendation_score?: number;
+  recommendation?: "auto_confirm" | "review";
 }
 
 interface Props {
@@ -107,6 +110,12 @@ export function CandidateRow({
           <strong>{currentText}</strong>
           <div className="candidate-meta-inline">
             <span>{candidate.start_timestamp ?? "-"}</span>
+            {typeof candidate.temporal_proximity === "number" && (
+              <span className="chip">Temporal {Math.round(candidate.temporal_proximity)}%</span>
+            )}
+            {typeof candidate.recommendation_score === "number" && (
+              <span className="chip recommendation">Rec {Math.round(candidate.recommendation_score)}</span>
+            )}
             {deepLink && (
               <a href={deepLink} target="_blank" rel="noreferrer">
                 Open at timestamp

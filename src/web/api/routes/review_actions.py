@@ -7,6 +7,7 @@ from typing import Any
 
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
+from src.web.app.review_grouping import recompute_groups
 
 VALID_ACTION_TYPES = frozenset(
     {
@@ -67,6 +68,7 @@ class ReviewActionsHandler:
             "candidates": candidates,
             "action_history": history,
         }
+        updated_payload = recompute_groups(updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
         self._sidecar.save(Path(state.csv_path), updated_payload)
 
@@ -102,6 +104,7 @@ class ReviewActionsHandler:
             "candidates": candidates,
             "action_history": history,
         }
+        updated_payload = recompute_groups(updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
         self._sidecar.save(Path(state.csv_path), updated_payload)
 

@@ -7,6 +7,7 @@ from typing import Any
 
 from src.web.app.grouping_service import GroupingService, GroupingThresholds
 from src.web.app.recommendation_service import RecommendationService
+from src.web.app.review_grouping import recompute_groups
 from src.web.app.result_schema_validator import ResultSchemaValidator
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
@@ -57,7 +58,16 @@ class ReviewSessionHandler:
             "candidates": candidates,
             "candidates_original": existing.get("candidates_original", [dict(item) for item in candidates]),
             "action_history": existing.get("action_history", []),
+            "thresholds": existing.get(
+                "thresholds",
+                {
+                    "similarity_threshold": 80,
+                    "recommendation_threshold": 70,
+                    "temporal_window_seconds": 2.0,
+                },
+            ),
         }
+        session_payload = recompute_groups(session_payload)
         self.sessions.upsert(session_id, str(csv_path), session_payload)
 
         return 200, {
@@ -86,11 +96,13 @@ class ReviewSessionHandler:
         state = self.sessions.get(session_id)
         if state is None:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
+        refreshed_payload = recompute_groups(dict(state.payload or {}))
+        self.sessions.upsert(state.session_id, state.csv_path, refreshed_payload)
         return 200, {
             "session_id": state.session_id,
             "csv_path": state.csv_path,
             "updated_at": state.updated_at.isoformat(),
-            **(state.payload or {}),
+            **refreshed_payload,
         }
 
     def patch_thresholds(self, session_id: str, payload: dict[str, Any]) -> tuple[int, dict]:
@@ -102,18 +114,11 @@ class ReviewSessionHandler:
         similarity_threshold = int(payload.get("similarity_threshold", 85))
         recommendation_threshold = int(payload.get("recommendation_threshold", 70))
 
-        thresholds = GroupingThresholds(similarity_threshold=similarity_threshold)
-        groups = GroupingService.build_groups(session_payload.get("candidates", []), thresholds)
-        scored_groups = RecommendationService.score_groups(
-            groups,
-            recommendation_threshold=recommendation_threshold,
-        )
-
         session_payload["thresholds"] = {
             "similarity_threshold": similarity_threshold,
             "recommendation_threshold": recommendation_threshold,
         }
-        session_payload["groups"] = scored_groups
+        session_payload = recompute_groups(session_payload)
         self.sessions.upsert(state.session_id, state.csv_path, session_payload)
         self._sidecar.save(Path(state.csv_path), session_payload)
 

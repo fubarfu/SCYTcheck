@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CandidateRow, type Candidate } from "../components/CandidateRow";
+import { CandidateGroupCard, type CandidateGroup } from "../components/CandidateGroupCard";
 import { FrameThumbnailModal } from "../components/FrameThumbnailModal";
 import { ReviewFilterBar } from "../components/ReviewFilterBar";
 import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
@@ -22,6 +23,11 @@ interface ReviewSessionPayload {
   source_type?: "local_file" | "youtube_url";
   source_value?: string;
   candidates?: Candidate[];
+  thresholds?: {
+    similarity_threshold?: number;
+    recommendation_threshold?: number;
+  };
+  groups?: CandidateGroup[];
 }
 
 interface ReviewPageProps {
@@ -64,6 +70,21 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     () => selectFilteredCandidates(selectedSession?.candidates ?? [], filter),
     [selectedSession?.candidates, filter],
   );
+  const visibleCandidateIds = useMemo(
+    () => new Set(selectVisibleCandidateIds(selectedSession?.candidates ?? [], filter)),
+    [selectedSession?.candidates, filter],
+  );
+  const visibleGroups = useMemo(() => {
+    const groups = selectedSession?.groups ?? [];
+    return groups
+      .map((group) => ({
+        ...group,
+        candidates: (group.candidates ?? []).filter((candidate) => visibleCandidateIds.has(candidate.candidate_id)),
+      }))
+      .filter((group) => group.candidates.length > 0);
+  }, [selectedSession?.groups, visibleCandidateIds]);
+  const similarityThreshold = selectedSession?.thresholds?.similarity_threshold ?? 80;
+  const recommendationThreshold = selectedSession?.thresholds?.recommendation_threshold ?? 70;
   const totalCandidates = selectedSession?.candidates?.length ?? 0;
   const reviewedCandidates = useMemo(
     () => (selectedSession?.candidates ?? []).filter((candidate) => (candidate.status ?? "pending") !== "pending").length,
@@ -170,6 +191,25 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     }
     setUndoCount((v) => v + 1);
     await fetchSession(selectedSessionId);
+  };
+
+  const patchThresholds = async (next: { similarity?: number; recommendation?: number }) => {
+    if (!selectedSessionId) return;
+    const payload = {
+      similarity_threshold: next.similarity ?? similarityThreshold,
+      recommendation_threshold: next.recommendation ?? recommendationThreshold,
+    };
+    const resp = await fetch(`/api/review/sessions/${selectedSessionId}/thresholds`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      setLoadingError("Unable to update group thresholds");
+      return;
+    }
+    const session = await resp.json() as ReviewSessionPayload;
+    setSelectedSession(session);
   };
 
   const handleUndo = async () => {
@@ -286,13 +326,17 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
             <ReviewFilterBar
               searchText={filter.searchText}
               status={filter.status}
+              similarityThreshold={similarityThreshold}
+              recommendationThreshold={recommendationThreshold}
               onSearchTextChange={(value) => setFilter((prev) => ({ ...prev, searchText: value }))}
               onStatusChange={(value) => setFilter((prev) => ({ ...prev, status: value }))}
+              onSimilarityThresholdChange={(value) => { void patchThresholds({ similarity: value }); }}
+              onRecommendationThresholdChange={(value) => { void patchThresholds({ recommendation: value }); }}
             />
           </div>
         </div>
 
-        <div className="candidate-list review-candidate-stack">
+        <div className="candidate-list review-candidate-stack review-group-list">
           {filteredCandidates.length === 0 ? (
             <div className="panel-card">
               <div className="panel-card-body empty-region-state">
@@ -302,6 +346,22 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                 </div>
               </div>
             </div>
+          ) : visibleGroups.length > 0 ? (
+            visibleGroups.map((group) => (
+              <CandidateGroupCard
+                key={group.group_id}
+                group={group}
+                sourceType={sourceType}
+                sourceValue={sourceValue}
+                onAction={(action) => {
+                  if (action.target_ids.length > 1) {
+                    action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));
+                  }
+                  void postAction(action);
+                }}
+                onOpenThumbnail={(id) => { void openThumbnail(id); }}
+              />
+            ))
           ) : (
             filteredCandidates.map((c) => (
               <CandidateRow
@@ -311,11 +371,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                 sourceValue={sourceValue}
                 onAction={(action) => {
                   if (action.target_ids.length > 1) {
-                    const visibleIds = selectVisibleCandidateIds(
-                      selectedSession?.candidates ?? [],
-                      filter,
-                    );
-                    action.target_ids = action.target_ids.filter((id) => visibleIds.includes(id));
+                    action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));
                   }
                   void postAction(action);
                 }}
