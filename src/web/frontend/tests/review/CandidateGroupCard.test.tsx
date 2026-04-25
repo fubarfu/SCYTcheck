@@ -73,4 +73,91 @@ describe("CandidateGroupCard feature 010", () => {
       },
     });
   });
+
+  it("renders unresolved groups expanded by default", () => {
+    render(
+      <CandidateGroupCard
+        group={{
+          group_id: "grp_conflict",
+          display_name: "Alicia",
+          accepted_name: null,
+          is_collapsed: false,
+          resolution_status: "UNRESOLVED",
+          active_spellings: ["Alice", "Alicia"],
+          occurrence_count: 2,
+          candidates: [
+            { candidate_id: "c1", extracted_name: "Alice", status: "pending" },
+            { candidate_id: "c2", extracted_name: "Alicia", status: "pending" },
+          ],
+        }}
+        sourceType="local_file"
+        sourceValue=""
+        onAction={() => {}}
+        onOpenThumbnail={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Unresolved")).toBeTruthy();
+    expect(screen.getByLabelText("Collapse group")).toBeTruthy();
+    expect(screen.getByText("Alice")).toBeTruthy();
+    expect(screen.getAllByText("Alicia").length).toBeGreaterThan(0);
+  });
+
+  it("dispatches manual collapse and re-expand actions for unresolved groups", () => {
+    const onAction = vi.fn();
+    const baseGroup = {
+      group_id: "grp_conflict",
+      display_name: "Alicia",
+      accepted_name: null,
+      resolution_status: "UNRESOLVED" as const,
+      active_spellings: ["Alice", "Alicia"],
+      occurrence_count: 2,
+      candidates: [
+        { candidate_id: "c1", extracted_name: "Alice", status: "pending" as const },
+        { candidate_id: "c2", extracted_name: "Alicia", status: "pending" as const },
+      ],
+    };
+
+    const { rerender } = render(
+      <CandidateGroupCard
+        group={{ ...baseGroup, is_collapsed: false }}
+        sourceType="local_file"
+        sourceValue=""
+        onAction={onAction}
+        onOpenThumbnail={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Collapse group"));
+
+    expect(onAction).toHaveBeenCalledWith({
+      action_type: "toggle_collapse",
+      target_ids: [],
+      payload: {
+        group_id: "grp_conflict",
+        is_collapsed: true,
+      },
+    });
+
+    rerender(
+      <CandidateGroupCard
+        group={{ ...baseGroup, is_collapsed: true }}
+        sourceType="local_file"
+        sourceValue=""
+        onAction={onAction}
+        onOpenThumbnail={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Expand group"));
+
+    expect(onAction).toHaveBeenLastCalledWith({
+      action_type: "toggle_collapse",
+      target_ids: [],
+      payload: {
+        group_id: "grp_conflict",
+        is_collapsed: false,
+      },
+    });
+  });
 });
