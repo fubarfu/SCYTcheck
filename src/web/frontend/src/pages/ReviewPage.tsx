@@ -5,6 +5,12 @@ import { FrameThumbnailModal } from "../components/FrameThumbnailModal";
 import { ReviewFilterBar } from "../components/ReviewFilterBar";
 import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
 import {
+  applyGroupToggleState,
+  deriveGroupToggleState,
+  updateGroupToggleState,
+  type GroupToggleState,
+} from "../state/reviewStore";
+import {
   selectFilteredCandidates,
   selectVisibleGroups,
   selectVisibleCandidateIds,
@@ -48,6 +54,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [undoCount, setUndoCount] = useState(0);
+  const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
   const [filter, setFilter] = useState<ReviewFilterState>({
     searchText: "",
     status: "all",
@@ -76,12 +83,15 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     [selectedSession?.candidates, filter],
   );
   const visibleGroups = useMemo(() => {
+    const hydratedGroups = selectedSession
+      ? applyGroupToggleState(selectedSession, groupToggles).groups ?? []
+      : [];
     return selectVisibleGroups(
-      selectedSession?.groups ?? [],
+      hydratedGroups as CandidateGroup[],
       selectedSession?.candidates ?? [],
       filter,
     );
-  }, [selectedSession?.groups, selectedSession?.candidates, filter]);
+  }, [selectedSession, selectedSession?.candidates, groupToggles, filter]);
   const similarityThreshold = selectedSession?.thresholds?.similarity_threshold ?? 80;
   const recommendationThreshold = selectedSession?.thresholds?.recommendation_threshold ?? 70;
   const totalCandidates = selectedSession?.candidates?.length ?? 0;
@@ -171,7 +181,9 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     const resp = await fetch(`/api/review/sessions/${sessionId}`);
     if (!resp.ok) return;
     const session = await resp.json() as ReviewSessionPayload;
-    setSelectedSession(session);
+    const nextToggles = deriveGroupToggleState(session.groups ?? []);
+    setGroupToggles(nextToggles);
+    setSelectedSession(applyGroupToggleState(session, nextToggles));
     setSelectedSessionId(sessionId);
     setLoadingError(null);
   };
@@ -179,6 +191,22 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const postAction = async (action: { action_type: string; target_ids: string[]; payload?: Record<string, unknown> }) => {
     if (!selectedSessionId) return;
     setExportMessage(null);
+
+    if (action.action_type === "toggle_collapse") {
+      const groupId = String(action.payload?.group_id ?? "").trim();
+      const requested = action.payload?.is_collapsed;
+      if (groupId && typeof requested === "boolean") {
+        const nextToggles = updateGroupToggleState(groupToggles, groupId, requested);
+        setGroupToggles(nextToggles);
+        setSelectedSession((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          return applyGroupToggleState(prev, nextToggles);
+        });
+      }
+    }
+
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/actions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
