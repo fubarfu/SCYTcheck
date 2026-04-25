@@ -197,6 +197,68 @@ button:disabled {
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.16);
 }
 
+.progress-panel {
+  padding: 20px 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.progress-panel h3 {
+  margin: 0;
+  font-family: var(--font-headline);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.stage-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.progress-bar-track {
+  height: 10px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--border) 60%, transparent 40%);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent, #5b8def);
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+
+.progress-pct {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.stop-action {
+  justify-self: start;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.stop-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--border) 50%, transparent 50%);
+}
+
+.stop-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .panel-card {
   overflow: hidden;
 }

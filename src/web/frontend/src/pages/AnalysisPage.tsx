@@ -20,6 +20,7 @@ interface Settings {
   filter_non_matching?: boolean;
   logging_enabled?: boolean;
   context_patterns?: unknown[];
+  output_folder?: string;
   scan_region?: ScanRegion;
   scan_regions?: ScanRegion[];
 }
@@ -89,6 +90,7 @@ export function AnalysisPage() {
   const [scrubTime, setScrubTime] = useState(0);
   const [frameCursorClass, setFrameCursorClass] = useState("cursor-crosshair");
   const derivedFilenameRef = useRef(true);
+  const settingsLoadedRef = useRef(false);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const activeRegionRef = useRef(0);
@@ -102,6 +104,9 @@ export function AnalysisPage() {
       .then((r) => r.json())
       .then((data: Settings) => {
         setSettings(data);
+        if (typeof data.output_folder === "string") {
+          setOutputFolder(data.output_folder);
+        }
         if (Array.isArray(data.scan_regions) && data.scan_regions.length > 0) {
           setScanRegions(data.scan_regions);
           setActiveRegionIndex(0);
@@ -112,8 +117,27 @@ export function AnalysisPage() {
           activeRegionRef.current = 0;
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        settingsLoadedRef.current = true;
+      });
   }, []);
+
+  useEffect(() => {
+    if (!settingsLoadedRef.current) {
+      return;
+    }
+
+    const handle = window.setTimeout(() => {
+      void fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ output_folder: outputFolder.trim() }),
+      }).catch(() => {});
+    }, 250);
+
+    return () => window.clearTimeout(handle);
+  }, [outputFolder]);
 
   useEffect(() => {
     if (derivedFilenameRef.current) {
@@ -435,7 +459,6 @@ export function AnalysisPage() {
     <section className="page-panel">
       <div className="page-heading-row">
         <div>
-          <p className="page-subtitle">Load a preview, drag to set the scan region, then start.</p>
         </div>
       </div>
 
