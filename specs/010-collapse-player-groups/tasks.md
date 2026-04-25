@@ -72,15 +72,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Add Vitest coverage for unresolved-group default-open state and manual toggle behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`
-- [ ] T021 [P] [US2] Add integration coverage for conflicting groups default-open hydration and toggle persistence in `tests/integration/test_review_groups_conflict_flow_010.py`
+- [X] T020 [P] [US2] Add Vitest coverage for unresolved-group default-open state and manual toggle behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`
+- [X] T021 [P] [US2] Add integration coverage for conflicting groups default-open hydration and toggle persistence in `tests/integration/test_review_groups_conflict_flow_010.py`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Extend grouping/session payload generation with active spellings, unresolved status, and remembered toggle state in `src/web/app/review_grouping.py` and `src/web/api/routes/review_sessions.py`
-- [ ] T023 [US2] Implement unresolved-group header styling, chevron toggle, and conflict summary in `src/web/frontend/src/components/CandidateGroupCard.tsx`
-- [ ] T024 [US2] Persist manual collapse and expand actions through the review action handler and sidecar store in `src/web/api/routes/review_actions.py` and `src/web/app/review_sidecar_store.py`
-- [ ] T025 [US2] Update review-page and store wiring for per-group toggle state and default-open conflict hydration in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/state/reviewStore.ts`
+- [X] T022 [US2] Extend grouping/session payload generation with active spellings, unresolved status, and remembered toggle state in `src/web/app/review_grouping.py` and `src/web/api/routes/review_sessions.py`
+- [X] T023 [US2] Implement unresolved-group header styling, chevron toggle, and conflict summary in `src/web/frontend/src/components/CandidateGroupCard.tsx`
+- [X] T024 [US2] Persist manual collapse and expand actions through the review action handler and sidecar store in `src/web/api/routes/review_actions.py` and `src/web/app/review_sidecar_store.py`
+- [X] T025 [US2] Update review-page and store wiring for per-group toggle state and default-open conflict hydration in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/state/reviewStore.ts`
 
 **Checkpoint**: Conflict groups are independently highlighted, expanded by default, and manually toggleable with remembered state.
 
