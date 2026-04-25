@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 import socket
 import threading
 from http import HTTPStatus
@@ -9,32 +10,193 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from time import perf_counter
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
+from src.web.api.routes.analysis import AnalysisHandler
+from src.web.api.routes.review_actions import ReviewActionsHandler
+from src.web.api.routes.review_assets import ReviewAssetsHandler
+from src.web.api.routes.review_export import ReviewExportHandler
+from src.web.api.routes.review_sessions import ReviewSessionHandler
+from src.web.api.routes.settings import SettingsHandler
+from src.web.app.session_manager import SessionManager
 from src.web.app.config import WebAppConfig, load_web_config
 
 
+class _AppServices:
+    def __init__(self) -> None:
+        session_manager = SessionManager()
+        self.settings = SettingsHandler()
+        self.analysis = AnalysisHandler()
+        self.review_sessions = ReviewSessionHandler(session_manager=session_manager)
+        self.review_actions = ReviewActionsHandler(session_manager=session_manager)
+        self.review_assets = ReviewAssetsHandler(session_manager=session_manager)
+        self.review_export = ReviewExportHandler(session_manager=session_manager)
+
+
 class _RequestHandler(SimpleHTTPRequestHandler):
-    def __init__(self, *args: Any, directory: str, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, directory: str, services: _AppServices, **kwargs: Any) -> None:
+        self._services = services
         super().__init__(*args, directory=directory, **kwargs)
 
-    def do_GET(self) -> None:  # noqa: N802
-        if self.path == "/api/health":
-            body = json.dumps({"status": "ok"}).encode("utf-8")
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+    def _send_json(self, status: int, payload: dict[str, Any]) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _read_json_body(self) -> dict[str, Any]:
+        content_length = int(self.headers.get("Content-Length", "0") or "0")
+        if content_length <= 0:
+            return {}
+        raw = self.rfile.read(content_length)
+        if not raw:
+            return {}
+        decoded = json.loads(raw.decode("utf-8"))
+        return decoded if isinstance(decoded, dict) else {}
+
+    def _dispatch_api(self, method: str, path: str) -> bool:
+        if path == "/api/health" and method == "GET":
+            self._send_json(HTTPStatus.OK, {"status": "ok"})
             return
 
+        if path == "/api/settings":
+            if method == "GET":
+                self._send_json(HTTPStatus.OK, self._services.settings.get_settings())
+                return True
+            if method == "PUT":
+                status, body = self._services.settings.put_settings(self._read_json_body())
+                self._send_json(status, body)
+                return True
+
+        if path == "/api/analysis/preview" and method == "POST":
+            status, body = self._services.analysis.post_preview(self._read_json_body())
+            self._send_json(status, body)
+            return True
+        if path == "/api/analysis/start" and method == "POST":
+            status, body = self._services.analysis.post_start(self._read_json_body())
+            self._send_json(status, body)
+            return True
+
+        progress_match = re.fullmatch(r"/api/analysis/progress/([^/]+)", path)
+        if progress_match and method == "GET":
+            status, body = self._services.analysis.get_progress(progress_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        stop_match = re.fullmatch(r"/api/analysis/stop/([^/]+)", path)
+        if stop_match and method == "POST":
+            status, body = self._services.analysis.post_stop(stop_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        result_match = re.fullmatch(r"/api/analysis/result/([^/]+)", path)
+        if result_match and method == "GET":
+            status, body = self._services.analysis.get_result(result_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/review/sessions" and method == "GET":
+            status, body = self._services.review_sessions.get_sessions()
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/review/sessions/load" and method == "POST":
+            status, body = self._services.review_sessions.post_load(self._read_json_body())
+            self._send_json(status, body)
+            return True
+
+        scan_match = path == "/api/review/sessions/scan"
+        if scan_match and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            directory_path = query.get("directory_path", [""])[0]
+            status, body = self._services.review_sessions.get_scan_directory(directory_path)
+            self._send_json(status, body)
+            return True
+
+        thresholds_match = re.fullmatch(r"/api/review/sessions/([^/]+)/thresholds", path)
+        if thresholds_match and method == "PATCH":
+            status, body = self._services.review_sessions.patch_thresholds(
+                thresholds_match.group(1),
+                self._read_json_body(),
+            )
+            self._send_json(status, body)
+            return True
+
+        actions_match = re.fullmatch(r"/api/review/sessions/([^/]+)/actions", path)
+        if actions_match and method == "POST":
+            status, body = self._services.review_actions.post_action(
+                actions_match.group(1),
+                self._read_json_body(),
+            )
+            self._send_json(status, body)
+            return True
+
+        undo_match = re.fullmatch(r"/api/review/sessions/([^/]+)/undo", path)
+        if undo_match and method == "POST":
+            status, body = self._services.review_actions.post_undo(undo_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        thumb_match = re.fullmatch(r"/api/review/sessions/([^/]+)/thumbnails/([^/]+)", path)
+        if thumb_match and method == "GET":
+            status, body = self._services.review_assets.get_thumbnail(
+                thumb_match.group(1),
+                thumb_match.group(2),
+            )
+            self._send_json(status, body)
+            return True
+
+        export_match = re.fullmatch(r"/api/review/sessions/([^/]+)/export", path)
+        if export_match and method == "POST":
+            status, body = self._services.review_export.post_export(export_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        session_match = re.fullmatch(r"/api/review/sessions/([^/]+)", path)
+        if session_match and method == "GET":
+            status, body = self._services.review_sessions.get_session(session_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        self._send_json(HTTPStatus.NOT_FOUND, {
+            "error": "not_found",
+            "message": f"No route for {method} {path}",
+        })
+        return True
+
+    def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         request_path = parsed.path or "/"
+
+        if request_path.startswith("/api/"):
+            self._dispatch_api("GET", request_path)
+            return
+
         if not request_path.startswith("/api/"):
             translated = Path(self.translate_path(request_path))
             if request_path in {"/", ""} or not translated.exists() or translated.is_dir():
                 self.path = "/index.html"
         return super().do_GET()
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        request_path = parsed.path or "/"
+        if self._dispatch_api("POST", request_path):
+            return
+
+    def do_PUT(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        request_path = parsed.path or "/"
+        if self._dispatch_api("PUT", request_path):
+            return
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        request_path = parsed.path or "/"
+        if self._dispatch_api("PATCH", request_path):
+            return
 
 
 class LocalWebServer:
@@ -42,6 +204,7 @@ class LocalWebServer:
 
     def __init__(self, config: WebAppConfig | None = None) -> None:
         self.config = config or load_web_config()
+        self._services = _AppServices()
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
         self._active_port: int | None = None
@@ -68,7 +231,12 @@ class LocalWebServer:
         dist_dir.mkdir(parents=True, exist_ok=True)
 
         def handler(*args: Any, **kwargs: Any) -> _RequestHandler:
-            return _RequestHandler(*args, directory=str(dist_dir), **kwargs)
+            return _RequestHandler(
+                *args,
+                directory=str(dist_dir),
+                services=self._services,
+                **kwargs,
+            )
 
         target_port = self.config.port
         try:

@@ -30,6 +30,7 @@ export function ReviewPage() {
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
   const [csvPathInput, setCsvPathInput] = useState("");
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [undoCount, setUndoCount] = useState(0);
   const [filter, setFilter] = useState<ReviewFilterState>({
     searchText: "",
@@ -51,6 +52,11 @@ export function ReviewPage() {
   const filteredCandidates = useMemo(
     () => selectFilteredCandidates(selectedSession?.candidates ?? [], filter),
     [selectedSession?.candidates, filter],
+  );
+  const totalCandidates = selectedSession?.candidates?.length ?? 0;
+  const reviewedCandidates = useMemo(
+    () => (selectedSession?.candidates ?? []).filter((candidate) => (candidate.status ?? "pending") !== "pending").length,
+    [selectedSession?.candidates],
   );
 
   const refreshSessions = async () => {
@@ -78,6 +84,7 @@ export function ReviewPage() {
 
   const loadSessionFromCsv = async () => {
     setLoadingError(null);
+    setExportMessage(null);
     const resp = await fetch("/api/review/sessions/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -100,10 +107,12 @@ export function ReviewPage() {
     const session = await resp.json() as ReviewSessionPayload;
     setSelectedSession(session);
     setSelectedSessionId(sessionId);
+    setLoadingError(null);
   };
 
   const postAction = async (action: { action_type: string; target_ids: string[]; payload?: Record<string, unknown> }) => {
     if (!selectedSessionId) return;
+    setExportMessage(null);
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/actions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -119,6 +128,7 @@ export function ReviewPage() {
 
   const handleUndo = async () => {
     if (!selectedSessionId) return;
+    setExportMessage(null);
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/undo`, { method: "POST" });
     if (!resp.ok) {
       setLoadingError("Undo failed");
@@ -143,69 +153,109 @@ export function ReviewPage() {
 
   const exportSession = async () => {
     if (!selectedSessionId) return;
+    setExportMessage(null);
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/export`, { method: "POST" });
     if (!resp.ok) {
       setLoadingError("Export failed");
       return;
     }
     const body = await resp.json() as { deduplicated_names_csv_path: string; occurrences_csv_path: string };
-    alert(`Exported:\n${body.deduplicated_names_csv_path}\n${body.occurrences_csv_path}`);
+    setExportMessage(
+      `Exported deduplicated names to ${body.deduplicated_names_csv_path} and occurrences to ${body.occurrences_csv_path}`,
+    );
   };
 
   return (
     <section className="page-panel">
-      <h2>Review</h2>
-
-      <div className="review-toolbar">
-        <input
-          type="text"
-          value={csvPathInput}
-          onChange={(e) => setCsvPathInput(e.target.value)}
-          placeholder="C:/output/match.csv"
-        />
-        <button type="button" className="primary-action" onClick={() => { void loadSessionFromCsv(); }}>
-          Load CSV
-        </button>
+      <div className="page-heading-row">
+        <p className="eyebrow">Review</p>
+        <h2>Review detected names</h2>
+        <p className="page-subtitle">
+          Load one result file, filter what matters, then confirm or reject candidates without the extra noise.
+        </p>
       </div>
 
       {loadingError && <SessionLoadErrorState message={loadingError} onRetry={() => setLoadingError(null)} />}
+      {exportMessage && <div className="export-banner">{exportMessage}</div>}
 
-      <div className="review-layout">
-        <aside className="session-list">
-          <h3>Sessions</h3>
-          {sessions.map((s) => (
-            <button
-              key={s.session_id}
-              type="button"
-              className={s.session_id === selectedSessionId ? "session-item active" : "session-item"}
-              onClick={() => { void fetchSession(s.session_id); }}
-            >
-              <span>{s.display_name}</span>
-              <small>{new Date(s.updated_at).toLocaleString()}</small>
-            </button>
-          ))}
-        </aside>
+      <div className="review-stack">
+        <div className="panel-card">
+          <div className="panel-card-body review-topbar">
+            <div className="review-source-picker">
+              <label>
+                Result file
+                <div className="review-load-row">
+                  <input
+                    type="text"
+                    value={csvPathInput}
+                    onChange={(e) => setCsvPathInput(e.target.value)}
+                    placeholder="C:/output/match.csv"
+                  />
+                  <button type="button" className="primary-action" onClick={() => { void loadSessionFromCsv(); }}>
+                    Load result
+                  </button>
+                </div>
+              </label>
+              {sessions.length > 0 && (
+                <div className="review-session-strip">
+                  {sessions.slice(0, 6).map((s) => (
+                    <button
+                      key={s.session_id}
+                      type="button"
+                      className={s.session_id === selectedSessionId ? "session-item active" : "session-item"}
+                      onClick={() => { void fetchSession(s.session_id); }}
+                    >
+                      <span>{s.display_name}</span>
+                      <small>{new Date(s.updated_at).toLocaleDateString()}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-        <div className="candidate-list">
-          <div className="candidate-list-head">
-            <h3>Candidates</h3>
-            <div className="candidate-list-actions">
-              <button type="button" onClick={() => { void handleUndo(); }} disabled={undoCount <= 0}>Undo</button>
-              <button type="button" className="primary-action" onClick={() => { void exportSession(); }}>
-                Export
-              </button>
+            <div className="review-summary-block">
+              <div className="review-progress-meta">
+                <span>{reviewedCandidates} / {totalCandidates} reviewed</span>
+                <span>{filteredCandidates.length} visible</span>
+              </div>
+              <progress
+                className="review-progress-track"
+                value={reviewedCandidates}
+                max={Math.max(totalCandidates, 1)}
+              />
+              <div className="candidate-list-actions">
+                <button type="button" className="ghost-action" onClick={() => { void handleUndo(); }} disabled={undoCount <= 0}>
+                  Undo
+                </button>
+                <button type="button" className="primary-action" onClick={() => { void exportSession(); }} disabled={!selectedSessionId}>
+                  Export review
+                </button>
+              </div>
             </div>
           </div>
+        </div>
 
-          <ReviewFilterBar
-            searchText={filter.searchText}
-            status={filter.status}
-            onSearchTextChange={(value) => setFilter((prev) => ({ ...prev, searchText: value }))}
-            onStatusChange={(value) => setFilter((prev) => ({ ...prev, status: value }))}
-          />
+        <div className="panel-card">
+          <div className="panel-card-body review-filter-shell">
+            <ReviewFilterBar
+              searchText={filter.searchText}
+              status={filter.status}
+              onSearchTextChange={(value) => setFilter((prev) => ({ ...prev, searchText: value }))}
+              onStatusChange={(value) => setFilter((prev) => ({ ...prev, status: value }))}
+            />
+          </div>
+        </div>
 
+        <div className="candidate-list review-candidate-stack">
           {filteredCandidates.length === 0 ? (
-            <p>No candidates loaded.</p>
+            <div className="panel-card">
+              <div className="panel-card-body empty-region-state">
+                <div>
+                  <strong>No candidates to review yet.</strong>
+                  <p>Load a result file or adjust the current filters.</p>
+                </div>
+              </div>
+            </div>
           ) : (
             filteredCandidates.map((c) => (
               <CandidateRow

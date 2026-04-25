@@ -38,7 +38,7 @@ class AnalysisStartRequestDTO:
     source_value: str
     output_folder: str
     output_filename: str
-    scan_region: ScanRegionDTO
+    scan_regions: list[ScanRegionDTO]
 
     @staticmethod
     def from_payload(payload: dict[str, Any]) -> AnalysisStartRequestDTO:
@@ -56,16 +56,26 @@ class AnalysisStartRequestDTO:
         if not output_filename:
             raise SchemaValidationError("output_filename is required")
 
-        scan_region_payload = payload.get("scan_region")
-        if not isinstance(scan_region_payload, dict):
-            raise SchemaValidationError("scan_region must be an object")
+        scan_regions_payload = payload.get("scan_regions")
+        scan_regions: list[ScanRegionDTO] = []
+
+        if isinstance(scan_regions_payload, list) and scan_regions_payload:
+            for item in scan_regions_payload:
+                if not isinstance(item, dict):
+                    raise SchemaValidationError("scan_regions must contain objects")
+                scan_regions.append(ScanRegionDTO.from_payload(item))
+        else:
+            scan_region_payload = payload.get("scan_region")
+            if not isinstance(scan_region_payload, dict):
+                raise SchemaValidationError("scan_region must be an object")
+            scan_regions = [ScanRegionDTO.from_payload(scan_region_payload)]
 
         return AnalysisStartRequestDTO(
             source_type=source_type,
             source_value=source_value,
             output_folder=output_folder,
             output_filename=output_filename,
-            scan_region=ScanRegionDTO.from_payload(scan_region_payload),
+            scan_regions=scan_regions,
         )
 
 

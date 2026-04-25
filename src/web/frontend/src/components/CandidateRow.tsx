@@ -27,7 +27,6 @@ export function CandidateRow({
   sourceValue,
   onAction,
   onOpenThumbnail,
-  thumbnailUrl,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [editedText, setEditedText] = useState(candidate.corrected_text ?? candidate.extracted_name);
@@ -62,31 +61,35 @@ export function CandidateRow({
 
   return (
     <div className="candidate-row" ref={rowRef}>
-      <div className="candidate-main">
-        <strong>{currentText}</strong>
+      <div className="candidate-main review-candidate-main">
+        <div>
+          <strong>{currentText}</strong>
+          <div className="candidate-meta-inline">
+            <span>{candidate.start_timestamp ?? "-"}</span>
+            {deepLink && (
+              <a href={deepLink} target="_blank" rel="noreferrer">
+                Open at timestamp
+              </a>
+            )}
+          </div>
+        </div>
         <span className={`status-chip ${candidate.status ?? "pending"}`}>{candidate.status ?? "pending"}</span>
       </div>
       <div className="candidate-meta">
-        <span>Start: {candidate.start_timestamp ?? "-"}s</span>
-        {thumbnailVisible && thumbnailUrl && (
-          <img
-            src={thumbnailUrl}
-            alt={`Thumbnail ${candidate.candidate_id}`}
-            width={84}
-            height={48}
-            loading="lazy"
-          />
-        )}
-        {deepLink && (
-          <a href={deepLink} target="_blank" rel="noreferrer">
-            Open in YouTube
-          </a>
+        <span>Candidate ID: {candidate.candidate_id}</span>
+        {candidate.corrected_text && candidate.corrected_text !== candidate.extracted_name && (
+          <span>Original OCR: {candidate.extracted_name}</span>
         )}
       </div>
 
       {editing ? (
         <div className="candidate-edit-row">
-          <input value={editedText} onChange={(e) => setEditedText(e.target.value)} />
+          <input
+            value={editedText}
+            onChange={(e) => setEditedText(e.target.value)}
+            placeholder="Corrected player name"
+            title="Corrected player name"
+          />
           <button
             type="button"
             onClick={() => {
@@ -104,11 +107,11 @@ export function CandidateRow({
         </div>
       ) : (
         <div className="candidate-actions">
-          <button type="button" onClick={() => onAction({ action_type: "confirm", target_ids: [candidate.candidate_id] })}>Confirm</button>
-          <button type="button" onClick={() => onAction({ action_type: "reject", target_ids: [candidate.candidate_id] })}>Reject</button>
-          <button type="button" onClick={() => setEditing(true)}>Edit</button>
-          <button type="button" onClick={() => onAction({ action_type: "remove", target_ids: [candidate.candidate_id] })}>Remove</button>
-          <button type="button" onClick={() => onOpenThumbnail(candidate.candidate_id)}>Thumbnail</button>
+          <button type="button" className="primary-action" onClick={() => onAction({ action_type: "confirm", target_ids: [candidate.candidate_id] })}>Confirm</button>
+          <button type="button" className="ghost-action" onClick={() => onAction({ action_type: "reject", target_ids: [candidate.candidate_id] })}>Reject</button>
+          <button type="button" className="ghost-action" onClick={() => setEditing(true)}>Edit</button>
+          <button type="button" className="ghost-action" onClick={() => onOpenThumbnail(candidate.candidate_id)} disabled={!thumbnailVisible}>Thumbnail</button>
+          <button type="button" className="ghost-action" onClick={() => onAction({ action_type: "remove", target_ids: [candidate.candidate_id] })}>Remove</button>
         </div>
       )}
     </div>

@@ -1,13 +1,13 @@
 interface Settings {
   theme?: string;
   video_quality?: string;
-  ocr_sensitivity?: number;
-  matching_tolerance?: number;
-  event_merge_gap_seconds?: number;
+  ocr_confidence_threshold?: number;
+  tolerance_value?: number;
+  event_gap_threshold_sec?: number;
   gating_enabled?: boolean;
   gating_threshold?: number;
   filter_non_matching?: boolean;
-  detailed_sidecar_log?: boolean;
+  logging_enabled?: boolean;
   context_patterns?: unknown[];
 }
 
@@ -42,22 +42,22 @@ export function AnalysisSettingsPanel({ settings, onChange }: Props) {
             type="range"
             min={0}
             max={100}
-            value={settings.ocr_sensitivity ?? 70}
-            onChange={(e) => update({ ocr_sensitivity: Number(e.target.value) })}
+            value={settings.ocr_confidence_threshold ?? 40}
+            onChange={(e) => update({ ocr_confidence_threshold: Number(e.target.value) })}
           />
-          <span>{settings.ocr_sensitivity ?? 70}</span>
+          <span>{settings.ocr_confidence_threshold ?? 40}</span>
         </label>
 
         <label>
           Matching tolerance
           <input
             type="range"
-            min={0}
-            max={100}
-            value={settings.matching_tolerance ?? 80}
-            onChange={(e) => update({ matching_tolerance: Number(e.target.value) })}
+            min={60}
+            max={95}
+            value={Math.round((settings.tolerance_value ?? 0.75) * 100)}
+            onChange={(e) => update({ tolerance_value: Number(e.target.value) / 100 })}
           />
-          <span>{settings.matching_tolerance ?? 80}</span>
+          <span>{(settings.tolerance_value ?? 0.75).toFixed(2)}</span>
         </label>
 
         <label>
@@ -66,8 +66,8 @@ export function AnalysisSettingsPanel({ settings, onChange }: Props) {
             type="number"
             min={0}
             step={0.5}
-            value={settings.event_merge_gap_seconds ?? 2.0}
-            onChange={(e) => update({ event_merge_gap_seconds: Number(e.target.value) })}
+            value={settings.event_gap_threshold_sec ?? 1.0}
+            onChange={(e) => update({ event_gap_threshold_sec: Number(e.target.value) })}
           />
         </label>
 
@@ -85,8 +85,10 @@ export function AnalysisSettingsPanel({ settings, onChange }: Props) {
             Gating threshold
             <input
               type="number"
-              min={1}
-              value={settings.gating_threshold ?? 12}
+              min={0}
+              max={1}
+              step={0.01}
+              value={settings.gating_threshold ?? 0.02}
               onChange={(e) => update({ gating_threshold: Number(e.target.value) })}
             />
           </label>
@@ -104,8 +106,8 @@ export function AnalysisSettingsPanel({ settings, onChange }: Props) {
         <label className="checkbox-label">
           <input
             type="checkbox"
-            checked={settings.detailed_sidecar_log ?? false}
-            onChange={(e) => update({ detailed_sidecar_log: e.target.checked })}
+            checked={settings.logging_enabled ?? false}
+            onChange={(e) => update({ logging_enabled: e.target.checked })}
           />
           Detailed sidecar log
         </label>

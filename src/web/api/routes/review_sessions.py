@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import uuid
 from pathlib import Path
 from typing import Any
@@ -45,12 +46,16 @@ class ReviewSessionHandler:
         existing = self._sidecar.load(csv_path) or {}
         source_type = existing.get("source_type", "local_file")
         source_value = existing.get("source_value", "")
+        candidates = existing.get("candidates")
+        if not isinstance(candidates, list) or not candidates:
+            candidates = self._load_candidates_from_csv(csv_path)
 
         session_payload: dict[str, Any] = {
             "schema_version": validation.schema_version,
             "source_type": source_type,
             "source_value": source_value,
-            "candidates": existing.get("candidates", []),
+            "candidates": candidates,
+            "candidates_original": existing.get("candidates_original", [dict(item) for item in candidates]),
             "action_history": existing.get("action_history", []),
         }
         self.sessions.upsert(session_id, str(csv_path), session_payload)
@@ -133,3 +138,45 @@ class ReviewSessionHandler:
                 for p in csv_files
             ]
         }
+
+    @staticmethod
+    def _load_candidates_from_csv(csv_path: Path) -> list[dict[str, Any]]:
+        with csv_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.reader(handle)
+            rows = [row for row in reader if row]
+
+        if not rows:
+            return []
+
+        header_row = rows[0]
+        data_rows = rows[1:]
+        if header_row and header_row[0].startswith("#schema_version="):
+            if len(rows) < 2:
+                return []
+            header_row = rows[1]
+            data_rows = rows[2:]
+
+        header_index = {name: idx for idx, name in enumerate(header_row)}
+        name_idx = header_index.get("PlayerName")
+        time_idx = header_index.get("StartTimestamp")
+        if name_idx is None or time_idx is None:
+            return []
+
+        candidates: list[dict[str, Any]] = []
+        for index, row in enumerate(data_rows, start=1):
+            if len(row) <= max(name_idx, time_idx):
+                continue
+            extracted_name = str(row[name_idx]).strip()
+            start_timestamp = str(row[time_idx]).strip()
+            if not extracted_name:
+                continue
+            candidates.append(
+                {
+                    "candidate_id": f"csv_{index}",
+                    "extracted_name": extracted_name,
+                    "start_timestamp": start_timestamp,
+                    "status": "pending",
+                }
+            )
+
+        return candidates

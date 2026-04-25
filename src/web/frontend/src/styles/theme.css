@@ -1,11 +1,11 @@
 :root {
-  --bg: #081f2f;
-  --panel: #103046;
-  --text: #f5fbff;
-  --muted: #b5ccdc;
+  --bg: #1a1a1a;
+  --panel: #242424;
+  --text: #f0f0f0;
+  --muted: #8e8e8e;
   --accent: #f28f16;
   --accent-strong: #c66e09;
-  --border: #2a4a62;
+  --border: #383838;
   --danger: #e3494d;
   --focus-ring: #ffd166;
 }
@@ -30,8 +30,7 @@ body {
   margin: 0;
   font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background:
-    radial-gradient(circle at 15% 10%, rgba(242, 143, 22, 0.14), transparent 35%),
-    radial-gradient(circle at 90% 25%, rgba(17, 36, 51, 0.4), transparent 50%),
+    radial-gradient(circle at 15% 10%, rgba(242, 143, 22, 0.08), transparent 40%),
     var(--bg);
   color: var(--text);
 }

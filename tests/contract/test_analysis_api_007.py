@@ -32,7 +32,24 @@ def test_analysis_start_request_dto_valid() -> None:
     }
     dto = AnalysisStartRequestDTO.from_payload(payload)
     assert dto.source_type == "local_file"
-    assert dto.scan_region.height == 40
+    assert len(dto.scan_regions) == 1
+    assert dto.scan_regions[0].height == 40
+
+
+def test_analysis_start_request_dto_accepts_multiple_regions() -> None:
+    payload = {
+        "source_type": "local_file",
+        "source_value": "C:/videos/match.mp4",
+        "output_folder": "C:/output",
+        "output_filename": "match.csv",
+        "scan_regions": [
+            {"x": 10, "y": 20, "width": 100, "height": 40},
+            {"x": 20, "y": 90, "width": 120, "height": 45},
+        ],
+    }
+    dto = AnalysisStartRequestDTO.from_payload(payload)
+    assert len(dto.scan_regions) == 2
+    assert dto.scan_regions[1].y == 90
 
 
 def test_analysis_start_request_dto_rejects_invalid_source_type() -> None:
