@@ -118,16 +118,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T034 [P] [US4] Add backend unit coverage for duplicate accepted-name detection and conflict payload generation in `tests/unit/test_review_group_uniqueness_010.py`
-- [ ] T035 [P] [US4] Extend contract coverage for duplicate-name validation failures and conflicting-group references in `tests/contract/test_review_groups_api_010.py`
-- [ ] T036 [P] [US4] Add integration coverage for cross-group duplicate prevention and rollback of invalid selections in `tests/integration/test_review_groups_validation_flow_010.py`
+- [X] T034 [P] [US4] Add backend unit coverage for duplicate accepted-name detection and conflict payload generation in `tests/unit/test_review_group_uniqueness_010.py`
+- [X] T035 [P] [US4] Extend contract coverage for duplicate-name validation failures and conflicting-group references in `tests/contract/test_review_groups_api_010.py`
+- [X] T036 [P] [US4] Add integration coverage for cross-group duplicate prevention and rollback of invalid selections in `tests/integration/test_review_groups_validation_flow_010.py`
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Implement backend uniqueness checks and conflicting-group lookup for review actions in `src/web/app/group_mutation_service.py` and `src/web/api/routes/review_actions.py`
-- [ ] T038 [US4] Add validation result DTOs and failed-action response payloads for duplicate-name feedback in `src/web/api/schemas.py` and `src/web/api/routes/review_actions.py`
-- [ ] T039 [US4] Extend `src/web/frontend/src/components/ValidationFeedback.tsx` to render inline duplicate-name errors and hints from the API payload
-- [ ] T040 [US4] Surface duplicate-name errors, conflicting-group references, and selection rollback in `src/web/frontend/src/components/CandidateRow.tsx` and `src/web/frontend/src/pages/ReviewPage.tsx`
+- [X] T037 [US4] Implement backend uniqueness checks and conflicting-group lookup for review actions in `src/web/app/group_mutation_service.py` and `src/web/api/routes/review_actions.py`
+- [X] T038 [US4] Add validation result DTOs and failed-action response payloads for duplicate-name feedback in `src/web/api/schemas.py` and `src/web/api/routes/review_actions.py`
+- [X] T039 [US4] Extend `src/web/frontend/src/components/ValidationFeedback.tsx` to render inline duplicate-name errors and hints from the API payload
+- [X] T040 [US4] Surface duplicate-name errors, conflicting-group references, and selection rollback in `src/web/frontend/src/components/CandidateRow.tsx` and `src/web/frontend/src/pages/ReviewPage.tsx`
 
 **Checkpoint**: Duplicate accepted names are independently blocked with persistent inline feedback and clear conflict context.
 
