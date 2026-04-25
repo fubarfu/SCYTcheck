@@ -8,7 +8,6 @@ interface Settings {
   gating_threshold?: number;
   filter_non_matching?: boolean;
   logging_enabled?: boolean;
-  context_patterns?: unknown[];
 }
 
 interface Props {

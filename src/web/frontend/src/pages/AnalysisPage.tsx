@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { AnalysisProgressPanel } from "../components/AnalysisProgressPanel";
 import { AnalysisSettingsPanel } from "../components/AnalysisSettingsPanel";
+import { ContextPatternsPanel } from "../components/ContextPatternsPanel";
 
 interface ScanRegion {
   x: number;
@@ -596,12 +597,8 @@ export function AnalysisPage() {
               </div>
             </section>
 
-            <section className="panel-card">
-              <div className="panel-card-header">
-                <div>
-                  <h3>Pick where results are written</h3>
-                </div>
-              </div>
+            <details className="settings-panel" open>
+              <summary>Pick where results are written</summary>
               <div className="panel-card-body form-stack">
                 <label>
                   Output folder
@@ -652,12 +649,13 @@ export function AnalysisPage() {
                   />
                 </label>
               </div>
-            </section>
+            </details>
           </div>
 
           {/* Secondary column: settings + run */}
           <div className="analysis-column analysis-column-secondary">
             <AnalysisSettingsPanel settings={settings} onChange={setSettings} />
+            <ContextPatternsPanel settings={settings} onChange={setSettings} />
 
             {startError && <p className="error-banner">{startError}</p>}
 

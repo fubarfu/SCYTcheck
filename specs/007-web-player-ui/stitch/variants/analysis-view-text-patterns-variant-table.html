@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SCYTcheck Analysis View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#ff9993",
+                        "on-primary-container": "#ffffff",
+                        "error-container": "#871f21",
+                        "on-background": "#e2e5f0",
+                        "surface-container-highest": "#22262e",
+                        "surface-bright": "#282c34",
+                        "primary-fixed-dim": "#317bef",
+                        "on-tertiary-container": "#54436b",
+                        "surface-variant": "#22262e",
+                        "secondary-container": "#333b4d",
+                        "surface-container-lowest": "#000000",
+                        "surface-container-low": "#111318",
+                        "tertiary-fixed": "#e5ceff",
+                        "primary-container": "#0e69dc",
+                        "outline-variant": "#444851",
+                        "tertiary-container": "#e5ceff",
+                        "on-tertiary": "#5d4c74",
+                        "error-dim": "#c54d4a",
+                        "secondary-fixed": "#dae2f9",
+                        "on-secondary-container": "#b7bfd5",
+                        "on-tertiary-fixed": "#413057",
+                        "surface-dim": "#0c0e12",
+                        "background": "#0c0e12",
+                        "on-surface": "#e2e5f0",
+                        "primary": "#adc6ff",
+                        "on-secondary": "#384052",
+                        "primary-dim": "#699cff",
+                        "secondary-fixed-dim": "#ccd4eb",
+                        "inverse-surface": "#f9f9fe",
+                        "tertiary-fixed-dim": "#d6c0f0",
+                        "surface-container": "#171a20",
+                        "secondary": "#bec6dd",
+                        "error": "#fa746f",
+                        "primary-fixed": "#4388fd",
+                        "tertiary": "#f0dfff",
+                        "on-tertiary-fixed-variant": "#5e4c75",
+                        "on-primary-fixed": "#000000",
+                        "inverse-primary": "#005bc4",
+                        "on-secondary-fixed": "#373f51",
+                        "on-error": "#490006",
+                        "tertiary-dim": "#d6c0f0",
+                        "secondary-dim": "#b1b9ce",
+                        "surface-container-high": "#1c2026",
+                        "on-secondary-fixed-variant": "#535b6e",
+                        "on-primary-fixed-variant": "#001435",
+                        "inverse-on-surface": "#53555a",
+                        "outline": "#72757f",
+                        "on-surface-variant": "#a8abb5",
+                        "surface": "#0c0e12",
+                        "on-primary": "#003d88",
+                        "surface-tint": "#adc6ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #111827;color: #E5E7EB;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4B5563; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3B82F6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #374151;
+            border-radius: 2px;
+        }input[type="checkbox"] {
+            @apply rounded border-[#374151] bg-[#111827] text-[#3B82F6] focus:ring-[#3B82F6] focus:ring-offset-[#1F2937];
+        }
+    </style>
+</head>
+<body class="bg-[#111827] text-[#E5E7EB] font-body min-h-screen flex flex-col pt-16 pb-20 selection:bg-primary-container selection:text-on-primary-container">
+<nav class="bg-gray-950 dark:bg-gray-950 font-['Plus_Jakarta_Sans'] font-medium text-sm docked full-width top-0 z-50 border-b border-gray-800 dark:border-gray-800 flat no shadows flex justify-between items-center px-8 w-full h-16 fixed">
+<div class="flex items-center gap-8">
+<div class="text-xl font-black tracking-tighter text-white dark:text-gray-50">
+                SCYTcheck
+            </div>
+<div class="flex items-center gap-6 h-full">
+<a class="text-blue-500 dark:text-blue-400 border-b-2 border-blue-500 dark:border-blue-400 pb-4 mt-4 cursor-pointer active:opacity-80 transition-all duration-200" href="#">
+                    Analysis
+                </a>
+<a class="text-gray-400 dark:text-gray-500 hover:text-gray-200 dark:hover:text-gray-300 pb-4 mt-4 cursor-pointer active:opacity-80 transition-all duration-200" href="#">
+                    Review
+                </a>
+</div>
+</div>
+<div class="flex items-center">
+<button aria-label="Toggle Dark Mode" class="p-2 rounded-full hover:bg-gray-900/50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer active:opacity-80 text-gray-400 hover:text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dark_mode</span>
+</button>
+</div>
+</nav>
+<main class="flex-grow container mx-auto px-6 py-8 max-w-[1280px]">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<div class="lg:col-span-5 flex flex-col gap-8">
+<div class="bg-[#1F2937] border border-[#374151] rounded-xl p-6 shadow-sm">
+<h2 class="font-headline font-bold text-lg text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[#3B82F6]">smart_display</span>
+                        Input Source
+                    </h2>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Video Source</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-gray-400 text-sm">link</span>
+</div>
+<input class="w-full bg-[#111827] border border-[#374151] text-white rounded-lg pl-10 pr-10 py-2.5 focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6] font-mono text-sm transition-colors" placeholder="https://youtube.com/watch?v=..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-gray-500 text-sm">help</span>
+</div>
+</div>
+</div>
+<div class="flex items-center py-2">
+<div class="flex-grow border-t border-[#374151]"></div>
+<span class="flex-shrink-0 mx-4 text-xs font-medium text-gray-500 uppercase tracking-wider">OR</span>
+<div class="flex-grow border-t border-[#374151]"></div>
+</div>
+<button class="w-full bg-[#374151] hover:bg-[#4B5563] text-white border border-[#4B5563] rounded-lg py-2.5 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 group">
+<span class="material-symbols-outlined text-gray-400 group-hover:text-white transition-colors">folder_open</span>
+                            Select Local Video File
+                        </button>
+</div>
+</div>
+<div class="bg-[#1F2937] border border-[#374151] rounded-xl p-6 shadow-sm">
+<h2 class="font-headline font-bold text-lg text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[#3B82F6]">folder_managed</span>
+                        Output Destination
+                    </h2>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Output Folder</label>
+<div class="flex gap-2">
+<div class="relative flex-grow">
+<input class="w-full bg-[#111827] border border-[#374151] text-gray-400 rounded-lg pl-3 pr-3 py-2 text-sm font-mono cursor-not-allowed" readonly="" type="text" value="C:\Scans\Results"/>
+</div>
+<button class="bg-[#374151] hover:bg-[#4B5563] text-white border border-[#4B5563] rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap">
+                                    Browse...
+                                </button>
+</div>
+</div>
+<div class="bg-[#111827] border border-[#374151] border-dashed rounded-lg p-4 flex items-center justify-center">
+<p class="text-xs text-gray-500 font-mono italic">output filename will appear here</p>
+</div>
+</div>
+</div>
+<div class="bg-[#1F2937] border border-[#374151] rounded-xl p-6 shadow-sm flex-grow flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-headline font-bold text-lg text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-[#3B82F6]">crop</span>
+                            Scan Region
+                        </h2>
+<button class="text-xs bg-[#3B82F6]/10 text-[#3B82F6] hover:bg-[#3B82F6]/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-[#3B82F6]/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled="">
+                            Select Region
+                        </button>
+</div>
+<div class="bg-[#0c0e12] border border-[#374151] rounded-lg flex-grow min-h-[200px] flex items-center justify-center relative overflow-hidden group">
+<div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, #374151 0, #374151 1px, transparent 0, transparent 50%); background-size: 10px 10px;"></div>
+<div class="text-center z-10 px-4">
+<span class="material-symbols-outlined text-gray-600 text-4xl mb-2 block">videocam_off</span>
+<p class="text-sm text-gray-500 font-medium">Select a video source to preview frame</p>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-7 flex flex-col gap-4">
+<h2 class="font-headline font-bold text-xl text-white mb-2 tracking-tight">Configuration</h2>
+<div class="bg-[#1F2937] border border-[#374151] rounded-xl overflow-hidden shadow-sm">
+<div class="px-5 py-4 border-b border-[#374151] flex justify-between items-center cursor-pointer bg-[#282c34]/30 hover:bg-[#282c34]/50 transition-colors">
+<h3 class="font-headline font-semibold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-sm">settings_suggest</span>
+                            Analysis Settings
+                        </h3>
+<span class="material-symbols-outlined text-gray-400">expand_less</span>
+</div>
+<div class="p-6 space-y-6 bg-[#1F2937]">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Video Quality</label>
+<select class="w-full bg-[#111827] border border-[#374151] text-white rounded-lg px-3 py-2 focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6] text-sm appearance-none cursor-pointer">
+<option>Best Available</option>
+<option>1080p</option>
+<option>720p</option>
+<option>480p</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-300 mb-2">Event Merge Gap</label>
+<div class="flex">
+<input class="w-20 bg-[#111827] border border-[#374151] text-white rounded-l-lg px-3 py-2 focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6] text-sm text-center font-mono" max="60" min="0" type="number" value="3"/>
+<span class="inline-flex items-center px-3 rounded-r-lg border border-l-0 border-[#374151] bg-[#374151]/50 text-gray-400 text-sm">
+                                        seconds
+                                    </span>
+</div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-1">
+<label class="text-sm font-medium text-gray-300">OCR Sensitivity</label>
+<span class="text-xs text-[#3B82F6] font-mono bg-[#3B82F6]/10 px-2 py-0.5 rounded">75</span>
+</div>
+<input class="w-full h-1 bg-[#374151] rounded-lg appearance-none cursor-pointer" max="100" min="0" type="range" value="75"/>
+<div class="flex justify-between text-xs text-gray-500 mt-1 font-mono">
+<span>0 (Faster)</span>
+<span>100 (Accurate)</span>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-1">
+<label class="text-sm font-medium text-gray-300">Matching Tolerance</label>
+<span class="text-xs text-[#3B82F6] font-mono bg-[#3B82F6]/10 px-2 py-0.5 rounded">80</span>
+</div>
+<input class="w-full h-1 bg-[#374151] rounded-lg appearance-none cursor-pointer" max="100" min="0" type="range" value="80"/>
+<div class="flex justify-between text-xs text-gray-500 mt-1 font-mono">
+<span>0 (Strict)</span>
+<span>100 (Fuzzy)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-[#1F2937] border border-[#374151] rounded-xl overflow-hidden shadow-sm">
+<div class="px-5 py-4 border-b border-[#374151] flex justify-between items-center cursor-pointer bg-[#282c34]/30 hover:bg-[#282c34]/50 transition-colors">
+<div class="flex items-center gap-3">
+<h3 class="font-headline font-semibold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-sm">animation</span>
+                                Frame Gating
+                            </h3>
+<div class="w-8 h-4 bg-[#3B82F6] rounded-full relative cursor-pointer flex items-center">
+<div class="w-3 h-3 bg-white rounded-full absolute right-0.5 shadow-sm"></div>
+</div>
+</div>
+<span class="material-symbols-outlined text-gray-400">expand_less</span>
+</div>
+<div class="p-6 bg-[#1F2937]">
+<p class="text-xs text-gray-400 mb-4 leading-relaxed">Frame gating ignores identical consecutive frames to dramatically speed up processing time.</p>
+<div>
+<div class="flex justify-between mb-1">
+<label class="text-sm font-medium text-gray-300">Gating Threshold</label>
+<span class="text-xs text-gray-300 font-mono bg-[#374151] px-2 py-0.5 rounded">15%</span>
+</div>
+<input class="w-full h-1 bg-[#374151] rounded-lg appearance-none cursor-pointer" max="100" min="0" type="range" value="15"/>
+<div class="flex justify-between text-xs text-gray-500 mt-1 font-mono">
+<span>1% (Minor Changes)</span>
+<span>50% (Scene Cuts Only)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-[#1F2937] border border-[#374151] rounded-xl overflow-hidden shadow-sm">
+<div class="px-5 py-4 border-b border-[#374151] flex justify-between items-center cursor-pointer bg-[#282c34]/30 hover:bg-[#282c34]/50 transition-colors">
+<div class="flex items-center gap-2">
+<h3 class="font-headline font-semibold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-sm">regular_expression</span>
+                                Context Patterns
+                            </h3>
+<span class="bg-[#374151] text-gray-300 text-[10px] px-1.5 py-0.5 rounded font-mono">Regex</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-1.5 text-xs font-semibold text-[#3B82F6] hover:text-blue-400 transition-colors">
+<span class="material-symbols-outlined text-sm">add_circle</span>
+                                ADD PATTERN
+                            </button>
+<span class="material-symbols-outlined text-gray-400">expand_less</span>
+</div>
+</div>
+<div class="bg-[#1F2937]">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#111827]/50 border-b border-[#374151]">
+<th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-16 text-center">Enabled</th>
+<th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Before Pattern</th>
+<th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">After Pattern</th>
+<th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-20 text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#374151]/30">
+<tr class="hover:bg-[#3B82F6]/5 transition-colors">
+<td class="px-4 py-2 text-center">
+<input checked="" class="w-4 h-4 rounded border-[#374151] bg-[#111827] text-[#3B82F6] focus:ring-offset-0 focus:ring-1" type="checkbox"/>
+</td>
+<td class="px-4 py-2">
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm font-mono text-gray-200 p-0 placeholder-gray-600" placeholder="Regex before..." type="text" value="\["/>
+</td>
+<td class="px-4 py-2">
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm font-mono text-gray-200 p-0 placeholder-gray-600" placeholder="Regex after..." type="text" value="\]"/>
+</td>
+<td class="px-4 py-2 text-center">
+<button class="text-gray-500 hover:text-red-400 transition-colors">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</td>
+</tr>
+<tr class="bg-[#111827]/20 hover:bg-[#3B82F6]/5 transition-colors">
+<td class="px-4 py-2 text-center">
+<input checked="" class="w-4 h-4 rounded border-[#374151] bg-[#111827] text-[#3B82F6] focus:ring-offset-0 focus:ring-1" type="checkbox"/>
+</td>
+<td class="px-4 py-2">
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm font-mono text-gray-200 p-0 placeholder-gray-600" type="text" value="Username:\s*"/>
+</td>
+<td class="px-4 py-2">
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm font-mono text-gray-200 p-0 placeholder-gray-600" type="text" value="\s+"/>
+</td>
+<td class="px-4 py-2 text-center">
+<button class="text-gray-500 hover:text-red-400 transition-colors">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-[#3B82F6]/5 transition-colors">
+<td class="px-4 py-2 text-center">
+<input class="w-4 h-4 rounded border-[#374151] bg-[#111827] text-[#3B82F6] focus:ring-offset-0 focus:ring-1" type="checkbox"/>
+</td>
+<td class="px-4 py-2">
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm font-mono text-gray-400 p-0 italic" placeholder="Regex before..." type="text" value="ID:\s*(\d+)"/>
+</td>
+<td class="px-4 py-2">
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm font-mono text-gray-200 p-0" placeholder="None" type="text" value=""/>
+</td>
+<td class="px-4 py-2 text-center">
+<button class="text-gray-500 hover:text-red-400 transition-colors">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-5 py-3 border-t border-[#374151]/50 bg-[#111827]/30 flex items-center justify-between">
+<label class="flex items-center gap-2 cursor-pointer group">
+<div class="relative flex items-center">
+<input class="peer h-4 w-4 rounded border-[#374151] bg-[#111827] text-[#3B82F6] focus:ring-[#3B82F6]" type="checkbox"/>
+</div>
+<span class="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">Extract only matching names</span>
+</label>
+<span class="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">3 Patterns Defined</span>
+</div>
+</div>
+</div>
+<div class="bg-[#1F2937] border border-[#374151] rounded-xl overflow-hidden shadow-sm opacity-80 hover:opacity-100 transition-opacity">
+<div class="px-5 py-4 flex justify-between items-center cursor-pointer bg-[#282c34]/30 hover:bg-[#282c34]/50 transition-colors">
+<h3 class="font-headline font-semibold text-gray-300 flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-500 text-sm">subject</span>
+                            Logging
+                        </h3>
+<span class="material-symbols-outlined text-gray-500">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="bg-gray-900/80 dark:bg-gray-950/90 backdrop-blur-md font-['Inter'] text-xs uppercase tracking-widest fixed bottom-0 w-full z-50 border-t border-gray-800 dark:border-gray-800 shadow-2xl flex justify-between items-center px-10 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-20"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-gray-500"></span>
+</span>
+<span class="text-gray-400 font-medium">Ready</span>
+<span class="mx-2 text-gray-700">|</span>
+<span class="text-gray-600 hidden md:inline">SCYTcheck Analysis Engine</span>
+</div>
+<button class="bg-blue-600/50 dark:bg-blue-500/50 text-white/50 font-bold py-2.5 px-8 rounded-md hover:brightness-110 transition-all scale-100 hover:scale-[1.02] active:scale-95 cursor-not-allowed flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+            Start Analysis
+        </button>
+</footer>
+
+</body></html>
