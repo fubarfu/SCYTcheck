@@ -94,17 +94,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T026 [P] [US3] Add backend unit coverage for confirm, reject, un-reject, and consensus-transition rules in `tests/unit/test_review_group_mutations_010.py`
-- [ ] T027 [P] [US3] Add contract coverage for confirm, reject, deselect, and undo review-group actions in `tests/contract/test_review_groups_api_010.py`
-- [ ] T028 [P] [US3] Add Vitest coverage for radio-button selection, explicit deselection, success feedback, and rejected-candidate rendering in `src/web/frontend/tests/review/CandidateRow.test.tsx`
+- [X] T026 [P] [US3] Add backend unit coverage for confirm, reject, un-reject, and consensus-transition rules in `tests/unit/test_review_group_mutations_010.py`
+- [X] T027 [P] [US3] Add contract coverage for confirm, reject, deselect, and undo review-group actions in `tests/contract/test_review_groups_api_010.py`
+- [X] T028 [P] [US3] Add Vitest coverage for radio-button selection, explicit deselection, success feedback, and rejected-candidate rendering in `src/web/frontend/tests/review/CandidateRow.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement confirm, reject, deselect, and un-reject mutation semantics plus accepted-name updates in `src/web/app/group_mutation_service.py` and `src/web/api/routes/review_actions.py`
-- [ ] T030 [US3] Persist accepted-name changes and auto-collapse-on-consensus behavior in `src/web/app/review_sidecar_store.py` and `src/web/api/routes/review_sessions.py`
-- [ ] T031 [US3] Create shared inline feedback rendering for successful confirmations in `src/web/frontend/src/components/ValidationFeedback.tsx`
-- [ ] T032 [US3] Implement candidate-level radio-button selection, reject or undo affordances, and success-state styling in `src/web/frontend/src/components/CandidateRow.tsx`
-- [ ] T033 [US3] Reconcile accepted-name, rejected-candidate, and auto-collapse transitions into client state in `src/web/frontend/src/state/reviewStore.ts` and `src/web/frontend/src/state/reviewSelectors.ts`
+- [X] T029 [US3] Implement confirm, reject, deselect, and un-reject mutation semantics plus accepted-name updates in `src/web/app/group_mutation_service.py` and `src/web/api/routes/review_actions.py`
+- [X] T030 [US3] Persist accepted-name changes and auto-collapse-on-consensus behavior in `src/web/app/review_sidecar_store.py` and `src/web/api/routes/review_sessions.py`
+- [X] T031 [US3] Create shared inline feedback rendering for successful confirmations in `src/web/frontend/src/components/ValidationFeedback.tsx`
+- [X] T032 [US3] Implement candidate-level radio-button selection, reject or undo affordances, and success-state styling in `src/web/frontend/src/components/CandidateRow.tsx`
+- [X] T033 [US3] Reconcile accepted-name, rejected-candidate, and auto-collapse transitions into client state in `src/web/frontend/src/state/reviewStore.ts` and `src/web/frontend/src/state/reviewSelectors.ts`
 
 **Checkpoint**: Reviewers can independently resolve groups, see confirmation feedback, and watch groups auto-collapse on consensus.
 
