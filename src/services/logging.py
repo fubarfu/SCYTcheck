@@ -68,8 +68,6 @@ def create_gating_log_record(
 
 LOG_HEADERS = [
     "TimestampSec",
-    "RawString",
-    "TestedStringRaw",
     "TestedStringNormalized",
     "Accepted",
     "RejectionReason",
@@ -153,8 +151,6 @@ class SidecarLogWriter:
             self._writer.writerow(
                 [
                     record.timestamp_sec,
-                    record.raw_string,
-                    record.tested_string_raw,
                     record.tested_string_normalized,
                     str(record.accepted).lower(),
                     record.rejection_reason,
@@ -190,8 +186,6 @@ def write_sidecar_log(output_folder: str, summary_filename: str, records: list[L
             writer.writerow(
                 [
                     record.timestamp_sec,
-                    record.raw_string,
-                    record.tested_string_raw,
                     record.tested_string_normalized,
                     str(record.accepted).lower(),
                     record.rejection_reason,
