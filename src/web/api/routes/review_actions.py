@@ -36,7 +36,7 @@ class ReviewActionsHandler:
 
         action_type = action_request.action_type
         target_ids = action_request.target_ids
-        action_payload = action_request.payload
+        action_payload = dict(action_request.payload)
         action_id = f"act_{uuid.uuid4().hex[:12]}"
         action_record = {
             "action_id": action_id,
@@ -47,6 +47,16 @@ class ReviewActionsHandler:
         }
 
         session_payload = recompute_groups(dict(state.payload or {}))
+        if action_type == "toggle_collapse":
+            group_id = str(action_payload.get("group_id", "")).strip()
+            if group_id:
+                requested = action_payload.get("is_collapsed")
+                requested_bool = bool(requested) if requested is not None else None
+                action_payload["is_collapsed"] = self._sidecar.resolve_group_collapsed_target(
+                    session_payload,
+                    group_id,
+                    requested_bool,
+                )
         mutation_payload, validation_payload, handled = GroupMutationService.apply_action(
             session_payload,
             action_type,

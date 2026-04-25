@@ -145,6 +145,32 @@ class ReviewSidecarStore:
         payload["resolution_status"] = statuses
         return payload
 
+    def resolve_group_collapsed_target(
+        self,
+        session_payload: dict[str, Any],
+        group_id: str,
+        requested_is_collapsed: bool | None,
+    ) -> bool:
+        payload = self.ensure_group_state_maps(session_payload)
+        if requested_is_collapsed is not None:
+            return bool(requested_is_collapsed)
+
+        collapsed_map = dict(payload.get("collapsed_groups", {}))
+        if group_id in collapsed_map:
+            return not bool(collapsed_map[group_id])
+
+        for group in list(payload.get("groups", [])):
+            if str(group.get("group_id", "")).strip() != group_id:
+                continue
+            if "is_collapsed" in group:
+                return not bool(group.get("is_collapsed"))
+            break
+
+        status_map = dict(payload.get("resolution_status", {}))
+        status = str(status_map.get(group_id, "UNRESOLVED"))
+        # Match hydration defaults when no explicit state has been persisted yet.
+        return status == "UNRESOLVED"
+
     def get_group_state(self, session_payload: dict[str, Any], group_id: str) -> dict[str, Any]:
         payload = self.ensure_group_state_maps(session_payload)
         return {
