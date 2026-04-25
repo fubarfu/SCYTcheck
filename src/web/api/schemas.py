@@ -92,3 +92,105 @@ class ReviewLoadRequestDTO:
         if csv_path.suffix.lower() != ".csv":
             raise SchemaValidationError("csv_path must point to a .csv file")
         return ReviewLoadRequestDTO(csv_path=csv_path)
+
+
+@dataclass(frozen=True)
+class HistoryContextDTO:
+    scan_region: dict[str, int]
+    context_patterns: list[dict[str, Any]]
+    analysis_settings: dict[str, Any]
+
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> HistoryContextDTO:
+        scan_region = payload.get("scan_region")
+        if not isinstance(scan_region, dict):
+            raise SchemaValidationError("context.scan_region must be an object")
+        region = ScanRegionDTO.from_payload(scan_region)
+
+        context_patterns_raw = payload.get("context_patterns", [])
+        if not isinstance(context_patterns_raw, list):
+            raise SchemaValidationError("context.context_patterns must be an array")
+
+        settings_raw = payload.get("analysis_settings", {})
+        if not isinstance(settings_raw, dict):
+            raise SchemaValidationError("context.analysis_settings must be an object")
+
+        return HistoryContextDTO(
+            scan_region={
+                "x": region.x,
+                "y": region.y,
+                "width": region.width,
+                "height": region.height,
+            },
+            context_patterns=[dict(item) for item in context_patterns_raw if isinstance(item, dict)],
+            analysis_settings=dict(settings_raw),
+        )
+
+
+@dataclass(frozen=True)
+class HistoryMergeRunRequestDTO:
+    source_type: str
+    source_value: str
+    canonical_source: str
+    duration_seconds: int | None
+    result_csv_path: Path
+    output_folder: Path
+    context: HistoryContextDTO
+
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> HistoryMergeRunRequestDTO:
+        source_type = str(payload.get("source_type", "")).strip()
+        source_value = str(payload.get("source_value", "")).strip()
+        canonical_source = str(payload.get("canonical_source", "")).strip()
+        result_csv_path_raw = str(payload.get("result_csv_path", "")).strip()
+        output_folder_raw = str(payload.get("output_folder", "")).strip()
+
+        if source_type not in {"youtube_url", "local_file"}:
+            raise SchemaValidationError("source_type must be 'youtube_url' or 'local_file'")
+        if not source_value:
+            raise SchemaValidationError("source_value is required")
+        if not canonical_source:
+            raise SchemaValidationError("canonical_source is required")
+        if not result_csv_path_raw:
+            raise SchemaValidationError("result_csv_path is required")
+        if not output_folder_raw:
+            raise SchemaValidationError("output_folder is required")
+
+        duration_raw = payload.get("duration_seconds")
+        duration_seconds: int | None = None
+        if duration_raw is not None:
+            try:
+                duration_seconds = int(duration_raw)
+            except (TypeError, ValueError):
+                duration_seconds = None
+            if duration_seconds is not None and duration_seconds < 0:
+                duration_seconds = None
+
+        context_payload = payload.get("context")
+        if not isinstance(context_payload, dict):
+            raise SchemaValidationError("context is required")
+
+        result_csv_path = Path(result_csv_path_raw)
+        output_folder = Path(output_folder_raw)
+
+        return HistoryMergeRunRequestDTO(
+            source_type=source_type,
+            source_value=source_value,
+            canonical_source=canonical_source,
+            duration_seconds=duration_seconds,
+            result_csv_path=result_csv_path,
+            output_folder=output_folder,
+            context=HistoryContextDTO.from_payload(context_payload),
+        )
+
+
+@dataclass(frozen=True)
+class HistoryReopenRequestDTO:
+    history_id: str
+
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> HistoryReopenRequestDTO:
+        history_id = str(payload.get("history_id", "")).strip()
+        if not history_id:
+            raise SchemaValidationError("history_id is required")
+        return HistoryReopenRequestDTO(history_id=history_id)

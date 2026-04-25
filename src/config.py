@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SETTINGS_FILE = "scytcheck_settings.json"
+HISTORY_INDEX_FILE = "video_history.json"
 
 
 @dataclass(frozen=True)
@@ -140,6 +141,15 @@ def _settings_path(base_dir: str | None = None) -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent / SETTINGS_FILE
     return Path.cwd() / SETTINGS_FILE
+
+
+def history_index_path(base_dir: str | None = None) -> Path:
+    """Return persistent path for video history index.
+
+    Uses the same APPDATA/fallback strategy as settings persistence.
+    """
+    settings_path = _settings_path(base_dir)
+    return settings_path.with_name(HISTORY_INDEX_FILE)
 
 
 def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:

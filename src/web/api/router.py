@@ -37,4 +37,9 @@ def build_router() -> RouteRegistry:
     """Register base routes that are always available in the local runtime."""
     router = RouteRegistry()
     router.add("GET", "/api/health", lambda: {"status": "ok"})
+    router.add("GET", "/api/history/videos", lambda: {})
+    router.add("GET", "/api/history/videos/{history_id}", lambda history_id: history_id)
+    router.add("POST", "/api/history/merge-run", lambda payload=None: payload)
+    router.add("POST", "/api/history/reopen", lambda payload=None: payload)
+    router.add("DELETE", "/api/history/videos/{history_id}", lambda history_id: history_id)
     return router

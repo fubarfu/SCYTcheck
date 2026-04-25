@@ -13,9 +13,11 @@ from src.data.models import ContextPattern, LogRecord, TextDetection, VideoAnaly
 
 from src.web.api.schemas import AnalysisStartRequestDTO, SchemaValidationError
 from src.web.app.analysis_adapter import AnalysisAdapter, RunStatus
+from src.web.app.history_store import canonicalize_source
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.services.analysis_service import AnalysisService
 from src.services.export_service import ExportService
+from src.services.history_service import HistoryService
 from src.services.logging import SidecarLogWriter, write_sidecar_log
 from src.services.ocr_service import OCRService
 from src.services.video_service import VideoService
@@ -103,6 +105,7 @@ class AnalysisHandler:
         self.adapter = adapter or AnalysisAdapter()
         self.video_service = VideoService()
         self.export_service = ExportService()
+        self.history_service = HistoryService()
         self._sidecar_store = ReviewSidecarStore()
 
     def post_preview(self, payload: dict[str, Any]) -> tuple[int, dict]:
@@ -237,6 +240,38 @@ class AnalysisHandler:
                 if advanced.logging_enabled:
                     write_sidecar_log(str(output_folder), dto.output_filename, analysis.log_records)
                 self._write_review_sidecar(exported, analysis, dto.source_type, dto.source_value)
+                merge_result = self.history_service.merge_run(
+                    source_type=dto.source_type,
+                    source_value=dto.source_value,
+                    canonical_source=canonicalize_source(dto.source_type, dto.source_value),
+                    duration_seconds=int(duration) if duration > 0 else None,
+                    result_csv_path=str(exported),
+                    output_folder=str(output_folder),
+                    context={
+                        "scan_region": {
+                            "x": dto.scan_regions[0].x,
+                            "y": dto.scan_regions[0].y,
+                            "width": dto.scan_regions[0].width,
+                            "height": dto.scan_regions[0].height,
+                        },
+                        "context_patterns": list(advanced.context_patterns),
+                        "analysis_settings": AnalysisService.history_settings_snapshot(
+                            ocr_confidence_threshold=advanced.ocr_confidence_threshold,
+                            tolerance_value=advanced.tolerance_value,
+                            event_gap_threshold_sec=advanced.event_gap_threshold_sec,
+                            gating_enabled=advanced.gating_enabled,
+                            gating_threshold=advanced.gating_threshold,
+                            video_quality=advanced.video_quality,
+                            filter_non_matching=advanced.filter_non_matching,
+                            logging_enabled=advanced.logging_enabled,
+                        ),
+                    },
+                )
+                self.adapter.set_history_metadata(
+                    run_id=run_id,
+                    history_id=str(merge_result["history_id"]),
+                    history_run_id=str(merge_result["run_id"]),
+                )
                 self.adapter.update_progress(run_id, 100, 100, "Completed")
                 return str(exported)
             finally:
@@ -398,5 +433,7 @@ class AnalysisHandler:
             "run_id": run_id,
             "status": state.status.value,
             "csv_path": state.output_csv_path,
+            "history_id": state.history_id,
+            "history_run_id": state.history_run_id,
             "partial": partial,
         }

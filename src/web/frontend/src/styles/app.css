@@ -167,9 +167,50 @@ button:disabled {
 .review-stack,
 .candidate-list,
 .review-toolbar,
-.review-filter-bar {
+.review-filter-bar,
+.history-list {
   display: grid;
   gap: 10px;
+}
+
+.history-entry-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.history-entry-main h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.history-source {
+  margin: 4px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.history-meta-row {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.history-entry-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.history-badge {
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--border) 30%);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .analysis-layout {

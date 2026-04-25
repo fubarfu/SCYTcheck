@@ -33,6 +33,30 @@ class AnalysisService:
         self.ocr_service = ocr_service
 
     @staticmethod
+    def history_settings_snapshot(
+        *,
+        ocr_confidence_threshold: int,
+        tolerance_value: float,
+        event_gap_threshold_sec: float,
+        gating_enabled: bool,
+        gating_threshold: float,
+        video_quality: str,
+        filter_non_matching: bool,
+        logging_enabled: bool,
+    ) -> dict[str, object]:
+        """Build a compact settings snapshot persisted for history reopen."""
+        return {
+            "ocr_confidence_threshold": int(ocr_confidence_threshold),
+            "tolerance_value": float(tolerance_value),
+            "event_gap_threshold_sec": float(event_gap_threshold_sec),
+            "gating_enabled": bool(gating_enabled),
+            "gating_threshold": float(gating_threshold),
+            "video_quality": str(video_quality),
+            "filter_non_matching": bool(filter_non_matching),
+            "logging_enabled": bool(logging_enabled),
+        }
+
+    @staticmethod
     def _estimate_total_frames(start_time: float, end_time: float, fps: int) -> int:
         duration = max(0.0, float(end_time) - float(start_time))
         return max(1, int(duration * max(1, fps)) + 1)

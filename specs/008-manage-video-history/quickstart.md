@@ -64,3 +64,8 @@ Validate that video history persistence, deterministic merge, reopen restore, an
 - Integration:
   - analyze -> merge -> history list -> reopen -> review auto-load
   - missing output folder warning path
+
+## Stitch Reconciliation Notes
+- No functional deviations from Stitch authority were required for feature 008 integration.
+- History view follows existing Analysis/Review card hierarchy and spacing tokens to preserve UI continuity.
+- Reopen warning behavior is intentionally non-blocking and rendered inline in Review, consistent with the status-message treatment in existing views.

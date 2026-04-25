@@ -15,14 +15,14 @@
 
 **Purpose**: Prepare test and module scaffolding for feature 008 within the existing repository structure.
 
-- [ ] T001 Create feature-specific history fixtures and sample payload builders in tests/fixtures/history_008/__init__.py
-- [ ] T002 [P] Create History API contract test module scaffold in tests/contract/test_history_api_008.py
-- [ ] T003 [P] Create History feature integration test module scaffolds in tests/integration/test_history_reopen_flow_008.py and tests/integration/test_history_merge_flow_008.py
-- [ ] T004 [P] Create History feature unit test module scaffolds in tests/unit/test_history_merge_logic_008.py and tests/unit/test_history_reopen_resolution_008.py
-- [ ] T005 Add history feature settings keys and defaults for index path resolution in src/config.py
-- [ ] T006 [P] Add web runtime config entries for history persistence and limits in src/web/app/config.py
-- [ ] T007 [P] Create backend history module stubs in src/web/app/history_store.py and src/services/history_service.py
-- [ ] T008 [P] Create frontend history module stubs in src/web/frontend/src/pages/HistoryPage.tsx and src/web/frontend/src/state/historyStore.ts
+- [X] T001 Create feature-specific history fixtures and sample payload builders in tests/fixtures/history_008/__init__.py
+- [X] T002 [P] Create History API contract test module scaffold in tests/contract/test_history_api_008.py
+- [X] T003 [P] Create History feature integration test module scaffolds in tests/integration/test_history_reopen_flow_008.py and tests/integration/test_history_merge_flow_008.py
+- [X] T004 [P] Create History feature unit test module scaffolds in tests/unit/test_history_merge_logic_008.py and tests/unit/test_history_reopen_resolution_008.py
+- [X] T005 Add history feature settings keys and defaults for index path resolution in src/config.py
+- [X] T006 [P] Add web runtime config entries for history persistence and limits in src/web/app/config.py
+- [X] T007 [P] Create backend history module stubs in src/web/app/history_store.py and src/services/history_service.py
+- [X] T008 [P] Create frontend history module stubs in src/web/frontend/src/pages/HistoryPage.tsx and src/web/frontend/src/state/historyStore.ts
 
 ---
 
@@ -32,13 +32,13 @@
 
 **CRITICAL**: No user story work should start before this phase is complete.
 
-- [ ] T009 Implement deterministic source canonicalization and merge-key utilities in src/web/app/history_store.py
-- [ ] T010 [P] Implement history index read/write with atomic persistence and soft-delete support in src/web/app/history_store.py
-- [ ] T011 [P] Extend backend data model types for VideoHistoryEntry/AnalysisRunRecord/PersistedAnalysisContext in src/data/models.py
-- [ ] T012 [P] Add history request/response DTO schemas for contract parity in src/web/api/schemas.py
-- [ ] T013 Implement shared history service primitives (list/get/delete/merge/reopen context load) in src/services/history_service.py
-- [ ] T014 Register history API routes and error mapping in src/web/api/router.py
-- [ ] T015 Add foundational unit coverage for persistence guards and schema validation in tests/unit/test_history_foundation_008.py
+- [X] T009 Implement deterministic source canonicalization and merge-key utilities in src/web/app/history_store.py
+- [X] T010 [P] Implement history index read/write with atomic persistence and soft-delete support in src/web/app/history_store.py
+- [X] T011 [P] Extend backend data model types for VideoHistoryEntry/AnalysisRunRecord/PersistedAnalysisContext in src/data/models.py
+- [X] T012 [P] Add history request/response DTO schemas for contract parity in src/web/api/schemas.py
+- [X] T013 Implement shared history service primitives (list/get/delete/merge/reopen context load) in src/services/history_service.py
+- [X] T014 Register history API routes and error mapping in src/web/api/router.py
+- [X] T015 Add foundational unit coverage for persistence guards and schema validation in tests/unit/test_history_foundation_008.py
 
 **Checkpoint**: History foundation ready; user stories can be implemented independently.
 
@@ -52,19 +52,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add unit tests for derived review result resolution states (ready/partial/missing_results/missing_folder) in tests/unit/test_history_reopen_resolution_008.py
-- [ ] T017 [P] [US1] Add contract tests for POST /api/history/reopen and GET /api/history/videos/{history_id}, including explicit metadata-access assertions for missing_results and missing_folder states, in tests/contract/test_history_api_008.py
-- [ ] T018 [P] [US1] Add integration test for quickstart Validation Flow A (create and reopen history entry) in tests/integration/test_history_reopen_flow_008.py
-- [ ] T019 [P] [US1] Add integration test for quickstart Validation Flow E (missing output folder warning path), including explicit verification that history metadata remains accessible, in tests/integration/test_history_reopen_missing_folder_008.py
+- [X] T016 [P] [US1] Add unit tests for derived review result resolution states (ready/partial/missing_results/missing_folder) in tests/unit/test_history_reopen_resolution_008.py
+- [X] T017 [P] [US1] Add contract tests for POST /api/history/reopen and GET /api/history/videos/{history_id}, including explicit metadata-access assertions for missing_results and missing_folder states, in tests/contract/test_history_api_008.py
+- [X] T018 [P] [US1] Add integration test for quickstart Validation Flow A (create and reopen history entry) in tests/integration/test_history_reopen_flow_008.py
+- [X] T019 [P] [US1] Add integration test for quickstart Validation Flow E (missing output folder warning path), including explicit verification that history metadata remains accessible, in tests/integration/test_history_reopen_missing_folder_008.py
 
 ### Implementation for User Story 1
 
-- [ ] T020 [US1] Implement reopen context restore and derived artifact discovery logic in src/services/history_service.py
-- [ ] T021 [US1] Implement POST /api/history/reopen and GET /api/history/videos/{history_id} handlers in src/web/api/routes/history.py
-- [ ] T022 [US1] Implement frontend reopen action and API client wiring in src/web/frontend/src/state/historyStore.ts
-- [ ] T023 [US1] Implement review-session hydration from reopen payload in src/web/frontend/src/state/reviewStore.ts
-- [ ] T024 [US1] Implement automatic Review navigation after successful reopen in src/web/frontend/src/App.tsx
-- [ ] T025 [US1] Implement non-blocking missing-artifact warning presentation in src/web/frontend/src/pages/ReviewPage.tsx
+- [X] T020 [US1] Implement reopen context restore and derived artifact discovery logic in src/services/history_service.py
+- [X] T021 [US1] Implement POST /api/history/reopen and GET /api/history/videos/{history_id} handlers in src/web/api/routes/history.py
+- [X] T022 [US1] Implement frontend reopen action and API client wiring in src/web/frontend/src/state/historyStore.ts
+- [X] T023 [US1] Implement review-session hydration from reopen payload in src/web/frontend/src/state/reviewStore.ts
+- [X] T024 [US1] Implement automatic Review navigation after successful reopen in src/web/frontend/src/App.tsx
+- [X] T025 [US1] Implement non-blocking missing-artifact warning presentation in src/web/frontend/src/pages/ReviewPage.tsx
 
 **Checkpoint**: US1 is independently functional and testable as MVP.
 
@@ -78,18 +78,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Add unit tests for merge identity rules and duration edge handling in tests/unit/test_history_merge_logic_008.py
-- [ ] T027 [P] [US2] Add contract tests for POST /api/history/merge-run behavior and error responses in tests/contract/test_history_api_008.py
-- [ ] T028 [P] [US2] Add integration test for quickstart Validation Flow B (deterministic merge and run_count increment) in tests/integration/test_history_merge_flow_008.py
-- [ ] T029 [P] [US2] Add integration test for quickstart Validation Flow C (missing/malformed duration creates potential duplicate) in tests/integration/test_history_duration_edge_008.py
+- [X] T026 [P] [US2] Add unit tests for merge identity rules and duration edge handling in tests/unit/test_history_merge_logic_008.py
+- [X] T027 [P] [US2] Add contract tests for POST /api/history/merge-run behavior and error responses in tests/contract/test_history_api_008.py
+- [X] T028 [P] [US2] Add integration test for quickstart Validation Flow B (deterministic merge and run_count increment) in tests/integration/test_history_merge_flow_008.py
+- [X] T029 [P] [US2] Add integration test for quickstart Validation Flow C (missing/malformed duration creates potential duplicate) in tests/integration/test_history_duration_edge_008.py
 
 ### Implementation for User Story 2
 
-- [ ] T030 [US2] Implement merge-run persistence workflow and run append semantics in src/services/history_service.py
-- [ ] T031 [US2] Implement POST /api/history/merge-run endpoint in src/web/api/routes/history.py
-- [ ] T032 [US2] Wire analysis completion to history merge-run writes in src/web/api/routes/analysis.py and src/web/app/analysis_adapter.py
-- [ ] T033 [US2] Persist latest analysis context snapshot during merge in src/services/analysis_service.py
-- [ ] T034 [US2] Add potential-duplicate metadata propagation into API responses in src/web/api/schemas.py
+- [X] T030 [US2] Implement merge-run persistence workflow and run append semantics in src/services/history_service.py
+- [X] T031 [US2] Implement POST /api/history/merge-run endpoint in src/web/api/routes/history.py
+- [X] T032 [US2] Wire analysis completion to history merge-run writes in src/web/api/routes/analysis.py and src/web/app/analysis_adapter.py
+- [X] T033 [US2] Persist latest analysis context snapshot during merge in src/services/analysis_service.py
+- [X] T034 [US2] Add potential-duplicate metadata propagation into API responses in src/web/api/schemas.py
 
 **Checkpoint**: US2 merge behavior is independently functional and testable.
 
@@ -103,20 +103,20 @@
 
 ### Tests for User Story 3
 
-- [ ] T035 [P] [US3] Add contract tests for GET /api/history/videos and DELETE /api/history/videos/{history_id} in tests/contract/test_history_api_008.py
-- [ ] T036 [P] [US3] Add integration test for quickstart Validation Flow D (delete behavior without file deletion) in tests/integration/test_history_delete_flow_008.py
-- [ ] T037 [P] [US3] Add integration test for history management view list/delete/reopen journey in tests/integration/test_history_management_view_008.py
-- [ ] T038 [P] [US3] Add unit tests for history list ordering, filtering, and soft-delete exclusion in tests/unit/test_history_list_behavior_008.py
+- [X] T035 [P] [US3] Add contract tests for GET /api/history/videos and DELETE /api/history/videos/{history_id} in tests/contract/test_history_api_008.py
+- [X] T036 [P] [US3] Add integration test for quickstart Validation Flow D (delete behavior without file deletion) in tests/integration/test_history_delete_flow_008.py
+- [X] T037 [P] [US3] Add integration test for history management view list/delete/reopen journey in tests/integration/test_history_management_view_008.py
+- [X] T038 [P] [US3] Add unit tests for history list ordering, filtering, and soft-delete exclusion in tests/unit/test_history_list_behavior_008.py
 
 ### Implementation for User Story 3
 
-- [ ] T039 [US3] Implement GET /api/history/videos and DELETE /api/history/videos/{history_id} handlers in src/web/api/routes/history.py
-- [ ] T040 [US3] Implement History page container and view-state orchestration in src/web/frontend/src/pages/HistoryPage.tsx
-- [ ] T041 [US3] Implement reusable history entry row/card actions (reopen/delete/potential-duplicate badge) in src/web/frontend/src/components/HistoryEntryRow.tsx
-- [ ] T042 [US3] Implement history list/load/delete/reopen store actions and API bindings in src/web/frontend/src/state/historyStore.ts
-- [ ] T043 [US3] Add third-view navigation and route integration for History in src/web/frontend/src/App.tsx
-- [ ] T044 [US3] Apply Stitch-aligned layout/token updates for History integration in src/web/frontend/src/styles/app.css and src/web/frontend/src/styles/theme.css
-- [ ] T045 [US3] Consume and trace all authoritative Stitch artifacts during frontend implementation by mapping structure from specs/008-manage-video-history/stitch/analysis-view.html, specs/008-manage-video-history/stitch/analysis-running-state.html, specs/008-manage-video-history/stitch/review-view.html, specs/008-manage-video-history/stitch/scan-region-selector-overlay.html, and specs/008-manage-video-history/stitch/frame-thumbnail-modal-overlay.html into UI notes in specs/008-manage-video-history/stitch/README.md
+- [X] T039 [US3] Implement GET /api/history/videos and DELETE /api/history/videos/{history_id} handlers in src/web/api/routes/history.py
+- [X] T040 [US3] Implement History page container and view-state orchestration in src/web/frontend/src/pages/HistoryPage.tsx
+- [X] T041 [US3] Implement reusable history entry row/card actions (reopen/delete/potential-duplicate badge) in src/web/frontend/src/components/HistoryEntryRow.tsx
+- [X] T042 [US3] Implement history list/load/delete/reopen store actions and API bindings in src/web/frontend/src/state/historyStore.ts
+- [X] T043 [US3] Add third-view navigation and route integration for History in src/web/frontend/src/App.tsx
+- [X] T044 [US3] Apply Stitch-aligned layout/token updates for History integration in src/web/frontend/src/styles/app.css and src/web/frontend/src/styles/theme.css
+- [X] T045 [US3] Consume and trace all authoritative Stitch artifacts during frontend implementation by mapping structure from specs/008-manage-video-history/stitch/analysis-view.html, specs/008-manage-video-history/stitch/analysis-running-state.html, specs/008-manage-video-history/stitch/review-view.html, specs/008-manage-video-history/stitch/scan-region-selector-overlay.html, and specs/008-manage-video-history/stitch/frame-thumbnail-modal-overlay.html into UI notes in specs/008-manage-video-history/stitch/README.md
 
 **Checkpoint**: US3 history management view is independently functional and testable.
 
@@ -126,11 +126,11 @@
 
 **Purpose**: Final validation, performance checks, and documentation for feature 008.
 
-- [ ] T046 [P] Run and fix full history contract suite for feature endpoints in tests/contract/test_history_api_008.py
-- [ ] T047 [P] Run and fix full history integration suite aligned to quickstart flows A-E in tests/integration/test_history_reopen_flow_008.py, tests/integration/test_history_merge_flow_008.py, tests/integration/test_history_duration_edge_008.py, tests/integration/test_history_delete_flow_008.py, and tests/integration/test_history_reopen_missing_folder_008.py
-- [ ] T048 [P] Add and validate history list/reopen performance checks (<=200ms list interactions, <=5s reopen-ready) in tests/integration/test_history_performance_008.py
-- [ ] T049 Reconcile implementation against Stitch authority and document any justified deviations in specs/008-manage-video-history/quickstart.md
-- [ ] T050 Execute end-to-end feature-008 verification and capture final notes in specs/008-manage-video-history/quickstart.md and tests/integration/test_history_end_to_end_008.py
+- [X] T046 [P] Run and fix full history contract suite for feature endpoints in tests/contract/test_history_api_008.py
+- [X] T047 [P] Run and fix full history integration suite aligned to quickstart flows A-E in tests/integration/test_history_reopen_flow_008.py, tests/integration/test_history_merge_flow_008.py, tests/integration/test_history_duration_edge_008.py, tests/integration/test_history_delete_flow_008.py, and tests/integration/test_history_reopen_missing_folder_008.py
+- [X] T048 [P] Add and validate history list/reopen performance checks (<=200ms list interactions, <=5s reopen-ready) in tests/integration/test_history_performance_008.py
+- [X] T049 Reconcile implementation against Stitch authority and document any justified deviations in specs/008-manage-video-history/quickstart.md
+- [X] T050 Execute end-to-end feature-008 verification and capture final notes in specs/008-manage-video-history/quickstart.md and tests/integration/test_history_end_to_end_008.py
 
 ---
 

@@ -24,6 +24,8 @@ class AnalysisRunState:
     frames_estimated_total: int = 0
     stage_label: str = ""
     output_csv_path: str | None = None
+    history_id: str | None = None
+    history_run_id: str | None = None
     error_message: str | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
@@ -106,3 +108,11 @@ class AnalysisAdapter:
                 state.frames_processed = frames_processed
                 state.frames_estimated_total = total
                 state.stage_label = label
+
+    def set_history_metadata(self, run_id: str, history_id: str, history_run_id: str) -> None:
+        with self._lock:
+            state = self._runs.get(run_id)
+            if state is None:
+                return
+            state.history_id = history_id
+            state.history_run_id = history_run_id

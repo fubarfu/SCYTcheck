@@ -203,3 +203,63 @@ class VideoAnalysis:
     def set_player_summaries(self, summaries: Iterable[PlayerSummary]) -> None:
         """Replace deduplicated summaries with latest aggregation output."""
         self.player_summaries = list(summaries)
+
+
+@dataclass
+class PersistedAnalysisContext:
+    """Restorable analysis context snapshot for history reopen."""
+
+    context_id: str
+    history_id: str
+    scan_region: dict[str, int]
+    output_folder: str
+    context_patterns: list[dict[str, object]]
+    analysis_settings: dict[str, object]
+    saved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class AnalysisRunRecord:
+    """One completed analysis run associated with a history entry."""
+
+    run_id: str
+    history_id: str
+    completed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    result_csv_path: str = ""
+    sidecar_review_path: str | None = None
+    frame_count_processed: int | None = None
+    settings_snapshot_id: str = ""
+
+
+@dataclass
+class VideoHistoryEntry:
+    """Persistent canonical entry representing one analyzed video identity."""
+
+    history_id: str
+    canonical_source: str
+    source_type: str
+    display_name: str
+    output_folder: str
+    duration_seconds: int | None = None
+    merge_key: str | None = None
+    potential_duplicate: bool = False
+    last_result_csv: str | None = None
+    run_count: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    deleted: bool = False
+    runs: list[AnalysisRunRecord] = field(default_factory=list)
+    contexts: list[PersistedAnalysisContext] = field(default_factory=list)
+
+
+@dataclass
+class DerivedReviewResultSet:
+    """Derived review artifacts discovered from persisted output folder."""
+
+    history_id: str
+    resolved_csv_paths: list[str]
+    resolution_status: str
+    resolution_messages: list[str]
+    resolved_sidecar_paths: list[str] = field(default_factory=list)
+    primary_csv_path: str | None = None
+    resolved_at: datetime = field(default_factory=lambda: datetime.now(UTC))

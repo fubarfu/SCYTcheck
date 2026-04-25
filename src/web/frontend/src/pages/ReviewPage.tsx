@@ -24,7 +24,15 @@ interface ReviewSessionPayload {
   candidates?: Candidate[];
 }
 
-export function ReviewPage() {
+interface ReviewPageProps {
+  reopenContext?: {
+    historyId: string;
+    warningMessages: string[];
+    hydratedAt: string;
+  } | null;
+}
+
+export function ReviewPage({ reopenContext = null }: ReviewPageProps) {
   const [sessions, setSessions] = useState<ReviewSessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
@@ -39,6 +47,7 @@ export function ReviewPage() {
 
   const [thumbnailCandidateId, setThumbnailCandidateId] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [reopenWarning, setReopenWarning] = useState<string | null>(null);
 
   const sourceType = selectedSession?.source_type ?? "local_file";
   const sourceValue = selectedSession?.source_value ?? "";
@@ -72,23 +81,43 @@ export function ReviewPage() {
 
   useEffect(() => {
     const openReview = (event: Event) => {
-      const custom = event as CustomEvent<{ csvPath?: string }>;
+      const custom = event as CustomEvent<{ csvPath?: string; autoLoad?: boolean }>;
       const csvPath = custom.detail?.csvPath;
       if (csvPath) {
         setCsvPathInput(csvPath);
+        if (custom.detail?.autoLoad) {
+          void loadSessionFromCsv(csvPath);
+        }
       }
     };
     window.addEventListener("scyt:open-review", openReview as EventListener);
     return () => window.removeEventListener("scyt:open-review", openReview as EventListener);
   }, []);
 
-  const loadSessionFromCsv = async () => {
+  useEffect(() => {
+    if (!reopenContext) {
+      setReopenWarning(null);
+      return;
+    }
+    if (reopenContext.warningMessages.length > 0) {
+      setReopenWarning(reopenContext.warningMessages.join(" "));
+      return;
+    }
+    setReopenWarning(null);
+  }, [reopenContext]);
+
+  const loadSessionFromCsv = async (csvPathOverride?: string) => {
     setLoadingError(null);
     setExportMessage(null);
+    const targetPath = (csvPathOverride ?? csvPathInput).trim();
+    if (!targetPath) {
+      setLoadingError("csv_path is required");
+      return;
+    }
     const resp = await fetch("/api/review/sessions/load", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csv_path: csvPathInput.trim() }),
+      body: JSON.stringify({ csv_path: targetPath }),
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ message: "Unable to load session" })) as { message?: string };
@@ -177,6 +206,7 @@ export function ReviewPage() {
 
       {loadingError && <SessionLoadErrorState message={loadingError} onRetry={() => setLoadingError(null)} />}
       {exportMessage && <div className="export-banner">{exportMessage}</div>}
+      {reopenWarning && <div className="export-banner">{reopenWarning}</div>}
 
       <div className="review-stack">
         <div className="panel-card">

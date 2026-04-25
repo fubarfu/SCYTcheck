@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, urlparse
 
 from src.web.api.routes.analysis import AnalysisHandler
 from src.web.api.routes.fs import FsHandler
+from src.web.api.routes.history import HistoryHandler
 from src.web.api.routes.review_actions import ReviewActionsHandler
 from src.web.api.routes.review_assets import ReviewAssetsHandler
 from src.web.api.routes.review_export import ReviewExportHandler
@@ -33,6 +34,7 @@ class _AppServices:
         self.review_actions = ReviewActionsHandler(session_manager=session_manager)
         self.review_assets = ReviewAssetsHandler(session_manager=session_manager)
         self.review_export = ReviewExportHandler(session_manager=session_manager)
+        self.history = HistoryHandler()
 
 
 class _RequestHandler(SimpleHTTPRequestHandler):
@@ -101,6 +103,37 @@ class _RequestHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/review/sessions" and method == "GET":
             status, body = self._services.review_sessions.get_sessions()
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/history/videos" and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            status, body = self._services.history.get_videos(
+                {
+                    "include_deleted": query.get("include_deleted", ["false"])[0],
+                    "limit": query.get("limit", ["200"])[0],
+                }
+            )
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/history/merge-run" and method == "POST":
+            status, body = self._services.history.post_merge_run(self._read_json_body())
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/history/reopen" and method == "POST":
+            status, body = self._services.history.post_reopen(self._read_json_body())
+            self._send_json(status, body)
+            return True
+
+        history_match = re.fullmatch(r"/api/history/videos/([^/]+)", path)
+        if history_match and method == "GET":
+            status, body = self._services.history.get_video(history_match.group(1))
+            self._send_json(status, body)
+            return True
+        if history_match and method == "DELETE":
+            status, body = self._services.history.delete_video(history_match.group(1))
             self._send_json(status, body)
             return True
 
@@ -205,6 +238,12 @@ class _RequestHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         request_path = parsed.path or "/"
         if self._dispatch_api("PATCH", request_path):
+            return
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        request_path = parsed.path or "/"
+        if self._dispatch_api("DELETE", request_path):
             return
 
 

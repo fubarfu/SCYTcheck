@@ -33,3 +33,9 @@
 ## Usage Rule
 - Implementations should follow these artifacts for structure and visual hierarchy.
 - Any required technical deviation from Stitch should be documented in implementation notes and tests.
+
+## Feature 008 Implementation Notes
+- Analysis and Review shell spacing, panel elevation, and nav rhythm were preserved by extending existing `panel-card` and nav tokens used by `analysis-view` and `review-view` artifacts.
+- The new History view uses the same card hierarchy (heading + metadata + action cluster) to stay consistent with Stitch section blocks while introducing history-specific actions.
+- Reopen from History routes directly to Review and keeps non-blocking artifact warnings inline, matching the unobtrusive status-banner language from the running/review screens.
+- Overlay and modal visual language remains unchanged by reusing existing review modal flow (`FrameThumbnailModal`) rather than introducing a new overlay pattern.
