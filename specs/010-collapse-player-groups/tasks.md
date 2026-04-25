@@ -20,7 +20,7 @@
 - [ ] T003 [P] Create review-group contract test scaffold in `tests/contract/test_review_groups_api_010.py`
 - [ ] T004 [P] Create review-group integration test scaffolds in `tests/integration/test_review_groups_consensus_flow_010.py`, `tests/integration/test_review_groups_conflict_flow_010.py`, `tests/integration/test_review_groups_validation_flow_010.py`, and `tests/integration/test_review_groups_toggle_persistence_010.py`
 - [ ] T005 [P] Create backend unit test scaffolds for foundation, mutation, and uniqueness coverage in `tests/unit/test_review_group_foundation_010.py`, `tests/unit/test_review_group_mutations_010.py`, and `tests/unit/test_review_group_uniqueness_010.py`
-- [ ] T006 [P] Create frontend Vitest scaffolds for group card, candidate row, and review store behavior in `src/web/frontend/src/components/CandidateGroupCard.test.tsx`, `src/web/frontend/src/components/CandidateRow.test.tsx`, and `src/web/frontend/src/state/reviewStore.test.ts`
+- [ ] T006 [P] Create frontend Vitest scaffolds for group card, candidate row, and review store behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`, `src/web/frontend/tests/review/CandidateRow.test.tsx`, and `src/web/frontend/tests/review/reviewStore.test.ts`
 
 ---
 
@@ -32,7 +32,7 @@
 
 - [ ] T007 Extend persisted review-session data structures for accepted names, rejected candidates, collapse state, and resolution status in `src/data/models.py`
 - [ ] T008 [P] Implement review-group sidecar read/write helpers for accepted-name, rejection, and collapse-state persistence in `src/web/app/review_sidecar_store.py`
-- [ ] T009 [P] Implement exact-match consensus recompute utilities and resolved/unresolved grouping state in `src/web/app/review_grouping.py` and `src/web/app/grouping_service.py`
+- [ ] T009 [P] Implement exact-match consensus recompute utilities and resolved/unresolved grouping state in `src/web/app/review_grouping.py`
 - [ ] T010 [P] Implement review-group mutation and uniqueness-validation primitives for confirm, reject, undo, and duplicate detection in `src/web/app/group_mutation_service.py`
 - [ ] T011 [P] Add request and response DTOs for review sessions, group toggles, candidate confirmations, and validation feedback in `src/web/api/schemas.py`
 - [ ] T012 Wire review-group routes and session payload mapping into `src/web/api/routes/review_sessions.py`, `src/web/api/routes/review_actions.py`, and `src/web/api/router.py`
@@ -50,7 +50,7 @@
 
 ### Tests for User Story 1
 
-- [ ] T014 [P] [US1] Add Vitest coverage for default-collapsed resolved-group rendering and expand interaction in `src/web/frontend/src/components/CandidateGroupCard.test.tsx`
+- [ ] T014 [P] [US1] Add Vitest coverage for default-collapsed resolved-group rendering and expand interaction in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`
 - [ ] T015 [P] [US1] Add integration coverage for default-collapsed consensus groups and metadata reveal in `tests/integration/test_review_groups_consensus_flow_010.py`
 
 ### Implementation for User Story 1
@@ -72,7 +72,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Add Vitest coverage for unresolved-group default-open state and manual toggle behavior in `src/web/frontend/src/components/CandidateGroupCard.test.tsx`
+- [ ] T020 [P] [US2] Add Vitest coverage for unresolved-group default-open state and manual toggle behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`
 - [ ] T021 [P] [US2] Add integration coverage for conflicting groups default-open hydration and toggle persistence in `tests/integration/test_review_groups_conflict_flow_010.py`
 
 ### Implementation for User Story 2
@@ -95,12 +95,12 @@
 ### Tests for User Story 3
 
 - [ ] T026 [P] [US3] Add backend unit coverage for confirm, reject, un-reject, and consensus-transition rules in `tests/unit/test_review_group_mutations_010.py`
-- [ ] T027 [P] [US3] Add contract coverage for confirm, reject, and undo review-group actions in `tests/contract/test_review_groups_api_010.py`
-- [ ] T028 [P] [US3] Add Vitest coverage for radio-button selection, success feedback, and rejected-candidate rendering in `src/web/frontend/src/components/CandidateRow.test.tsx`
+- [ ] T027 [P] [US3] Add contract coverage for confirm, reject, deselect, and undo review-group actions in `tests/contract/test_review_groups_api_010.py`
+- [ ] T028 [P] [US3] Add Vitest coverage for radio-button selection, explicit deselection, success feedback, and rejected-candidate rendering in `src/web/frontend/tests/review/CandidateRow.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement confirm, reject, and un-reject mutation semantics plus accepted-name updates in `src/web/app/group_mutation_service.py` and `src/web/api/routes/review_actions.py`
+- [ ] T029 [US3] Implement confirm, reject, deselect, and un-reject mutation semantics plus accepted-name updates in `src/web/app/group_mutation_service.py` and `src/web/api/routes/review_actions.py`
 - [ ] T030 [US3] Persist accepted-name changes and auto-collapse-on-consensus behavior in `src/web/app/review_sidecar_store.py` and `src/web/api/routes/review_sessions.py`
 - [ ] T031 [US3] Create shared inline feedback rendering for successful confirmations in `src/web/frontend/src/components/ValidationFeedback.tsx`
 - [ ] T032 [US3] Implement candidate-level radio-button selection, reject or undo affordances, and success-state styling in `src/web/frontend/src/components/CandidateRow.tsx`
@@ -135,19 +135,19 @@
 
 ## Phase 7: User Story 5 - Manage Collapse State for Resolved Groups (Priority: P2)
 
-**Goal**: Let users manually collapse or expand resolved groups, optionally batch-toggle groups, and preserve mixed collapse states during the review session.
+**Goal**: Let users manually collapse or expand resolved groups and preserve mixed collapse states during the review session.
 
-**Independent Test**: Toggle resolved groups individually, optionally trigger collapse-all or expand-all controls, reload the session, and verify the review UI restores the same mixed collapse states.
+**Independent Test**: Toggle resolved groups individually, reload the session, and verify the review UI restores the same mixed collapse states.
 
 ### Tests for User Story 5
 
-- [ ] T041 [P] [US5] Add Vitest coverage for resolved-group manual toggle persistence and batch-toggle state changes in `src/web/frontend/src/components/CandidateGroupCard.test.tsx` and `src/web/frontend/src/state/reviewStore.test.ts`
+- [ ] T041 [P] [US5] Add Vitest coverage for resolved-group manual toggle persistence in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx` and `src/web/frontend/tests/review/reviewStore.test.ts`
 - [ ] T042 [P] [US5] Add integration coverage for persisted mixed collapse states across session reload in `tests/integration/test_review_groups_toggle_persistence_010.py`
 
 ### Implementation for User Story 5
 
 - [ ] T043 [US5] Implement persisted per-group toggle state and reload hydration for resolved groups in `src/web/app/review_sidecar_store.py` and `src/web/api/routes/review_sessions.py`
-- [ ] T044 [US5] Add resolved-group manual toggle controls and optional collapse-all or expand-all review actions in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/components/CandidateGroupCard.tsx`
+- [ ] T044 [US5] Add resolved-group manual toggle controls and associated review actions in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/components/CandidateGroupCard.tsx`
 - [ ] T045 [US5] Preserve mixed collapse states after confirm, reject, undo, and reload flows in `src/web/frontend/src/state/reviewStore.ts` and `src/web/frontend/src/state/reviewSelectors.ts`
 
 **Checkpoint**: Resolved-group layout control is independently functional and survives session reloads.
@@ -160,9 +160,15 @@
 
 - [ ] T046 [P] Run and fix the backend unit suite for review-group foundation, mutation, and uniqueness behavior in `tests/unit/test_review_group_foundation_010.py`, `tests/unit/test_review_group_mutations_010.py`, and `tests/unit/test_review_group_uniqueness_010.py`
 - [ ] T047 [P] Run and fix the review-group contract and integration suites in `tests/contract/test_review_groups_api_010.py`, `tests/integration/test_review_groups_consensus_flow_010.py`, `tests/integration/test_review_groups_conflict_flow_010.py`, `tests/integration/test_review_groups_validation_flow_010.py`, and `tests/integration/test_review_groups_toggle_persistence_010.py`
-- [ ] T048 [P] Run and fix the frontend Vitest suite for review-group UI behavior in `src/web/frontend/src/components/CandidateGroupCard.test.tsx`, `src/web/frontend/src/components/CandidateRow.test.tsx`, and `src/web/frontend/src/state/reviewStore.test.ts`
+- [ ] T048 [P] Run and fix the frontend Vitest suite for review-group UI behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`, `src/web/frontend/tests/review/CandidateRow.test.tsx`, and `src/web/frontend/tests/review/reviewStore.test.ts`
 - [ ] T049 Reconcile implementation against the approved Stitch screens and document any justified deviations in `specs/010-collapse-player-groups/stitch/README.md` and `specs/010-collapse-player-groups/quickstart.md`
 - [ ] T050 Execute the quickstart end-to-end validation flow and capture final implementation notes in `specs/010-collapse-player-groups/quickstart.md`
+- [ ] T051 [P] Add backend export-gate checks that reject export when any group is unresolved or accepted names are duplicated in `tests/contract/test_review_groups_api_010.py` and `tests/integration/test_review_groups_validation_flow_010.py`
+- [ ] T052 Implement completion/export gating rules in `src/web/api/routes/review_export.py` and `src/web/app/group_mutation_service.py` to satisfy FR-021 and SC-006/SC-008
+- [ ] T053 [P] Add integration timing assertions for SC-003 (resolve under 10s simulated workflow) and SC-003b (validation feedback under 500ms) in `tests/integration/test_review_groups_consensus_flow_010.py` and `tests/integration/test_review_groups_validation_flow_010.py`
+- [ ] T054 [P] Add frontend perf timing checks for validation response and toggle latency in `src/web/frontend/tests/review/perfBenchmark.test.tsx`
+- [ ] T055 Document completion/export gate behavior and timing measurement procedure in `specs/010-collapse-player-groups/quickstart.md`
+- [ ] T056 [P] Add explicit recovery test for the all-candidates-rejected edge case (user must recover by unreject/select before export) in `tests/integration/test_review_groups_validation_flow_010.py`
 
 ---
 
@@ -215,7 +221,7 @@
 # Parallel test authoring for US3
 Task: "T026 Add backend unit coverage in tests/unit/test_review_group_mutations_010.py"
 Task: "T027 Add contract coverage in tests/contract/test_review_groups_api_010.py"
-Task: "T028 Add Vitest coverage in src/web/frontend/src/components/CandidateRow.test.tsx"
+Task: "T028 Add Vitest coverage in src/web/frontend/tests/review/CandidateRow.test.tsx"
 ```
 
 ## Parallel Example: User Story 4

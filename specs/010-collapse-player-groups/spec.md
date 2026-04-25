@@ -2,7 +2,7 @@
 
 **Feature Branch**: `010-collapse-player-groups`  
 **Created**: 2026-04-25  
-**Status**: Draft  
+**Status**: Ready for Implementation  
 **Input**: User description: "groups in the review view should be collapsable and show as collapsed as default when all candidates inside are identical. That player name is considered accepted for such a group. If candidates in a group are different they show as default open as this is an issue to be resolved. Groups with different spelled player names are collapsable and the issue is resolved, if only identical candidates in a group are confirmed, or all not rejected names are identical. Further there cannot be two groups with the same accepted player name."
 
 > This feature enhances the review interface for video analysis results, allowing users to efficiently manage 
@@ -130,8 +130,8 @@ Users can manually collapse/expand groups at any time. Collapsed groups remain v
 - **FR-017**: System MUST mark a group as "resolved" when it achieves consensus (either all identical or all-but-one rejected)
 - **FR-018**: System MUST mark a group as "unresolved" when conflicts remain (multiple different spellings with no clear consensus)
 - **FR-019**: System MUST provide visual distinction between resolved and unresolved groups (e.g., color, badge, font styling)
-- **FR-020**: System MUST support undoing a confirmation action within the session to allow changing the accepted name via radio button deselection
-- **FR-021**: System MUST validate that at least one candidate remains accepted per group before allowing session completion
+- **FR-020**: System MUST support an explicit deselect action on the currently selected radio option that clears the accepted name for that group, marks the group unresolved, and keeps the group expanded until a new valid selection is made
+- **FR-021**: System MUST validate that every group has an accepted name and that accepted names are unique across groups before allowing session completion or export
 - **FR-022**: System MUST display inline validation feedback (green checkmark) when candidate selection succeeds, positioned directly below the selected radio button
 - **FR-023**: System MUST display inline validation feedback (red error text) when candidate selection fails due to duplicate name conflict, positioned directly below the selected radio button
 - **FR-024**: System MUST include in error message the name of the conflicting group when duplicate name detected

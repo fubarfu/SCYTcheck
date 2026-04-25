@@ -71,33 +71,46 @@ src/
 │   ├── frontend/
 │   │   ├── src/
 │   │   │   ├── components/
-│   │   │   │   ├── CollapsibleGroup.tsx      # NEW
-│   │   │   │   ├── CandidateRadioButton.tsx  # NEW
-│   │   │   │   ├── ValidationFeedback.tsx    # NEW
-│   │   │   │   └── ReviewGroupsPanel.tsx     # ENHANCED
+│   │   │   │   ├── CandidateGroupCard.tsx    # ENHANCED
+│   │   │   │   ├── CandidateRow.tsx          # ENHANCED
+│   │   │   │   └── ValidationFeedback.tsx    # NEW
 │   │   │   └── utils/
 │   │   │       ├── groupLogic.ts             # NEW
 │   │   │       └── validationRules.ts        # NEW
+│   │   └── tests/
+│   │       └── review/                       # NEW frontend tests
 │   │   └── [existing structure]
 │   ├── api/
-│   │   ├── review_groups_service.py          # NEW
-│   │   └── [existing routes]
+│   │   ├── routes/
+│   │   │   ├── review_sessions.py            # ENHANCED
+│   │   │   ├── review_actions.py             # ENHANCED
+│   │   │   └── review_export.py              # ENHANCED
+│   │   └── schemas.py                        # ENHANCED
+│   ├── app/
+│   │   ├── review_sidecar_store.py           # ENHANCED
+│   │   ├── review_grouping.py                # ENHANCED
+│   │   └── group_mutation_service.py         # ENHANCED
 │   └── [existing structure]
-├── services/
-│   └── review_session_persistence.py         # ENHANCED
+├── data/
+│   └── models.py                             # ENHANCED
 └── [existing structure]
 
 tests/
 ├── contract/
 │   └── test_review_groups_api_010.py         # NEW
 ├── unit/
-│   ├── test_group_consensus_logic.py         # NEW
-│   ├── test_validation_rules.py              # NEW
-│   └── test_collapse_state.py                # NEW
+│   ├── test_review_group_foundation_010.py   # NEW
+│   ├── test_review_group_mutations_010.py    # NEW
+│   └── test_review_group_uniqueness_010.py   # NEW
+├── integration/
+│   ├── test_review_groups_consensus_flow_010.py     # NEW
+│   ├── test_review_groups_conflict_flow_010.py      # NEW
+│   ├── test_review_groups_validation_flow_010.py    # NEW
+│   └── test_review_groups_toggle_persistence_010.py # NEW
 └── [existing structure]
 ```
 
-**Structure Decision**: Enhance existing `src/web/frontend` and `src/web/api` modules with new components and services for collapsible groups. Reuse existing review workflow infrastructure from 007-web-player-ui. No new top-level directories needed.
+**Structure Decision**: Enhance existing `src/web/frontend`, `src/web/api/routes`, and `src/web/app` modules that already power review sessions. Reuse existing review workflow infrastructure and sidecar persistence, avoiding parallel service abstractions.
 
 ---
 
@@ -145,12 +158,12 @@ tests/
 
 ### 1.2 API Contracts (COMPLETE ✓)
 
-**Endpoints** (5 core operations):
-1. `GET /review-sessions/{session_id}` - Load session state
-2. `POST /review-sessions/{session_id}/groups/{group_id}/candidates/{candidate_id}/select` - Select candidate + validate
-3. `POST /review-sessions/{session_id}/groups/{group_id}/candidates/{candidate_id}/reject` - Mark rejected
-4. `POST /review-sessions/{session_id}/groups/{group_id}/toggle-collapse` - Manual toggle
-5. `GET /review-groups/validate` - Validate spelling uniqueness
+**Endpoints** (existing route surface, enhanced):
+1. `GET /api/review/sessions/{session_id}` - Load hydrated session state
+2. `POST /api/review/sessions/{session_id}/actions` - Confirm/reject/unreject/deselect/toggle-collapse actions
+3. `POST /api/review/sessions/{session_id}/undo` - Undo last action
+4. `POST /api/review/sessions/{session_id}/export` - Export with completion/uniqueness gating
+5. `GET /api/review/sessions` and `POST /api/review/sessions/load` - Session discovery and load
 
 **Error Handling**: Standard HTTP codes + JSON error responses with conflict details
 
@@ -163,7 +176,7 @@ tests/
 **Sections**:
 - Backend setup (Python venv, dependencies)
 - Frontend setup (React, Vite dev server)
-- API server (FastAPI/Flask on port 5000)
+- API server (local web server under `src.main`, API mounted at `/api`)
 - Unit/contract/integration test execution
 - Manual validation (end-to-end workflow)
 - Persistence verification (sidecar JSON, CSV immutability)
@@ -192,15 +205,15 @@ tests/
 
 **Reuse**:
 - Existing `src/web/frontend` React/Vite stack
-- Existing `src/web/api` (FastAPI/Flask) routes
-- Existing `review_session_persistence.py` (enhanced, not replaced)
-- Existing CSV export (unmodified, sidecar JSON additive)
+- Existing `src/web/api/routes` handlers and router wiring
+- Existing `review_sidecar_store.py` persistence path (enhanced, not replaced)
+- Existing CSV export artifacts with added completion-gate validation
 
 **New Components**:
-- `CollapsibleGroup.tsx` - Main UI component
-- `CandidateRadioButton.tsx` - Interactive selection
+- `CandidateGroupCard.tsx` - Main group UI component (enhanced)
+- `CandidateRow.tsx` - Candidate-level radio select, reject, and deselect behavior (enhanced)
 - `ValidationFeedback.tsx` - Error/success display
-- `review_groups_service.py` - Backend consensus logic
+- `group_mutation_service.py` - Backend mutation and uniqueness logic
 
 **Constitution Re-Check** (Phase 1 Completion): All 8 principles remain PASS ✓
 
