@@ -50,6 +50,14 @@ class _RequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_file(self, status: int, file_path: Path, content_type: str) -> None:
+        body = file_path.read_bytes()
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _read_json_body(self) -> dict[str, Any]:
         content_length = int(self.headers.get("Content-Length", "0") or "0")
         if content_length <= 0:
@@ -174,6 +182,22 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
+        thumb_png_match = re.fullmatch(r"/api/review/sessions/([^/]+)/thumbnails/([^/]+)\.png", path)
+        if thumb_png_match and method == "GET":
+            session_id, candidate_id = thumb_png_match.groups()
+            asset_path = self._services.review_assets.resolve_thumbnail_path(session_id, candidate_id)
+            if asset_path is None:
+                self._send_json(
+                    HTTPStatus.NOT_FOUND,
+                    {
+                        "error": "not_found",
+                        "message": f"No thumbnail available for candidate {candidate_id}",
+                    },
+                )
+                return True
+            self._send_file(HTTPStatus.OK, asset_path, "image/png")
+            return True
+
         thumb_match = re.fullmatch(r"/api/review/sessions/([^/]+)/thumbnails/([^/]+)", path)
         if thumb_match and method == "GET":
             status, body = self._services.review_assets.get_thumbnail(
@@ -181,6 +205,26 @@ class _RequestHandler(SimpleHTTPRequestHandler):
                 thumb_match.group(2),
             )
             self._send_json(status, body)
+            return True
+
+        asset_match = re.fullmatch(r"/api/assets/(frames|cache)/([^/]+)/([^/]+)\.png", path)
+        if asset_match and method == "GET":
+            asset_kind, session_id, candidate_id = asset_match.groups()
+            asset_path = self._services.review_assets.resolve_thumbnail_path(
+                session_id,
+                candidate_id,
+                asset_kind=asset_kind,
+            )
+            if asset_path is None:
+                self._send_json(
+                    HTTPStatus.NOT_FOUND,
+                    {
+                        "error": "not_found",
+                        "message": f"No thumbnail available for candidate {candidate_id}",
+                    },
+                )
+                return True
+            self._send_file(HTTPStatus.OK, asset_path, "image/png")
             return True
 
         export_match = re.fullmatch(r"/api/review/sessions/([^/]+)/export", path)

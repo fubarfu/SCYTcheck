@@ -21,6 +21,46 @@ interface Props {
   thumbnailUrl?: string | null;
 }
 
+function parseTimestampSeconds(raw: string | undefined): number {
+  if (!raw) {
+    return 0;
+  }
+
+  const trimmed = raw.trim();
+  const numeric = Number(trimmed);
+  if (!Number.isNaN(numeric)) {
+    return Math.max(0, Math.floor(numeric));
+  }
+
+  if (!trimmed.includes(":")) {
+    return 0;
+  }
+
+  const parts = trimmed.split(":").map((part) => Number(part));
+  if (parts.some((part) => Number.isNaN(part) || part < 0)) {
+    return 0;
+  }
+
+  let total = 0;
+  for (const part of parts) {
+    total = (total * 60) + Math.floor(part);
+  }
+  return Math.max(0, total);
+}
+
+function buildYouTubeTimestampLink(sourceValue: string, timestampSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(timestampSeconds));
+  try {
+    const url = new URL(sourceValue);
+    url.searchParams.set("t", `${safeSeconds}s`);
+    url.searchParams.set("autoplay", "0");
+    return url.toString();
+  } catch {
+    const separator = sourceValue.includes("?") ? "&" : "?";
+    return `${sourceValue}${separator}t=${safeSeconds}s&autoplay=0`;
+  }
+}
+
 export function CandidateRow({
   candidate,
   sourceType,
@@ -54,9 +94,10 @@ export function CandidateRow({
   }, []);
 
   const currentText = candidate.corrected_text ?? candidate.extracted_name;
+  const timestampSeconds = parseTimestampSeconds(candidate.start_timestamp);
   const deepLink =
     sourceType === "youtube_url" && sourceValue
-      ? `${sourceValue}${sourceValue.includes("?") ? "&" : "?"}t=${Math.max(0, Math.floor(Number(candidate.start_timestamp ?? "0")))}s`
+      ? buildYouTubeTimestampLink(sourceValue, timestampSeconds)
       : null;
 
   return (

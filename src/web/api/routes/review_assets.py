@@ -24,7 +24,7 @@ class ReviewAssetsHandler:
         if persisted.exists():
             return 200, {
                 "candidate_id": candidate_id,
-                "thumbnail_url": f"/api/assets/frames/{candidate_id}.png",
+                "thumbnail_url": f"/api/assets/frames/{session_id}/{candidate_id}.png",
             }
 
         cache_path = self.frame_store.cache_thumbnail_path(session_id, candidate_id)
@@ -38,3 +38,29 @@ class ReviewAssetsHandler:
             "error": "not_found",
             "message": f"No thumbnail available for candidate {candidate_id}",
         }
+
+    def resolve_thumbnail_path(
+        self,
+        session_id: str,
+        candidate_id: str,
+        *,
+        asset_kind: str | None = None,
+    ) -> Path | None:
+        state = self.sessions.get(session_id)
+        if state is None:
+            return None
+
+        csv_path = Path(state.csv_path)
+        persisted = self.frame_store.persisted_frame_path(csv_path, candidate_id)
+        cache_path = self.frame_store.cache_thumbnail_path(session_id, candidate_id)
+
+        if asset_kind == "frames":
+            return persisted if persisted.exists() else None
+        if asset_kind == "cache":
+            return cache_path if cache_path.exists() else None
+
+        if persisted.exists():
+            return persisted
+        if cache_path.exists():
+            return cache_path
+        return None

@@ -36,7 +36,7 @@ def test_thumbnail_returns_url_when_persisted_frame_exists(tmp_path: Path) -> No
     status, body = assets.get_thumbnail(session_id, "cand_1")
     assert status == 200
     assert "thumbnail_url" in body
-    assert "cand_1" in body["thumbnail_url"]
+    assert body["thumbnail_url"] == f"/api/assets/frames/{session_id}/cand_1.png"
 
 
 def test_session_source_type_local_file(tmp_path: Path) -> None:

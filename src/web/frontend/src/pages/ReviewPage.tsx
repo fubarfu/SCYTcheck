@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CandidateRow, type Candidate } from "../components/CandidateRow";
 import { FrameThumbnailModal } from "../components/FrameThumbnailModal";
 import { ReviewFilterBar } from "../components/ReviewFilterBar";
@@ -49,6 +49,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [thumbnailCandidateId, setThumbnailCandidateId] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [reopenWarning, setReopenWarning] = useState<string | null>(null);
+  const autoLoadedHistoryCsvPathRef = useRef<string | null>(null);
 
   const sourceType = selectedSession?.source_type ?? "local_file";
   const sourceValue = selectedSession?.source_value ?? "";
@@ -77,10 +78,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   useEffect(() => {
-    void refreshSessions();
-  }, []);
-
-  useEffect(() => {
     const openReview = (event: Event) => {
       const custom = event as CustomEvent<{ csvPath?: string; autoLoad?: boolean }>;
       const csvPath = custom.detail?.csvPath;
@@ -101,6 +98,18 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       setCsvPathInput(value);
     }
   }, [autoCsvPath]);
+
+  useEffect(() => {
+    const value = autoCsvPath?.trim() ?? "";
+    if (!reopenContext || !value) {
+      return;
+    }
+    if (autoLoadedHistoryCsvPathRef.current === value) {
+      return;
+    }
+    autoLoadedHistoryCsvPathRef.current = value;
+    void loadSessionFromCsv(value);
+  }, [autoCsvPath, reopenContext]);
 
   useEffect(() => {
     if (!reopenContext) {
@@ -180,8 +189,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     if (!selectedSessionId) return;
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/thumbnails/${candidateId}`);
     if (resp.ok) {
-      const body = await resp.json() as { thumbnail_url: string };
-      setThumbnailUrl(body.thumbnail_url);
+      setThumbnailUrl(`/api/review/sessions/${selectedSessionId}/thumbnails/${candidateId}.png`);
     } else {
       setThumbnailUrl(null);
     }
