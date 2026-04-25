@@ -6,6 +6,7 @@ import { ReviewFilterBar } from "../components/ReviewFilterBar";
 import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
 import {
   selectFilteredCandidates,
+  selectVisibleGroups,
   selectVisibleCandidateIds,
   type ReviewFilterState,
 } from "../state/reviewSelectors";
@@ -75,14 +76,12 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     [selectedSession?.candidates, filter],
   );
   const visibleGroups = useMemo(() => {
-    const groups = selectedSession?.groups ?? [];
-    return groups
-      .map((group) => ({
-        ...group,
-        candidates: (group.candidates ?? []).filter((candidate) => visibleCandidateIds.has(candidate.candidate_id)),
-      }))
-      .filter((group) => group.candidates.length > 0);
-  }, [selectedSession?.groups, visibleCandidateIds]);
+    return selectVisibleGroups(
+      selectedSession?.groups ?? [],
+      selectedSession?.candidates ?? [],
+      filter,
+    );
+  }, [selectedSession?.groups, selectedSession?.candidates, filter]);
   const similarityThreshold = selectedSession?.thresholds?.similarity_threshold ?? 80;
   const recommendationThreshold = selectedSession?.thresholds?.recommendation_threshold ?? 70;
   const totalCandidates = selectedSession?.candidates?.length ?? 0;

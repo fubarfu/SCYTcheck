@@ -15,6 +15,9 @@ interface Props {
   candidate: Candidate;
   sourceType: "local_file" | "youtube_url";
   sourceValue: string;
+  occurrenceIndex?: number;
+  occurrenceCount?: number;
+  showOccurrenceMetadata?: boolean;
   onAction: (action: {
     action_type: string;
     target_ids: string[];
@@ -68,6 +71,9 @@ export function CandidateRow({
   candidate,
   sourceType,
   sourceValue,
+  occurrenceIndex,
+  occurrenceCount,
+  showOccurrenceMetadata = false,
   onAction,
   onOpenThumbnail,
 }: Props) {
@@ -127,6 +133,9 @@ export function CandidateRow({
       </div>
       <div className="candidate-meta">
         <span>Candidate ID: {candidate.candidate_id}</span>
+        {showOccurrenceMetadata && typeof occurrenceIndex === "number" && typeof occurrenceCount === "number" && (
+          <span>Occurrence {occurrenceIndex} of {occurrenceCount}</span>
+        )}
         {candidate.corrected_text && candidate.corrected_text !== candidate.extracted_name && (
           <span>Original OCR: {candidate.extracted_name}</span>
         )}
