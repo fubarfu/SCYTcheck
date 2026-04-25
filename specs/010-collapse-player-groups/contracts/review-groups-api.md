@@ -21,7 +21,7 @@ Primary implementation files:
 
 1. Conflict groups are expanded by default, but users may manually collapse them. Manual collapse state is persisted in sidecar JSON for the session.
 2. Deselect is explicit: deselecting the currently selected candidate clears `accepted_name`, marks the group unresolved, and keeps the group expanded.
-3. Completion and export are gated: export is blocked unless every group has an accepted name and accepted names are unique across groups.
+3. Completion and export are gated: in the current runtime, completion is represented by export eligibility. Export is blocked unless every group has an accepted name and accepted names are unique across groups.
 
 ## Endpoints
 

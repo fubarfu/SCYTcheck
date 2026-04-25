@@ -89,6 +89,8 @@ npm test -- tests/review/perfBenchmark.test.tsx
 
 ## 5. Completion and Export Gate Validation
 
+In this runtime, session completion is defined as meeting export gate criteria.
+
 ### 5.1 Export blocked for unresolved groups
 
 - Leave at least one group without accepted name.
