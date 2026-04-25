@@ -426,35 +426,44 @@ export function AnalysisPage() {
 
       {!isRunning && (
         <div className="analysis-layout">
-          {/* Primary column: source bar + preview (prominent) + output */}
+          {/* Primary column: source + preview (prominent) + output */}
           <div className="analysis-column analysis-column-primary">
-            <div className="source-bar">
-              <select
-                className="source-bar-type"
-                value={sourceType}
-                onChange={(e) => setSourceType(e.target.value as SourceType)}
-                aria-label="Source type"
-              >
-                <option value="youtube_url">YouTube</option>
-                <option value="local_file">Local file</option>
-              </select>
-              <input
-                type="text"
-                className="source-bar-input"
-                value={sourceValue}
-                onChange={(e) => setSourceValue(e.target.value)}
-                placeholder={sourceType === "local_file" ? "C:/videos/match.mp4" : "https://youtube.com/watch?v=..."}
-                aria-label={sourceType === "local_file" ? "File path" : "YouTube URL"}
-              />
-              <button
-                type="button"
-                className="ghost-action source-bar-btn"
-                disabled={!sourceValue.trim() || previewLoading}
-                onClick={() => { void loadPreview(scrubTime); }}
-              >
-                {previewLoading ? "Loading\u2026" : preview ? "Refresh" : "Load"}
-              </button>
-            </div>
+            <section className="panel-card">
+              <div className="panel-card-header">
+                <div>
+                  <h3>Select source</h3>
+                </div>
+              </div>
+              <div className="panel-card-body">
+                <div className="source-bar">
+                  <select
+                    className="source-bar-type"
+                    value={sourceType}
+                    onChange={(e) => setSourceType(e.target.value as SourceType)}
+                    aria-label="Source type"
+                  >
+                    <option value="youtube_url">YouTube</option>
+                    <option value="local_file">Local file</option>
+                  </select>
+                  <input
+                    type="text"
+                    className="source-bar-input"
+                    value={sourceValue}
+                    onChange={(e) => setSourceValue(e.target.value)}
+                    placeholder={sourceType === "local_file" ? "C:/videos/match.mp4" : "https://youtube.com/watch?v=..."}
+                    aria-label={sourceType === "local_file" ? "File path" : "YouTube URL"}
+                  />
+                  <button
+                    type="button"
+                    className="ghost-action source-bar-btn"
+                    disabled={!sourceValue.trim() || previewLoading}
+                    onClick={() => { void loadPreview(scrubTime); }}
+                  >
+                    {previewLoading ? "Loading\u2026" : preview ? "Refresh" : "Load"}
+                  </button>
+                </div>
+              </div>
+            </section>
 
             <section className="panel-card region-panel-card">
               <div className="panel-card-header">
