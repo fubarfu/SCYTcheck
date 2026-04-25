@@ -37,6 +37,14 @@ def build_router() -> RouteRegistry:
     """Register base routes that are always available in the local runtime."""
     router = RouteRegistry()
     router.add("GET", "/api/health", lambda: {"status": "ok"})
+
+    # Review workflow endpoints (implemented by local web server handlers).
+    router.add("GET", "/api/review/sessions", lambda: {})
+    router.add("POST", "/api/review/sessions/load", lambda payload=None: payload)
+    router.add("GET", "/api/review/sessions/{session_id}", lambda session_id: session_id)
+    router.add("POST", "/api/review/sessions/{session_id}/actions", lambda session_id, payload=None: payload)
+    router.add("POST", "/api/review/sessions/{session_id}/undo", lambda session_id: session_id)
+
     router.add("GET", "/api/history/videos", lambda: {})
     router.add("GET", "/api/history/videos/{history_id}", lambda history_id: history_id)
     router.add("POST", "/api/history/merge-run", lambda payload=None: payload)

@@ -194,3 +194,148 @@ class HistoryReopenRequestDTO:
         if not history_id:
             raise SchemaValidationError("history_id is required")
         return HistoryReopenRequestDTO(history_id=history_id)
+
+
+REVIEW_ACTION_TYPES = frozenset(
+    {
+        "confirm",
+        "reject",
+        "unreject",
+        "deselect",
+        "toggle_collapse",
+        "edit",
+        "remove",
+        "move_candidate",
+        "merge_groups",
+        "reorder_group",
+    }
+)
+
+
+@dataclass(frozen=True)
+class ReviewActionRequestDTO:
+    action_type: str
+    target_ids: list[str]
+    payload: dict[str, Any]
+
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> ReviewActionRequestDTO:
+        action_type = str(payload.get("action_type", "")).strip()
+        if action_type not in REVIEW_ACTION_TYPES:
+            raise SchemaValidationError(
+                f"action_type must be one of: {', '.join(sorted(REVIEW_ACTION_TYPES))}"
+            )
+
+        target_ids_raw = payload.get("target_ids", [])
+        if not isinstance(target_ids_raw, list):
+            raise SchemaValidationError("target_ids must be a list")
+        target_ids = [str(item).strip() for item in target_ids_raw if str(item).strip()]
+
+        if action_type in {"confirm", "reject", "unreject", "edit", "remove"} and not target_ids:
+            raise SchemaValidationError("target_ids must be a non-empty list")
+
+        action_payload = payload.get("payload", {})
+        if not isinstance(action_payload, dict):
+            raise SchemaValidationError("payload must be an object")
+
+        return ReviewActionRequestDTO(
+            action_type=action_type,
+            target_ids=target_ids,
+            payload=action_payload,
+        )
+
+
+@dataclass(frozen=True)
+class ReviewToggleCollapseRequestDTO:
+    group_id: str
+    is_collapsed: bool | None = None
+
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> ReviewToggleCollapseRequestDTO:
+        group_id = str(payload.get("group_id", "")).strip()
+        if not group_id:
+            raise SchemaValidationError("payload.group_id is required")
+
+        collapsed_raw = payload.get("is_collapsed")
+        collapsed: bool | None
+        if collapsed_raw is None:
+            collapsed = None
+        else:
+            collapsed = bool(collapsed_raw)
+
+        return ReviewToggleCollapseRequestDTO(group_id=group_id, is_collapsed=collapsed)
+
+
+@dataclass(frozen=True)
+class ReviewConfirmCandidateRequestDTO:
+    group_id: str
+    candidate_id: str
+
+    @staticmethod
+    def from_action(action: ReviewActionRequestDTO) -> ReviewConfirmCandidateRequestDTO:
+        group_id = str(action.payload.get("group_id", "")).strip()
+        candidate_id = action.target_ids[0] if action.target_ids else ""
+        if not group_id:
+            raise SchemaValidationError("payload.group_id is required")
+        if not candidate_id:
+            raise SchemaValidationError("target_ids must include a candidate id")
+        return ReviewConfirmCandidateRequestDTO(group_id=group_id, candidate_id=candidate_id)
+
+
+@dataclass(frozen=True)
+class ReviewValidationFeedbackDTO:
+    is_valid: bool
+    candidate_name: str
+    message: str | None = None
+    conflict_group_id: str | None = None
+    hint: str | None = None
+
+    def to_payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "is_valid": self.is_valid,
+            "candidate_name": self.candidate_name,
+        }
+        if self.message:
+            payload["message"] = self.message
+        if self.conflict_group_id:
+            payload["conflict_group_id"] = self.conflict_group_id
+        if self.hint:
+            payload["hint"] = self.hint
+        return payload
+
+
+@dataclass(frozen=True)
+class ReviewGroupResponseDTO:
+    group_id: str
+    accepted_name: str | None
+    is_collapsed: bool
+    resolution_status: str
+    rejected_candidate_ids: list[str]
+
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> ReviewGroupResponseDTO:
+        group_id = str(payload.get("group_id", "")).strip()
+        if not group_id:
+            raise SchemaValidationError("group_id is required")
+        accepted_name_raw = payload.get("accepted_name")
+        accepted_name = str(accepted_name_raw).strip() if accepted_name_raw else None
+        return ReviewGroupResponseDTO(
+            group_id=group_id,
+            accepted_name=accepted_name,
+            is_collapsed=bool(payload.get("is_collapsed", False)),
+            resolution_status=str(payload.get("resolution_status", "UNRESOLVED")),
+            rejected_candidate_ids=[
+                str(item)
+                for item in payload.get("rejected_candidate_ids", [])
+                if str(item).strip()
+            ],
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "group_id": self.group_id,
+            "accepted_name": self.accepted_name,
+            "is_collapsed": self.is_collapsed,
+            "resolution_status": self.resolution_status,
+            "rejected_candidate_ids": list(self.rejected_candidate_ids),
+        }

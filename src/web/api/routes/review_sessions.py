@@ -5,12 +5,11 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from src.web.app.grouping_service import GroupingService, GroupingThresholds
-from src.web.app.recommendation_service import RecommendationService
 from src.web.app.review_grouping import recompute_groups
 from src.web.app.result_schema_validator import ResultSchemaValidator
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
+from src.web.api.schemas import ReviewLoadRequestDTO, SchemaValidationError
 
 
 class ReviewSessionHandler:
@@ -26,13 +25,14 @@ class ReviewSessionHandler:
         self._sidecar = ReviewSidecarStore()
 
     def post_load(self, payload: dict[str, Any]) -> tuple[int, dict]:
-        csv_path_raw = str(payload.get("csv_path", "")).strip()
-        if not csv_path_raw:
-            return 400, {"error": "validation_error", "message": "csv_path is required"}
+        try:
+            request_dto = ReviewLoadRequestDTO.from_payload(payload)
+        except SchemaValidationError as exc:
+            return 400, {"error": "validation_error", "message": str(exc)}
 
-        csv_path = Path(csv_path_raw)
+        csv_path = request_dto.csv_path
         if not csv_path.exists():
-            return 404, {"error": "not_found", "message": f"File not found: {csv_path_raw}"}
+            return 404, {"error": "not_found", "message": f"File not found: {csv_path}"}
 
         validation = self.validator.validate(csv_path)
         if not validation.is_valid:
@@ -66,6 +66,14 @@ class ReviewSessionHandler:
                     "temporal_window_seconds": 2.0,
                 },
             ),
+            "accepted_names": existing.get("accepted_names", {}),
+            "rejected_candidates": existing.get("rejected_candidates", {}),
+            "collapsed_groups": existing.get("collapsed_groups", {}),
+            "resolution_status": existing.get("resolution_status", {}),
+            "accepted_names_original": existing.get("accepted_names_original", existing.get("accepted_names", {})),
+            "rejected_candidates_original": existing.get("rejected_candidates_original", existing.get("rejected_candidates", {})),
+            "collapsed_groups_original": existing.get("collapsed_groups_original", existing.get("collapsed_groups", {})),
+            "resolution_status_original": existing.get("resolution_status_original", existing.get("resolution_status", {})),
         }
         session_payload = recompute_groups(session_payload)
         self.sessions.upsert(session_id, str(csv_path), session_payload)

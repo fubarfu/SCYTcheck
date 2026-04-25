@@ -263,3 +263,52 @@ class DerivedReviewResultSet:
     resolved_sidecar_paths: list[str] = field(default_factory=list)
     primary_csv_path: str | None = None
     resolved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class ReviewGroupSessionState:
+    """Persisted review-group controls and resolution state per group."""
+
+    accepted_names: dict[str, str] = field(default_factory=dict)
+    rejected_candidates: dict[str, list[str]] = field(default_factory=dict)
+    collapsed_groups: dict[str, bool] = field(default_factory=dict)
+    resolution_status: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ReviewGroupCandidate:
+    """Typed view of one candidate in a review group payload."""
+
+    candidate_id: str
+    extracted_name: str
+    corrected_text: str = ""
+    status: str = "pending"
+
+    @property
+    def display_name(self) -> str:
+        text = (self.corrected_text or "").strip()
+        if text:
+            return text
+        return self.extracted_name.strip()
+
+
+@dataclass
+class ReviewGroupPayload:
+    """Typed representation of one API review group."""
+
+    group_id: str
+    accepted_name: str | None = None
+    rejected_candidate_ids: list[str] = field(default_factory=list)
+    is_collapsed: bool = False
+    resolution_status: str = "UNRESOLVED"
+    candidates: list[ReviewGroupCandidate] = field(default_factory=list)
+
+    @property
+    def active_spellings(self) -> set[str]:
+        rejected = set(self.rejected_candidate_ids)
+        values = {
+            candidate.display_name
+            for candidate in self.candidates
+            if candidate.candidate_id not in rejected and candidate.display_name
+        }
+        return values

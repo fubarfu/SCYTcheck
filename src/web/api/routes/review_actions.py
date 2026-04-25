@@ -5,21 +5,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from src.web.api.schemas import (
+    REVIEW_ACTION_TYPES,
+    ReviewActionRequestDTO,
+    ReviewValidationFeedbackDTO,
+    SchemaValidationError,
+)
+from src.web.app.group_mutation_service import GroupMutationService
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
 from src.web.app.review_grouping import recompute_groups
 
-VALID_ACTION_TYPES = frozenset(
-    {
-        "confirm",
-        "reject",
-        "edit",
-        "remove",
-        "move_candidate",
-        "merge_groups",
-        "reorder_group",
-    }
-)
+VALID_ACTION_TYPES = REVIEW_ACTION_TYPES
 
 
 class ReviewActionsHandler:
@@ -32,21 +29,14 @@ class ReviewActionsHandler:
         if state is None:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
 
-        action_type = str(payload.get("action_type", "")).strip()
-        if action_type not in VALID_ACTION_TYPES:
-            return 400, {
-                "error": "validation_error",
-                "message": f"action_type must be one of: {', '.join(sorted(VALID_ACTION_TYPES))}",
-            }
+        try:
+            action_request = ReviewActionRequestDTO.from_payload(payload)
+        except SchemaValidationError as exc:
+            return 400, {"error": "validation_error", "message": str(exc)}
 
-        target_ids: list[str] = payload.get("target_ids", [])
-        if not isinstance(target_ids, list) or not target_ids:
-            return 400, {
-                "error": "validation_error",
-                "message": "target_ids must be a non-empty list",
-            }
-
-        action_payload = payload.get("payload", {})
+        action_type = action_request.action_type
+        target_ids = action_request.target_ids
+        action_payload = action_request.payload
         action_id = f"act_{uuid.uuid4().hex[:12]}"
         action_record = {
             "action_id": action_id,
@@ -56,18 +46,50 @@ class ReviewActionsHandler:
             "applied_at": datetime.now(UTC).isoformat(),
         }
 
-        session_payload = dict(state.payload or {})
-        history: list[dict] = list(session_payload.get("action_history", []))
+        session_payload = recompute_groups(dict(state.payload or {}))
+        mutation_payload, validation_payload, handled = GroupMutationService.apply_action(
+            session_payload,
+            action_type,
+            target_ids,
+            action_payload,
+        )
+
+        if handled:
+            if validation_payload and not validation_payload.get("is_valid", False):
+                feedback = ReviewValidationFeedbackDTO(
+                    is_valid=False,
+                    candidate_name=str(validation_payload.get("candidate_name", "")),
+                    message=str(validation_payload.get("message", "Validation failed")),
+                    conflict_group_id=str(validation_payload.get("conflict_group_id", "")) or None,
+                    hint=str(validation_payload.get("hint", "")) or None,
+                )
+                return 422, {
+                    "error": "validation_error",
+                    "message": feedback.message or "Validation failed",
+                    "validation": feedback.to_payload(),
+                }
+            updated_payload = dict(mutation_payload)
+        else:
+            candidates: list[dict] = list(session_payload.get("candidates", []))
+            candidates = _apply_action(candidates, action_type, target_ids, action_payload)
+            updated_payload = {
+                **session_payload,
+                "candidates": candidates,
+            }
+
+        history: list[dict] = list(updated_payload.get("action_history", []))
         history.append(action_record)
+        updated_payload["action_history"] = history
 
-        candidates: list[dict] = list(session_payload.get("candidates", []))
-        candidates = _apply_action(candidates, action_type, target_ids, action_payload)
+        if "accepted_names_original" not in updated_payload:
+            updated_payload["accepted_names_original"] = dict(updated_payload.get("accepted_names", {}))
+        if "rejected_candidates_original" not in updated_payload:
+            updated_payload["rejected_candidates_original"] = dict(updated_payload.get("rejected_candidates", {}))
+        if "collapsed_groups_original" not in updated_payload:
+            updated_payload["collapsed_groups_original"] = dict(updated_payload.get("collapsed_groups", {}))
+        if "resolution_status_original" not in updated_payload:
+            updated_payload["resolution_status_original"] = dict(updated_payload.get("resolution_status", {}))
 
-        updated_payload: dict[str, Any] = {
-            **session_payload,
-            "candidates": candidates,
-            "action_history": history,
-        }
         updated_payload = recompute_groups(updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
         self._sidecar.save(Path(state.csv_path), updated_payload)
@@ -92,18 +114,40 @@ class ReviewActionsHandler:
         undone = history.pop()
         action_id = undone.get("action_id", "")
 
-        base_candidates: list[dict] = list(session_payload.get("candidates_original", []))
-        candidates = base_candidates[:]
-        for record in history:
-            candidates = _apply_action(
-                candidates, record["action_type"], record["target_ids"], record.get("payload", {})
-            )
-
-        updated_payload: dict[str, Any] = {
+        replay_payload: dict[str, Any] = {
             **session_payload,
-            "candidates": candidates,
-            "action_history": history,
+            "candidates": list(session_payload.get("candidates_original", [])),
+            "accepted_names": dict(session_payload.get("accepted_names_original", {})),
+            "rejected_candidates": dict(session_payload.get("rejected_candidates_original", {})),
+            "collapsed_groups": dict(session_payload.get("collapsed_groups_original", {})),
+            "resolution_status": dict(session_payload.get("resolution_status_original", {})),
+            "action_history": [],
         }
+
+        for record in history:
+            replay_payload = recompute_groups(replay_payload)
+            mutated_payload, _, handled = GroupMutationService.apply_action(
+                replay_payload,
+                record["action_type"],
+                record["target_ids"],
+                record.get("payload", {}),
+            )
+            if handled:
+                replay_payload = mutated_payload
+            else:
+                replay_payload["candidates"] = _apply_action(
+                    list(replay_payload.get("candidates", [])),
+                    record["action_type"],
+                    record["target_ids"],
+                    record.get("payload", {}),
+                )
+
+            replay_history = list(replay_payload.get("action_history", []))
+            replay_history.append(record)
+            replay_payload["action_history"] = replay_history
+
+        updated_payload: dict[str, Any] = dict(replay_payload)
+        updated_payload["action_history"] = history
         updated_payload = recompute_groups(updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
         self._sidecar.save(Path(state.csv_path), updated_payload)
