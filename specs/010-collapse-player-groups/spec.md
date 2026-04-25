@@ -8,6 +8,16 @@
 > This feature enhances the review interface for video analysis results, allowing users to efficiently manage 
 > player name disambiguation through collapsible grouping and visual prioritization of unresolved issues.
 
+## Clarifications
+
+### Session 2026-04-25
+
+- Q: Are player names considered personally identifiable information that requires special handling? → A: Player names are public/non-sensitive data - treat like any other text
+- Q: Where should confirmed player names and group resolution state be stored? → A: Auto-saved to local file system (CSV/JSON) - persistent locally, included in standard export workflow
+- Q: What is the interaction pattern for confirming candidates? → A: Radio button per candidate - only one can be selected at a time per group (selecting a new one auto-deselects the old)
+- Q: What is the rejection workflow for candidates? → A: Rejected candidates remain visible but visually marked (strikethrough, grayed out, X badge); user can undo rejection
+- Q: How should confirmation feedback and validation errors be communicated? → A: Both inline + visual indicator - error displays inline in red below candidate; success shows inline green check; both persist until user takes next action
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - View Collapsed Groups with Consensus Names (Priority: P1)
@@ -109,16 +119,23 @@ Users can manually collapse/expand groups at any time. Collapsed groups remain v
 - **FR-006**: System MUST persist collapse state during a review session
 - **FR-007**: System MUST display the accepted player name prominently when a group is collapsed
 - **FR-008**: System MUST display all candidate variants with occurrence metadata (frame number, timestamp, detection confidence) when a group is expanded
-- **FR-009**: System MUST allow users to confirm/select one candidate as the accepted name for a group
-- **FR-010**: System MUST allow users to reject individual candidates within a group
-- **FR-011**: System MUST automatically resolve a group to consensus when only identical candidates remain (confirmed and not rejected)
-- **FR-012**: System MUST enforce uniqueness constraint: prevent the same player name from being accepted in multiple groups
-- **FR-013**: System MUST display a clear error message when a user attempts to confirm a duplicate player name, including reference to the conflicting group
-- **FR-014**: System MUST mark a group as "resolved" when it achieves consensus (either all identical or all-but-one rejected)
-- **FR-015**: System MUST mark a group as "unresolved" when conflicts remain (multiple different spellings with no clear consensus)
-- **FR-016**: System MUST provide visual distinction between resolved and unresolved groups (e.g., color, badge, font styling)
-- **FR-017**: System MUST support undoing a confirmation action within the session to allow changing the accepted name
-- **FR-018**: System MUST validate that at least one candidate remains accepted per group before allowing session completion
+- **FR-009**: System MUST allow users to confirm/select one candidate as the accepted name for a group using a radio button interface (mutually exclusive selection within a group)
+- **FR-010**: System MUST automatically deselect previous selection when user selects a new radio button (only one accepted name per group at any time)
+- **FR-011**: System MUST allow users to reject individual candidates within a group (independent of radio button acceptance) by marking with explicit reject action
+- **FR-012**: System MUST visually distinguish rejected candidates (strikethrough, grayed out, or X badge) while keeping them visible for context and potential undo
+- **FR-013**: System MUST allow users to undo/un-reject a candidate that was previously marked as rejected
+- **FR-014**: System MUST automatically resolve a group to consensus when only identical candidates remain (confirmed and not rejected)
+- **FR-015**: System MUST enforce uniqueness constraint: prevent the same player name from being accepted in multiple groups
+- **FR-016**: System MUST display a clear error message when a user attempts to confirm a duplicate player name, including reference to the conflicting group
+- **FR-017**: System MUST mark a group as "resolved" when it achieves consensus (either all identical or all-but-one rejected)
+- **FR-018**: System MUST mark a group as "unresolved" when conflicts remain (multiple different spellings with no clear consensus)
+- **FR-019**: System MUST provide visual distinction between resolved and unresolved groups (e.g., color, badge, font styling)
+- **FR-020**: System MUST support undoing a confirmation action within the session to allow changing the accepted name via radio button deselection
+- **FR-021**: System MUST validate that at least one candidate remains accepted per group before allowing session completion
+- **FR-022**: System MUST display inline validation feedback (green checkmark) when candidate selection succeeds, positioned directly below the selected radio button
+- **FR-023**: System MUST display inline validation feedback (red error text) when candidate selection fails due to duplicate name conflict, positioned directly below the selected radio button
+- **FR-024**: System MUST include in error message the name of the conflicting group when duplicate name detected
+- **FR-025**: System MUST persist inline validation feedback (success or error) until user takes a subsequent action (e.g., selects different candidate, rejects candidate)
 
 ### Key Entities *(include if feature involves data)*
 
@@ -149,6 +166,8 @@ Users can manually collapse/expand groups at any time. Collapsed groups remain v
 - **SC-001**: Consensus groups (100% identical candidates) are collapsed by default on 100% of review sessions
 - **SC-002**: Conflict groups (mixed spellings) are expanded by default on 100% of review sessions
 - **SC-003**: Users can resolve a player name conflict and confirm selection in under 10 seconds per group (including reviewing candidates and selecting accepted name)
+- **SC-003b**: Validation feedback (success or error) appears within 500ms of user confirming a candidate selection
+- **SC-003c**: 100% of duplicate name conflicts are caught and communicated with inline error message before session can be saved
 - **SC-004**: System prevents duplicate accepted names across groups on 100% of attempted conflicts with clear error feedback
 - **SC-005**: Collapse/expand state persists across user interactions during a review session (until explicit state change)
 - **SC-006**: Review session completion requires 100% of groups to have an accepted player name with no duplicates
