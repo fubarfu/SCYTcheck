@@ -6,6 +6,7 @@ from src.web.api.schemas import (
     ScanRegionDTO,
     SchemaValidationError,
 )
+from src.web.app.settings_store import SettingsStore
 
 
 def test_scan_region_dto_valid() -> None:
@@ -77,3 +78,14 @@ def test_review_load_request_dto_rejects_non_csv() -> None:
 
     with pytest.raises(SchemaValidationError, match="csv"):
         ReviewLoadRequestDTO.from_payload({"csv_path": "C:/output/result.txt"})
+
+
+def test_settings_store_load_returns_effective_analysis_defaults(tmp_path) -> None:
+    store = SettingsStore(settings_path=tmp_path / "settings.json")
+
+    loaded = store.load()
+
+    assert loaded["filter_non_matching"] is True
+    assert loaded["gating_enabled"] is False
+    assert loaded["video_quality"] == "best"
+    assert loaded["context_patterns"]

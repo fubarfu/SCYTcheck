@@ -73,13 +73,13 @@ export function AnalysisSettingsPanel({ settings, onChange }: Props) {
         <label className="checkbox-label">
           <input
             type="checkbox"
-            checked={settings.gating_enabled ?? true}
+            checked={settings.gating_enabled ?? false}
             onChange={(e) => update({ gating_enabled: e.target.checked })}
           />
           Gating enabled
         </label>
 
-        {(settings.gating_enabled ?? true) && (
+        {(settings.gating_enabled ?? false) && (
           <label>
             Gating threshold
             <input
@@ -96,7 +96,7 @@ export function AnalysisSettingsPanel({ settings, onChange }: Props) {
         <label className="checkbox-label">
           <input
             type="checkbox"
-            checked={settings.filter_non_matching ?? false}
+            checked={settings.filter_non_matching ?? true}
             onChange={(e) => update({ filter_non_matching: e.target.checked })}
           />
           Filter non-matching results

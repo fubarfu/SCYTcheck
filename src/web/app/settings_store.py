@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from src.config import default_advanced_settings
+
 DEFAULT_SETTINGS_FILENAME = "scytcheck_settings.json"
 
 
@@ -22,13 +24,14 @@ class SettingsStore:
         return Path(DEFAULT_SETTINGS_FILENAME)
 
     def load(self) -> dict[str, Any]:
+        defaults = self._default_settings_payload()
         if not self.settings_path.exists():
-            return {}
+            return defaults
         with self.settings_path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
             if not isinstance(data, dict):
-                return {}
-            return data
+                return defaults
+            return self._deep_merge(defaults, data)
 
     def save(self, partial_update: dict[str, Any]) -> dict[str, Any]:
         current = self.load()
@@ -46,3 +49,18 @@ class SettingsStore:
             else:
                 merged[key] = value
         return merged
+
+    @staticmethod
+    def _default_settings_payload() -> dict[str, Any]:
+        advanced = default_advanced_settings()
+        return {
+            "video_quality": advanced.video_quality,
+            "ocr_confidence_threshold": advanced.ocr_confidence_threshold,
+            "tolerance_value": advanced.tolerance_value,
+            "event_gap_threshold_sec": advanced.event_gap_threshold_sec,
+            "gating_enabled": advanced.gating_enabled,
+            "gating_threshold": advanced.gating_threshold,
+            "filter_non_matching": advanced.filter_non_matching,
+            "logging_enabled": advanced.logging_enabled,
+            "context_patterns": list(advanced.context_patterns),
+        }

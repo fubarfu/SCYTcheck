@@ -186,6 +186,7 @@ class AnalysisHandler:
                 dto.source_value,
                 quality=advanced.video_quality,
             )
+            self._validate_regions(dto, video_info)
             duration = float(video_info.get("duration") or 0.0)
             if duration <= 0:
                 duration = 60.0
@@ -248,6 +249,26 @@ class AnalysisHandler:
             return 409, {"error": "conflict", "message": str(exc)}
 
         return 202, {"run_id": run_id, "status": RunStatus.RUNNING.value}
+
+    @staticmethod
+    def _validate_regions(
+        dto: AnalysisStartRequestDTO,
+        video_info: dict[str, object],
+    ) -> None:
+        frame_width = int(video_info.get("width") or 0)
+        frame_height = int(video_info.get("height") or 0)
+        if frame_width <= 0 or frame_height <= 0:
+            return
+
+        for index, region in enumerate(dto.scan_regions, start=1):
+            if region.x >= frame_width or region.y >= frame_height:
+                raise SchemaValidationError(
+                    f"scan region {index} origin is outside frame bounds {frame_width}x{frame_height}"
+                )
+            if region.x + region.width > frame_width or region.y + region.height > frame_height:
+                raise SchemaValidationError(
+                    f"scan region {index} exceeds frame bounds {frame_width}x{frame_height}"
+                )
 
     @staticmethod
     def _build_context_patterns(items: list[dict[str, object]]) -> list[ContextPattern]:

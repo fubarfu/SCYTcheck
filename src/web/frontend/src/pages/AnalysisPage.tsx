@@ -2,6 +2,7 @@
 import { AnalysisProgressPanel } from "../components/AnalysisProgressPanel";
 import { AnalysisSettingsPanel } from "../components/AnalysisSettingsPanel";
 import { ContextPatternsPanel } from "../components/ContextPatternsPanel";
+import { clampRegionToFrame, clientPointToFramePoint } from "../utils/regionMath";
 
 interface ScanRegion {
   x: number;
@@ -81,7 +82,17 @@ export function AnalysisPage() {
   const [outputFilename, setOutputFilename] = useState("output.csv");
   const [scanRegions, setScanRegions] = useState<ScanRegion[]>([{ x: 120, y: 40, width: 480, height: 60 }]);
   const [activeRegionIndex, setActiveRegionIndex] = useState(0);
-  const [settings, setSettings] = useState<Settings>({});
+  const [settings, setSettings] = useState<Settings>({
+    video_quality: "best",
+    ocr_confidence_threshold: 40,
+    tolerance_value: 0.75,
+    event_gap_threshold_sec: 1.0,
+    gating_enabled: false,
+    gating_threshold: 0.02,
+    filter_non_matching: true,
+    logging_enabled: false,
+    context_patterns: [],
+  });
   const [runId, setRunId] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
@@ -282,10 +293,9 @@ export function AnalysisPage() {
     if (!frame || !drag || !preview) return;
 
     const rect = frame.getBoundingClientRect();
-    const px = clamp(clientX - rect.left, 0, rect.width);
-    const py = clamp(clientY - rect.top, 0, rect.height);
-    const x = Math.round((px / rect.width) * preview.width);
-    const y = Math.round((py / rect.height) * preview.height);
+    const point = clientPointToFramePoint(clientX, clientY, rect, preview);
+    const x = point.x;
+    const y = point.y;
     const regionIndex = activeRegionRef.current;
 
     setScanRegions((prev) => prev.map((region, index) => {
@@ -294,22 +304,22 @@ export function AnalysisPage() {
       }
 
       if (drag.mode === "draw") {
-        return {
+        return clampRegionToFrame({
           x: Math.min(drag.startX, x),
           y: Math.min(drag.startY, y),
           width: Math.max(1, Math.abs(x - drag.startX)),
           height: Math.max(1, Math.abs(y - drag.startY)),
-        };
+        }, preview);
       }
 
       if (drag.mode === "move") {
         const nx = clamp(x - drag.offsetX, 0, Math.max(0, preview.width - drag.baseRegion.width));
         const ny = clamp(y - drag.offsetY, 0, Math.max(0, preview.height - drag.baseRegion.height));
-        return {
+        return clampRegionToFrame({
           ...drag.baseRegion,
           x: nx,
           y: ny,
-        };
+        }, preview);
       }
 
       if (drag.mode === "resize") {
@@ -327,12 +337,12 @@ export function AnalysisPage() {
         if (drag.handle?.includes("n")) ny = clamp(y, 0, bottom - 1);
         if (drag.handle?.includes("s")) nb = clamp(y, base.y + 1, preview.height);
 
-        return {
+        return clampRegionToFrame({
           x: nx,
           y: ny,
           width: Math.max(1, nr - nx),
           height: Math.max(1, nb - ny),
-        };
+        }, preview);
       }
 
       return region;
@@ -344,12 +354,7 @@ export function AnalysisPage() {
     const frame = frameRef.current;
     if (!frame || !preview) return;
     const rect = frame.getBoundingClientRect();
-    const sx = Math.round(((e.clientX - rect.left) / rect.width) * preview.width);
-    const sy = Math.round(((e.clientY - rect.top) / rect.height) * preview.height);
-    const point = {
-      x: clamp(sx, 0, preview.width),
-      y: clamp(sy, 0, preview.height),
-    };
+    const point = clientPointToFramePoint(e.clientX, e.clientY, rect, preview);
 
     if (scanRegions.length === 0) {
       return;
@@ -395,12 +400,7 @@ export function AnalysisPage() {
     }
 
     const rect = frame.getBoundingClientRect();
-    const sx = Math.round(((e.clientX - rect.left) / rect.width) * preview.width);
-    const sy = Math.round(((e.clientY - rect.top) / rect.height) * preview.height);
-    const point = {
-      x: clamp(sx, 0, preview.width),
-      y: clamp(sy, 0, preview.height),
-    };
+    const point = clientPointToFramePoint(e.clientX, e.clientY, rect, preview);
 
     let hitIndex = -1;
     for (let i = scanRegions.length - 1; i >= 0; i -= 1) {
@@ -541,7 +541,7 @@ export function AnalysisPage() {
                       <svg
                         className="region-overlay-svg"
                         viewBox={`0 0 ${preview.width} ${preview.height}`}
-                        preserveAspectRatio="none"
+                        preserveAspectRatio="xMidYMid meet"
                         aria-hidden="true"
                       >
                         {scanRegions.map((region, index) => (

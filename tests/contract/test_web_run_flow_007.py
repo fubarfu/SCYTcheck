@@ -12,7 +12,7 @@ from src.web.app.review_sidecar_store import ReviewSidecarStore
 class _FakeVideoService:
     def get_video_info(self, source: str, quality: str = "best") -> dict[str, object]:
         del source, quality
-        return {"duration": 5.0}
+        return {"duration": 5.0, "width": 1920, "height": 1080}
 
 
 class _FakeAnalysisService:
@@ -104,3 +104,27 @@ def test_review_session_load_uses_csv_rows_when_sidecar_missing(tmp_path: Path) 
     session_status, session_body = handler.get_session(body["session_id"])
     assert session_status == 200
     assert [candidate["extracted_name"] for candidate in session_body["candidates"]] == ["Alice", "Bob"]
+
+
+def test_analysis_start_rejects_scan_region_outside_video_bounds(
+    tmp_path: Path, monkeypatch
+) -> None:
+    handler = AnalysisHandler()
+    monkeypatch.setattr(
+        handler,
+        "_create_analysis_service",
+        lambda source_type, advanced: _FakeAnalysisService(),
+    )
+
+    status, body = handler.post_start(
+        {
+            "source_type": "youtube_url",
+            "source_value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "output_folder": str(tmp_path),
+            "output_filename": "result.csv",
+            "scan_region": {"x": 1900, "y": 20, "width": 120, "height": 40},
+        }
+    )
+
+    assert status == 400
+    assert "exceeds frame bounds" in body["message"]

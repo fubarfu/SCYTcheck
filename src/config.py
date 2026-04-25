@@ -69,7 +69,7 @@ class AdvancedSettings:
     gating_threshold: float = 0.02
 
 
-def _default_advanced_settings() -> AdvancedSettings:
+def default_advanced_settings() -> AdvancedSettings:
     return AdvancedSettings(
         context_patterns=[
             {
@@ -146,21 +146,21 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
     """Load persisted advanced settings or initialize defaults on first run."""
     path = _settings_path(base_dir)
     if not path.exists():
-        defaults = _default_advanced_settings()
+        defaults = default_advanced_settings()
         save_advanced_settings(defaults, base_dir)
         return defaults
 
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        defaults = _default_advanced_settings()
+        defaults = default_advanced_settings()
         save_advanced_settings(defaults, base_dir)
         return defaults
 
     if not isinstance(payload, dict):
         payload = {}
 
-    defaults = _default_advanced_settings()
+    defaults = default_advanced_settings()
     return AdvancedSettings(
         context_patterns=list(payload.get("context_patterns", defaults.context_patterns)),
         filter_non_matching=bool(payload.get("filter_non_matching", defaults.filter_non_matching)),
