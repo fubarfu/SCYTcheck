@@ -30,13 +30,13 @@
 
 **CRITICAL**: No user story work should start before this phase is complete.
 
-- [ ] T007 Extend persisted review-session data structures for accepted names, rejected candidates, collapse state, and resolution status in `src/data/models.py`
-- [ ] T008 [P] Implement review-group sidecar read/write helpers for accepted-name, rejection, and collapse-state persistence in `src/web/app/review_sidecar_store.py`
-- [ ] T009 [P] Implement exact-match consensus recompute utilities and resolved/unresolved grouping state in `src/web/app/review_grouping.py`
-- [ ] T010 [P] Implement review-group mutation and uniqueness-validation primitives for confirm, reject, undo, and duplicate detection in `src/web/app/group_mutation_service.py`
-- [ ] T011 [P] Add request and response DTOs for review sessions, group toggles, candidate confirmations, and validation feedback in `src/web/api/schemas.py`
-- [ ] T012 Wire review-group routes and session payload mapping into `src/web/api/routes/review_sessions.py`, `src/web/api/routes/review_actions.py`, and `src/web/api/router.py`
-- [ ] T013 Add foundational test coverage for sidecar persistence, grouping recompute guards, and schema parity in `tests/unit/test_review_group_foundation_010.py`
+- [X] T007 Extend persisted review-session data structures for accepted names, rejected candidates, collapse state, and resolution status in `src/data/models.py`
+- [X] T008 [P] Implement review-group sidecar read/write helpers for accepted-name, rejection, and collapse-state persistence in `src/web/app/review_sidecar_store.py`
+- [X] T009 [P] Implement exact-match consensus recompute utilities and resolved/unresolved grouping state in `src/web/app/review_grouping.py`
+- [X] T010 [P] Implement review-group mutation and uniqueness-validation primitives for confirm, reject, undo, and duplicate detection in `src/web/app/group_mutation_service.py`
+- [X] T011 [P] Add request and response DTOs for review sessions, group toggles, candidate confirmations, and validation feedback in `src/web/api/schemas.py`
+- [X] T012 Wire review-group routes and session payload mapping into `src/web/api/routes/review_sessions.py`, `src/web/api/routes/review_actions.py`, and `src/web/api/router.py`
+- [X] T013 Add foundational test coverage for sidecar persistence, grouping recompute guards, and schema parity in `tests/unit/test_review_group_foundation_010.py`
 
 **Checkpoint**: Review-group foundations are ready; user stories can now be implemented and validated independently.
 
