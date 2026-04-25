@@ -21,6 +21,12 @@ interface Props {
   group: CandidateGroup;
   sourceType: "local_file" | "youtube_url";
   sourceValue: string;
+  validationFeedback?: {
+    candidateId?: string | null;
+    message: string;
+    hint?: string | null;
+    conflictGroupId?: string | null;
+  } | null;
   onAction: (action: {
     action_type: string;
     target_ids: string[];
@@ -33,6 +39,7 @@ export function CandidateGroupCard({
   group,
   sourceType,
   sourceValue,
+  validationFeedback = null,
   onAction,
   onOpenThumbnail,
 }: Props) {
@@ -126,6 +133,15 @@ export function CandidateGroupCard({
               occurrenceIndex={index + 1}
               occurrenceCount={occurrenceCount}
               showOccurrenceMetadata={isResolved}
+              validationError={
+                validationFeedback && (!validationFeedback.candidateId || validationFeedback.candidateId === candidate.candidate_id)
+                  ? {
+                      message: validationFeedback.message,
+                      hint: validationFeedback.hint,
+                      conflictGroupId: validationFeedback.conflictGroupId,
+                    }
+                  : null
+              }
               onAction={onAction}
               onOpenThumbnail={onOpenThumbnail}
             />

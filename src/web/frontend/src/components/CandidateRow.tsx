@@ -28,6 +28,11 @@ interface Props {
   }) => void;
   onOpenThumbnail: (candidateId: string) => void;
   thumbnailUrl?: string | null;
+  validationError?: {
+    message: string;
+    hint?: string | null;
+    conflictGroupId?: string | null;
+  } | null;
 }
 
 function parseTimestampSeconds(raw: string | undefined): number {
@@ -81,6 +86,7 @@ export function CandidateRow({
   showOccurrenceMetadata = false,
   onAction,
   onOpenThumbnail,
+  validationError = null,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [editedText, setEditedText] = useState(candidate.corrected_text ?? candidate.extracted_name);
@@ -224,6 +230,14 @@ export function CandidateRow({
           type="success"
           message="Selection saved"
           hint="This candidate is now the accepted name for the group."
+        />
+      )}
+      {validationError && (
+        <ValidationFeedback
+          type="error"
+          message={validationError.message}
+          hint={validationError.hint}
+          conflictGroupId={validationError.conflictGroupId}
         />
       )}
       {isRejected && <ValidationFeedback type="error" message="Rejected" hint="This candidate is excluded until you undo reject." />}

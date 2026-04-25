@@ -38,6 +38,13 @@ interface ReviewSessionPayload {
   groups?: CandidateGroup[];
 }
 
+interface GroupValidationFeedbackState {
+  candidateId?: string | null;
+  message: string;
+  hint?: string | null;
+  conflictGroupId?: string | null;
+}
+
 interface ReviewPageProps {
   reopenContext?: {
     historyId: string;
@@ -56,6 +63,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [undoCount, setUndoCount] = useState(0);
   const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
+  const [groupValidationFeedback, setGroupValidationFeedback] = useState<Record<string, GroupValidationFeedbackState>>({});
   const [filter, setFilter] = useState<ReviewFilterState>({
     searchText: "",
     status: "all",
@@ -186,6 +194,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     const nextToggles = deriveGroupToggleState(reconciled.groups ?? []);
     setGroupToggles(nextToggles);
     setSelectedSession(applyGroupToggleState(reconciled, nextToggles));
+    setGroupValidationFeedback({});
     setSelectedSessionId(sessionId);
     setLoadingError(null);
   };
@@ -193,6 +202,8 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const postAction = async (action: { action_type: string; target_ids: string[]; payload?: Record<string, unknown> }) => {
     if (!selectedSessionId) return;
     setExportMessage(null);
+    const actionGroupId = String(action.payload?.group_id ?? "").trim();
+    const actionCandidateId = action.target_ids[0] ?? null;
 
     if (action.action_type === "toggle_collapse") {
       const groupId = String(action.payload?.group_id ?? "").trim();
@@ -215,9 +226,50 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       body: JSON.stringify(action),
     });
     if (!resp.ok) {
-      setLoadingError("Action failed");
+      const errorBody = await resp.json().catch(() => null) as {
+        message?: string;
+        validation?: {
+          is_valid?: boolean;
+          message?: string;
+          hint?: string;
+          conflict_group_id?: string;
+        };
+        action?: {
+          group_id?: string;
+          candidate_id?: string;
+        };
+      } | null;
+
+      const validation = errorBody?.validation;
+      const responseGroupId = String(errorBody?.action?.group_id ?? actionGroupId).trim();
+      if (resp.status === 422 && validation && responseGroupId) {
+        setGroupValidationFeedback((previous) => ({
+          ...previous,
+          [responseGroupId]: {
+            candidateId: errorBody?.action?.candidate_id ?? actionCandidateId,
+            message: validation.message ?? errorBody?.message ?? "Validation failed",
+            hint: validation.hint ?? null,
+            conflictGroupId: validation.conflict_group_id ?? null,
+          },
+        }));
+        setLoadingError(null);
+        await fetchSession(selectedSessionId);
+        return;
+      }
+      setLoadingError(errorBody?.message ?? "Action failed");
       return;
     }
+    if (actionGroupId) {
+      setGroupValidationFeedback((previous) => {
+        if (!(actionGroupId in previous)) {
+          return previous;
+        }
+        const next = { ...previous };
+        delete next[actionGroupId];
+        return next;
+      });
+    }
+    setLoadingError(null);
     setUndoCount((v) => v + 1);
     await fetchSession(selectedSessionId);
   };
@@ -382,6 +434,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                 group={group}
                 sourceType={sourceType}
                 sourceValue={sourceValue}
+                validationFeedback={groupValidationFeedback[group.group_id] ?? null}
                 onAction={(action) => {
                   if (action.target_ids.length > 1) {
                     action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));
