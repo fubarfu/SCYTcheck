@@ -305,6 +305,31 @@ class ReviewValidationFeedbackDTO:
 
 
 @dataclass(frozen=True)
+class ReviewActionValidationErrorResponseDTO:
+    error: str
+    message: str
+    validation: ReviewValidationFeedbackDTO
+    action_type: str
+    group_id: str | None = None
+    candidate_id: str | None = None
+
+    def to_payload(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "error": self.error,
+            "message": self.message,
+            "validation": self.validation.to_payload(),
+            "action": {
+                "action_type": self.action_type,
+            },
+        }
+        if self.group_id:
+            payload["action"]["group_id"] = self.group_id
+        if self.candidate_id:
+            payload["action"]["candidate_id"] = self.candidate_id
+        return payload
+
+
+@dataclass(frozen=True)
 class ReviewGroupResponseDTO:
     group_id: str
     display_name: str

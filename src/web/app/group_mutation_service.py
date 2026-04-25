@@ -99,6 +99,40 @@ def _duplicate_conflict(
   return None
 
 
+def _accepted_name_lookup(session_payload: dict[str, Any]) -> dict[str, str]:
+  accepted_lookup: dict[str, str] = {
+    str(group_id).strip(): str(accepted_name).strip()
+    for group_id, accepted_name in dict(session_payload.get("accepted_names", {})).items()
+    if str(group_id).strip() and str(accepted_name).strip()
+  }
+
+  rejected_map = {
+    str(group_id).strip(): {
+      str(candidate_id).strip()
+      for candidate_id in candidate_ids
+      if str(candidate_id).strip()
+    }
+    for group_id, candidate_ids in dict(session_payload.get("rejected_candidates", {})).items()
+    if isinstance(candidate_ids, list)
+  }
+
+  for group in list(session_payload.get("groups", [])):
+    group_id = str(group.get("group_id", "")).strip()
+    if not group_id:
+      continue
+
+    explicit_accepted = str(group.get("accepted_name", "")).strip()
+    if explicit_accepted:
+      accepted_lookup[group_id] = explicit_accepted
+      continue
+
+    active_spellings = _active_spellings(group, rejected_map.get(group_id, set()))
+    if len(active_spellings) == 1:
+      accepted_lookup.setdefault(group_id, active_spellings[0])
+
+  return accepted_lookup
+
+
 def _validation_payload(
   *,
   is_valid: bool,
@@ -209,7 +243,7 @@ class GroupMutationService:
 
     accepted_name = _candidate_name(candidate)
     conflict_group = _duplicate_conflict(
-      dict(payload.get("accepted_names", {})),
+      _accepted_name_lookup(payload),
       accepted_name,
       excluded_group_id=group_id,
     )

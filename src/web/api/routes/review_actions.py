@@ -8,6 +8,7 @@ from typing import Any
 from src.web.api.schemas import (
     REVIEW_ACTION_TYPES,
     ReviewActionRequestDTO,
+    ReviewActionValidationErrorResponseDTO,
     ReviewValidationFeedbackDTO,
     SchemaValidationError,
 )
@@ -73,11 +74,15 @@ class ReviewActionsHandler:
                     conflict_group_id=str(validation_payload.get("conflict_group_id", "")) or None,
                     hint=str(validation_payload.get("hint", "")) or None,
                 )
-                return 422, {
-                    "error": "validation_error",
-                    "message": feedback.message or "Validation failed",
-                    "validation": feedback.to_payload(),
-                }
+                failure = ReviewActionValidationErrorResponseDTO(
+                    error="validation_error",
+                    message=feedback.message or "Validation failed",
+                    validation=feedback,
+                    action_type=action_type,
+                    group_id=str(action_payload.get("group_id", "")).strip() or None,
+                    candidate_id=(target_ids[0] if target_ids else None),
+                )
+                return 422, failure.to_payload()
             updated_payload = dict(mutation_payload)
         else:
             candidates: list[dict] = list(session_payload.get("candidates", []))
