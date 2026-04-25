@@ -38,6 +38,8 @@ export function CandidateGroupCard({
   const ids = group.candidates.map((c) => c.candidate_id);
   const isCollapsed = Boolean(group.is_collapsed);
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
+  const activeSpellings = Array.isArray(group.active_spellings) ? group.active_spellings : [];
+  const hasConflict = !isResolved && activeSpellings.length > 1;
   const acceptedSummary = group.accepted_name_summary ?? group.accepted_name ?? null;
   const occurrenceCount = group.occurrence_count ?? group.total_candidate_count ?? group.candidates.length;
   const collapseAction = {
@@ -51,11 +53,12 @@ export function CandidateGroupCard({
 
   return (
     <section
-      className="candidate-group-card"
+      className={isResolved ? "candidate-group-card group-resolved" : "candidate-group-card group-unresolved"}
       data-testid={`candidate-group-${group.group_id}`}
       data-collapsed={isCollapsed ? "true" : "false"}
+      data-resolution={isResolved ? "resolved" : "unresolved"}
     >
-      <header className="group-card-header">
+      <header className={isResolved ? "group-card-header" : "group-card-header group-card-header-unresolved"}>
         <div className="group-title-stack">
           <h4>{group.display_name}</h4>
           <div className="group-meta-row">
@@ -65,6 +68,11 @@ export function CandidateGroupCard({
               <span className="chip recommendation">Group rec {Math.round(group.group_recommendation_score)}</span>
             )}
           </div>
+          {hasConflict && (
+            <p className="group-conflict-summary">
+              Conflict: {activeSpellings.length} active spellings ({activeSpellings.join(", ")})
+            </p>
+          )}
           {isResolved && acceptedSummary && (
             <p className="group-accepted-summary">Accepted: <strong>{acceptedSummary}</strong></p>
           )}
@@ -77,7 +85,8 @@ export function CandidateGroupCard({
             data-testid={`toggle-group-${group.group_id}`}
             onClick={() => onAction(collapseAction)}
           >
-            {isCollapsed ? "Expand" : "Collapse"}
+            <span aria-hidden="true" className="group-toggle-chevron">{isCollapsed ? ">" : "v"}</span>
+            <span>{isCollapsed ? "Expand" : "Collapse"}</span>
           </button>
           {!isCollapsed && (
             <>
