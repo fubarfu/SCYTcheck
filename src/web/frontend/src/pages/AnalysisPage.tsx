@@ -420,8 +420,6 @@ export function AnalysisPage() {
     <section className="page-panel">
       <div className="page-heading-row">
         <div>
-          <p className="eyebrow">Analysis</p>
-          <h2>Configure and scan one video source</h2>
           <p className="page-subtitle">Load a preview, drag to set the scan region, then start.</p>
         </div>
       </div>
@@ -554,7 +552,6 @@ export function AnalysisPage() {
             <section className="panel-card">
               <div className="panel-card-header">
                 <div>
-                  <p className="eyebrow">Output</p>
                   <h3>Pick where results are written</h3>
                 </div>
               </div>
@@ -592,7 +589,6 @@ export function AnalysisPage() {
             <section className="panel-card action-card">
               <div className="panel-card-header">
                 <div>
-                  <p className="eyebrow">Run</p>
                   <h3>Start the analysis pass</h3>
                 </div>
               </div>

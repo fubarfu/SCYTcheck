@@ -11,16 +11,26 @@ export function App() {
   return (
     <main className="app-shell">
       <header className="app-nav">
-        <h1>SCYTcheck</h1>
-        <div className="app-nav-actions">
-          <ThemeToggle />
-          <button className={view === "analysis" ? "active" : ""} onClick={() => setView("analysis")}>
-            Analysis
-          </button>
-          <button className={view === "review" ? "active" : ""} onClick={() => setView("review")}>
-            Review
-          </button>
+        <div className="app-nav-left">
+          <h1>SCYTcheck</h1>
+          <nav className="app-nav-links">
+            <button
+              type="button"
+              className={`app-nav-link${view === "analysis" ? " active" : ""}`}
+              onClick={() => setView("analysis")}
+            >
+              Analysis
+            </button>
+            <button
+              type="button"
+              className={`app-nav-link${view === "review" ? " active" : ""}`}
+              onClick={() => setView("review")}
+            >
+              Review
+            </button>
+          </nav>
         </div>
+        <ThemeToggle />
       </header>
       {view === "analysis" ? <AnalysisPage /> : <ReviewPage />}
     </main>

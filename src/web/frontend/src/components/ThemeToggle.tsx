@@ -18,10 +18,13 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
+      className="app-nav-theme-btn"
       onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
       aria-label="Toggle theme"
     >
-      Theme: {theme}
+      <span className="material-symbols-outlined" aria-hidden="true">
+        {theme === "dark" ? "dark_mode" : "light_mode"}
+      </span>
     </button>
   );
 }
