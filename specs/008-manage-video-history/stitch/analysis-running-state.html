@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SCYTcheck - Analysis Running</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;900&amp;family=Inter:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#317bef",
+                        "surface-dim": "#0c0e12",
+                        "on-tertiary-fixed": "#413057",
+                        "error": "#fa746f",
+                        "surface-container-highest": "#22262e",
+                        "tertiary": "#f0dfff",
+                        "on-primary-container": "#ffffff",
+                        "error-container": "#871f21",
+                        "surface-container": "#171a20",
+                        "surface-container-lowest": "#000000",
+                        "on-secondary-fixed-variant": "#535b6e",
+                        "on-tertiary-fixed-variant": "#5e4c75",
+                        "secondary-dim": "#b1b9ce",
+                        "inverse-surface": "#f9f9fe",
+                        "primary-container": "#0e69dc",
+                        "tertiary-dim": "#d6c0f0",
+                        "on-primary": "#003d88",
+                        "on-secondary-fixed": "#373f51",
+                        "inverse-primary": "#005bc4",
+                        "tertiary-container": "#e5ceff",
+                        "secondary-fixed-dim": "#ccd4eb",
+                        "outline": "#72757f",
+                        "primary-fixed": "#4388fd",
+                        "on-tertiary-container": "#54436b",
+                        "surface-bright": "#282c34",
+                        "on-error": "#490006",
+                        "on-background": "#e2e5f0",
+                        "on-secondary": "#384052",
+                        "on-primary-fixed": "#000000",
+                        "surface": "#0c0e12",
+                        "primary-dim": "#699cff",
+                        "inverse-on-surface": "#53555a",
+                        "surface-container-high": "#1c2026",
+                        "surface-tint": "#adc6ff",
+                        "background": "#0c0e12",
+                        "on-secondary-container": "#b7bfd5",
+                        "error-dim": "#c54d4a",
+                        "surface-variant": "#22262e",
+                        "primary": "#adc6ff",
+                        "on-surface-variant": "#a8abb5",
+                        "secondary-container": "#333b4d",
+                        "outline-variant": "#444851",
+                        "tertiary-fixed-dim": "#d6c0f0",
+                        "on-error-container": "#ff9993",
+                        "on-surface": "#e2e5f0",
+                        "on-tertiary": "#5d4c74",
+                        "secondary": "#bec6dd",
+                        "on-primary-fixed-variant": "#001435",
+                        "secondary-fixed": "#dae2f9",
+                        "surface-container-low": "#111318",
+                        "tertiary-fixed": "#e5ceff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col pt-16 pb-20">
+<!-- TopNavBar -->
+<nav class="bg-gray-950 dark:bg-gray-950 text-blue-500 dark:text-blue-400 font-['Plus_Jakarta_Sans'] text-sm tracking-tight border-b border-gray-800 flat no shadows fixed w-full top-0 flex justify-between items-center px-8 py-3 h-16 z-50">
+<div class="flex items-center gap-8">
+<span class="text-lg font-black tracking-tighter text-white">SCYTcheck</span>
+<div class="flex gap-6">
+<a class="text-blue-500 border-b-2 border-blue-500 pb-1 font-bold cursor-pointer active:scale-95" href="#">Analysis</a>
+<a class="text-gray-500 dark:text-gray-400 font-medium opacity-50 cursor-not-allowed" href="#">Review</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 cursor-pointer active:scale-95 hover:text-blue-400 transition-colors duration-200" data-icon="dark_mode">dark_mode</span>
+</div>
+</nav>
+<!-- Main Content Grid -->
+<main class="flex-1 container mx-auto max-w-7xl px-8 py-8 grid grid-cols-12 gap-8">
+<!-- Left Column (Input & Region) -->
+<div class="col-span-12 lg:col-span-7 flex flex-col gap-6">
+<!-- Source Input (Locked) -->
+<section class="bg-surface-container rounded-xl p-6 border border-outline-variant/30 flex flex-col gap-4 opacity-75">
+<h2 class="text-lg font-bold font-headline text-on-surface">Video Source</h2>
+<div class="flex flex-col gap-2">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-label">YouTube URL</label>
+<div class="flex items-center bg-surface-container-high rounded border border-outline-variant/50 px-3 py-2 cursor-not-allowed">
+<span class="material-symbols-outlined text-outline mr-2 text-sm">link</span>
+<input class="bg-transparent border-none p-0 text-on-surface-variant text-sm w-full font-mono focus:ring-0 cursor-not-allowed" disabled="" type="text" value="https://youtube.com/watch?v=dQw4w9WgXcQ"/>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-label">Output Folder</label>
+<div class="flex items-center bg-surface-container-high rounded border border-outline-variant/50 px-3 py-2 cursor-not-allowed">
+<span class="material-symbols-outlined text-outline mr-2 text-sm">folder</span>
+<input class="bg-transparent border-none p-0 text-on-surface-variant text-sm w-full font-mono focus:ring-0 cursor-not-allowed" disabled="" type="text" value="/Users/user/Downloads/scytcheck-output"/>
+</div>
+</div>
+<div class="text-xs text-on-surface-variant font-mono mt-1">
+                    Output preview: <span class="text-secondary-fixed">dQw4w9WgXcQ_2026-04-21.csv</span>
+</div>
+</section>
+<!-- Region Selector (Locked) -->
+<section class="bg-surface-container rounded-xl p-6 border border-outline-variant/30 flex flex-col gap-4 flex-1 opacity-75">
+<div class="flex justify-between items-center">
+<h2 class="text-lg font-bold font-headline text-on-surface">Region Selector</h2>
+<span class="text-xs text-primary bg-primary/10 px-2 py-1 rounded font-mono border border-primary/20">LOCKED</span>
+</div>
+<div class="relative w-full aspect-video bg-surface-container-lowest rounded overflow-hidden border border-outline-variant group">
+<img alt="Generic video still" class="w-full h-full object-cover opacity-60" data-alt="Dark, moody gaming setup or abstract digital background, generic video placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDonq8-yTOAQB8EYx-ZMG25kezdwNM4TfXdYq0wN9UPQYFCkQMxkvS5ydOGSJSCj2a76SsH8QpcoZzSwXcjgOwk_AsTt4DiivPamhEULQosFBopyfaBHXEr8Pksl3VLMKaBGN8tyetdH-CiV2ja_kVXqqOIPrLuWz5Krrjg2Ci6RomnYxslvlrTf662rSv7xywfHyEgKLNYVX9JB9gvxwtnPDN3dMDX8onOlzvwRbX5H3XqQmCo-eUNEeR9Wse_7M1v6TE25NLVHFk"/>
+<!-- Overlay Rectangle -->
+<div class="absolute border-2 border-primary border-dashed bg-primary/10 pointer-events-none" style="left: 10%; top: 10%; width: 40%; height: 15%;">
+</div>
+</div>
+<div class="flex justify-between items-center text-sm font-mono text-on-surface-variant bg-surface-container-high p-3 rounded border border-outline-variant/50">
+<div class="flex gap-4">
+<span>x: <span class="text-secondary-fixed">120</span></span>
+<span>y: <span class="text-secondary-fixed">40</span></span>
+<span>w: <span class="text-secondary-fixed">480</span></span>
+<span>h: <span class="text-secondary-fixed">60</span></span>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column (Settings) -->
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-4">
+<h2 class="text-lg font-bold font-headline text-on-surface mb-2">Configuration</h2>
+<!-- Collapsed & Locked Settings Panels -->
+<div class="bg-surface-container rounded-lg border border-outline-variant/30 p-4 flex justify-between items-center opacity-60 cursor-not-allowed">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">settings</span>
+<span class="font-medium text-sm text-on-surface">Analysis Settings</span>
+</div>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+<div class="bg-surface-container rounded-lg border border-outline-variant/30 p-4 flex justify-between items-center opacity-60 cursor-not-allowed">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">crop_free</span>
+<span class="font-medium text-sm text-on-surface">Frame Gating</span>
+</div>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+<div class="bg-surface-container rounded-lg border border-outline-variant/30 p-4 flex justify-between items-center opacity-60 cursor-not-allowed">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">pattern</span>
+<span class="font-medium text-sm text-on-surface">Context Patterns</span>
+</div>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+<div class="bg-surface-container rounded-lg border border-outline-variant/30 p-4 flex justify-between items-center opacity-60 cursor-not-allowed">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">list_alt</span>
+<span class="font-medium text-sm text-on-surface">Logging</span>
+</div>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+<!-- Analysis Log Preview (Bonus context for running state) -->
+<div class="mt-4 bg-surface-container-lowest rounded-xl border border-outline-variant/50 p-4 flex-1 flex flex-col gap-2 font-mono text-xs text-on-surface-variant overflow-hidden">
+<div class="text-primary-fixed-dim border-b border-outline-variant/30 pb-2 mb-2">Analysis Log</div>
+<div class="opacity-50">[10:42:01] Initialization complete.</div>
+<div class="opacity-70">[10:42:05] Downloading video stream...</div>
+<div class="opacity-90">[10:42:15] Stream downloaded. Starting frame extraction.</div>
+<div class="text-secondary-fixed">[10:42:18] Processing frame 100...</div>
+<div class="text-secondary-fixed">[10:42:25] Processing frame 200...</div>
+<div class="text-secondary-fixed">[10:42:31] Processing frame 300...</div>
+</div>
+</div>
+</main>
+<!-- Footer / Active Progress -->
+<footer class="bg-gray-900/50 dark:bg-gray-900/80 backdrop-blur-md text-blue-500 dark:text-blue-400 font-['Inter'] text-xs font-mono uppercase tracking-widest border-t border-gray-800 shadow-2xl fixed bottom-0 left-0 w-full z-50 flex justify-between items-center px-8 py-4 h-20">
+<!-- Progress Area -->
+<div class="flex-1 max-w-2xl flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-on-surface font-semibold tracking-wider flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm animate-spin" style="font-variation-settings: 'FILL' 1;">progress_activity</span>
+                    Extracting frames...
+                </span>
+<span class="text-primary-dim">312 / ~520 frames processed</span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/30">
+<div class="h-full bg-primary relative rounded-full" style="width: 60%;">
+<!-- Subtle pulsing overlay for active state -->
+<div class="absolute inset-0 bg-white/20"></div>
+</div>
+</div>
+</div>
+<!-- Stop Action -->
+<div class="flex items-center gap-4 ml-8">
+<button class="bg-error/10 text-red-500 font-bold hover:bg-red-500/20 hover:text-red-400 transition-all px-6 py-2 rounded flex items-center gap-2 border border-error/20">
+<span class="material-symbols-outlined text-sm">stop</span>
+                Stop Analysis
+            </button>
+</div>
+</footer>
+</body></html>
