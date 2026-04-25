@@ -67,6 +67,7 @@ Contracts between History view and local Python server for video history listing
 
 ## Endpoint: `POST /api/history/reopen`
 - Purpose: Restore persisted context and resolve review artifacts from output folder.
+- Required artifact set for `resolution_status=ready`: at least one CSV result file in the output folder. Sidecar review JSON files are optional.
 - Request body:
 ```json
 {
@@ -105,6 +106,9 @@ Contracts between History view and local Python server for video history listing
   "review_route": "/review?history_id=vh_001"
 }
 ```
+- Behavior rules:
+  - Missing or unreadable CSV artifacts MUST return `resolution_status=missing_results` or `missing_folder` and still include `history_id` plus `review_route` so metadata remains accessible.
+  - Missing sidecar review JSON files alone MUST NOT downgrade a `ready` CSV result set to a hard failure.
 - Errors:
   - 404 unknown/deleted history entry
   - 500 restore failure

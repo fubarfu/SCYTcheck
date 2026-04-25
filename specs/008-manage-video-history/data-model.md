@@ -71,6 +71,7 @@
 
 ### Validation Rules
 - `resolution_status=ready` requires at least one valid CSV path.
+- `resolved_sidecar_paths` are optional and MAY be empty even when `resolution_status=ready`.
 - `missing_folder` when output folder is not accessible.
 
 ## Relationships

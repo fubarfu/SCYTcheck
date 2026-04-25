@@ -1,6 +1,6 @@
 # Feature Specification: Managed Video Analysis History
 
-**Feature Branch**: `009-prepare-spec-branch`  
+**Feature Branch**: `008-manage-video-history`  
 **Created**: 2026-04-25  
 **Status**: Draft  
 **Input**: User description: "The tool maintains a list of videos that have previously been analysed. All analysis of a video that has been previously analysed are merged. A third view allows the user maintain this list (delete, reopen). All settings, like the selected regions, output folder, context text patterns, and analysis settings are persistent when a video analysis is reopened. the review view load automatically the results. the result files in the review are automatically derived from the outputfolder."
@@ -84,7 +84,7 @@ As an analyst, I want a dedicated history-management view where I can reopen or 
 - **FR-007**: When an analysis is reopened, review view MUST load automatically.
 - **FR-008**: Review results for a reopened analysis MUST be discovered automatically from the entry's output folder.
 - **FR-009**: System MUST prevent duplicate history entries for the same video after merge.
-- **FR-010**: If required result files are missing from the derived output folder, system MUST notify the user and still allow access to the history entry metadata.
+- **FR-010**: If required result artifacts are missing from the derived output folder, system MUST notify the user and still allow access to the history entry metadata. Required artifacts are at least one CSV result file; sidecar review JSON is optional and its absence MUST NOT block metadata access.
 - **FR-011**: If duration metadata is missing or malformed for a candidate merge, system MUST NOT auto-merge and MUST create a new history entry flagged as a potential duplicate for user review.
 
 ### Key Entities *(include if feature involves data)*
@@ -99,7 +99,7 @@ As an analyst, I want a dedicated history-management view where I can reopen or 
 ### Measurable Outcomes
 
 - **SC-001**: 95% of reopen actions load the review view with restored context in under 5 seconds under normal local workstation conditions.
-- **SC-002**: 100% of repeat analyses for the same video produce a single visible history entry rather than multiple duplicates.
+- **SC-002**: 100% of repeat analyses with a valid deterministic merge key (canonical source URI/path plus valid duration seconds) produce a single visible history entry rather than multiple duplicates.
 - **SC-003**: At least 90% of users can reopen a prior analysis and continue review without manually re-entering settings.
 - **SC-004**: At least 95% of reopen attempts with valid output folders automatically load discoverable result files without user file browsing.
 

@@ -57,6 +57,7 @@ Validate that video history persistence, deterministic merge, reopen restore, an
   - history persistence read/write guards
 - Contract:
   - `GET /api/history/videos`
+  - `GET /api/history/videos/{history_id}`
   - `POST /api/history/merge-run`
   - `POST /api/history/reopen`
   - `DELETE /api/history/videos/{history_id}`

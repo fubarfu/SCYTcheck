@@ -1,6 +1,6 @@
 # Implementation Plan: Managed Video Analysis History
 
-**Branch**: `009-prepare-spec-branch` | **Date**: 2026-04-25 | **Spec**: [specs/008-manage-video-history/spec.md](specs/008-manage-video-history/spec.md)
+**Branch**: `008-manage-video-history` | **Date**: 2026-04-25 | **Spec**: [specs/008-manage-video-history/spec.md](specs/008-manage-video-history/spec.md)
 **Input**: Feature specification from `specs/008-manage-video-history/spec.md`
 
 ## Summary
@@ -73,8 +73,8 @@ src/
 │   └── video_service.py
 ├── web/
 │   ├── api/
-│   │   ├── app/
 │   │   └── routes/
+│   ├── app/
 │   └── frontend/
 │       └── src/
 │           ├── App.tsx

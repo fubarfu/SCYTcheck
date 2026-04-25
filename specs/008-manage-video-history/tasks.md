@@ -53,9 +53,9 @@
 ### Tests for User Story 1
 
 - [ ] T016 [P] [US1] Add unit tests for derived review result resolution states (ready/partial/missing_results/missing_folder) in tests/unit/test_history_reopen_resolution_008.py
-- [ ] T017 [P] [US1] Add contract tests for POST /api/history/reopen and GET /api/history/videos/{history_id} in tests/contract/test_history_api_008.py
+- [ ] T017 [P] [US1] Add contract tests for POST /api/history/reopen and GET /api/history/videos/{history_id}, including explicit metadata-access assertions for missing_results and missing_folder states, in tests/contract/test_history_api_008.py
 - [ ] T018 [P] [US1] Add integration test for quickstart Validation Flow A (create and reopen history entry) in tests/integration/test_history_reopen_flow_008.py
-- [ ] T019 [P] [US1] Add integration test for quickstart Validation Flow E (missing output folder warning path) in tests/integration/test_history_reopen_missing_folder_008.py
+- [ ] T019 [P] [US1] Add integration test for quickstart Validation Flow E (missing output folder warning path), including explicit verification that history metadata remains accessible, in tests/integration/test_history_reopen_missing_folder_008.py
 
 ### Implementation for User Story 1
 
@@ -116,7 +116,7 @@
 - [ ] T042 [US3] Implement history list/load/delete/reopen store actions and API bindings in src/web/frontend/src/state/historyStore.ts
 - [ ] T043 [US3] Add third-view navigation and route integration for History in src/web/frontend/src/App.tsx
 - [ ] T044 [US3] Apply Stitch-aligned layout/token updates for History integration in src/web/frontend/src/styles/app.css and src/web/frontend/src/styles/theme.css
-- [ ] T045 [US3] Consume and trace Stitch artifacts during frontend implementation by mapping structure from specs/008-manage-video-history/stitch/analysis-view.html, specs/008-manage-video-history/stitch/review-view.html, and specs/008-manage-video-history/stitch/frame-thumbnail-modal-overlay.html into UI notes in specs/008-manage-video-history/stitch/README.md
+- [ ] T045 [US3] Consume and trace all authoritative Stitch artifacts during frontend implementation by mapping structure from specs/008-manage-video-history/stitch/analysis-view.html, specs/008-manage-video-history/stitch/analysis-running-state.html, specs/008-manage-video-history/stitch/review-view.html, specs/008-manage-video-history/stitch/scan-region-selector-overlay.html, and specs/008-manage-video-history/stitch/frame-thumbnail-modal-overlay.html into UI notes in specs/008-manage-video-history/stitch/README.md
 
 **Checkpoint**: US3 history management view is independently functional and testable.
 
@@ -130,7 +130,7 @@
 - [ ] T047 [P] Run and fix full history integration suite aligned to quickstart flows A-E in tests/integration/test_history_reopen_flow_008.py, tests/integration/test_history_merge_flow_008.py, tests/integration/test_history_duration_edge_008.py, tests/integration/test_history_delete_flow_008.py, and tests/integration/test_history_reopen_missing_folder_008.py
 - [ ] T048 [P] Add and validate history list/reopen performance checks (<=200ms list interactions, <=5s reopen-ready) in tests/integration/test_history_performance_008.py
 - [ ] T049 Reconcile implementation against Stitch authority and document any justified deviations in specs/008-manage-video-history/quickstart.md
-- [ ] T050 Execute end-to-end feature verification and capture final notes in specs/008-manage-video-history/quickstart.md and tests/integration/test_all_features_combined.py
+- [ ] T050 Execute end-to-end feature-008 verification and capture final notes in specs/008-manage-video-history/quickstart.md and tests/integration/test_history_end_to_end_008.py
 
 ---
 
@@ -141,7 +141,7 @@
 - Phase 1 (Setup): Starts immediately.
 - Phase 2 (Foundational): Depends on Phase 1 and blocks all user stories.
 - Phase 3 (US1): Depends on Phase 2 and delivers MVP.
-- Phase 4 (US2): Depends on Phase 2 and can proceed after US1 baseline routes are available.
+- Phase 4 (US2): Depends on Phase 2 and can proceed in parallel with US1 once foundational persistence and API scaffolding are complete.
 - Phase 5 (US3): Depends on Phase 2 and can proceed after core history endpoints exist.
 - Phase 6 (Polish): Depends on completion of desired user stories.
 
