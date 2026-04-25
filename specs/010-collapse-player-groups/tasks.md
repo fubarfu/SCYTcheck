@@ -50,15 +50,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T014 [P] [US1] Add Vitest coverage for default-collapsed resolved-group rendering and expand interaction in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`
-- [ ] T015 [P] [US1] Add integration coverage for default-collapsed consensus groups and metadata reveal in `tests/integration/test_review_groups_consensus_flow_010.py`
+- [X] T014 [P] [US1] Add Vitest coverage for default-collapsed resolved-group rendering and expand interaction in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`
+- [X] T015 [P] [US1] Add integration coverage for default-collapsed consensus groups and metadata reveal in `tests/integration/test_review_groups_consensus_flow_010.py`
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Expose resolved-group summary fields and collapsed consensus state from the session loader in `src/web/api/routes/review_sessions.py` and `src/web/api/schemas.py`
-- [ ] T017 [US1] Implement collapsed resolved-group header, accepted-name summary, and expand affordance in `src/web/frontend/src/components/CandidateGroupCard.tsx`
-- [ ] T018 [US1] Render identical candidate occurrences and occurrence metadata for expanded resolved groups in `src/web/frontend/src/components/CandidateRow.tsx`
-- [ ] T019 [US1] Wire collapsed consensus groups into review-page rendering and derived selectors in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/state/reviewSelectors.ts`
+- [X] T016 [US1] Expose resolved-group summary fields and collapsed consensus state from the session loader in `src/web/api/routes/review_sessions.py` and `src/web/api/schemas.py`
+- [X] T017 [US1] Implement collapsed resolved-group header, accepted-name summary, and expand affordance in `src/web/frontend/src/components/CandidateGroupCard.tsx`
+- [X] T018 [US1] Render identical candidate occurrences and occurrence metadata for expanded resolved groups in `src/web/frontend/src/components/CandidateRow.tsx`
+- [X] T019 [US1] Wire collapsed consensus groups into review-page rendering and derived selectors in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/state/reviewSelectors.ts`
 
 **Checkpoint**: Consensus groups are independently visible, collapsed by default, and expandable with full context.
 
