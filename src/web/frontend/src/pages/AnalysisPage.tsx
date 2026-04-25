@@ -3,6 +3,7 @@ import { AnalysisProgressPanel } from "../components/AnalysisProgressPanel";
 import { AnalysisSettingsPanel } from "../components/AnalysisSettingsPanel";
 import { ContextPatternsPanel } from "../components/ContextPatternsPanel";
 import { clampRegionToFrame, clientPointToFramePoint } from "../utils/regionMath";
+import type { ReopenResponse } from "../state/historyStore";
 
 interface ScanRegion {
   x: number;
@@ -48,6 +49,10 @@ interface DragState {
   baseRegion: ScanRegion;
 }
 
+interface AnalysisPageProps {
+  reopenPayload?: ReopenResponse | null;
+}
+
 function deriveFilename(sourceType: SourceType, sourceValue: string): string {
   const now = new Date();
   const ts =
@@ -75,7 +80,7 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function AnalysisPage() {
+export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
   const [sourceType, setSourceType] = useState<SourceType>("youtube_url");
   const [sourceValue, setSourceValue] = useState("");
   const [outputFolder, setOutputFolder] = useState("");
@@ -106,6 +111,58 @@ export function AnalysisPage() {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const activeRegionRef = useRef(0);
+  const appliedHistoryIdRef = useRef<string | null>(null);
+
+  function applyReopenPayload(payload: ReopenResponse) {
+    const context = payload.analysis_context;
+    setSourceType(context.source_type);
+    setSourceValue(context.source_value ?? "");
+    setOutputFolder(context.output_folder ?? "");
+
+    const region = context.scan_region;
+    if (
+      region
+      && Number.isFinite(region.x)
+      && Number.isFinite(region.y)
+      && Number.isFinite(region.width)
+      && Number.isFinite(region.height)
+      && region.width > 0
+      && region.height > 0
+    ) {
+      const nextRegion = {
+        x: Math.max(0, Math.floor(region.x)),
+        y: Math.max(0, Math.floor(region.y)),
+        width: Math.max(1, Math.floor(region.width)),
+        height: Math.max(1, Math.floor(region.height)),
+      };
+      setScanRegions([nextRegion]);
+      setActiveRegion(0);
+    }
+
+    setSettings((prev) => ({
+      ...prev,
+      ...context.analysis_settings,
+      context_patterns: Array.isArray(context.context_patterns)
+        ? context.context_patterns
+        : prev.context_patterns,
+    }));
+
+    derivedFilenameRef.current = true;
+    setPreview(null);
+    setPreviewError(null);
+    setScrubTime(0);
+  }
+
+  useEffect(() => {
+    if (!reopenPayload) {
+      return;
+    }
+    if (appliedHistoryIdRef.current === reopenPayload.history_id) {
+      return;
+    }
+    applyReopenPayload(reopenPayload);
+    appliedHistoryIdRef.current = reopenPayload.history_id;
+  }, [reopenPayload]);
 
   useEffect(() => {
     activeRegionRef.current = activeRegionIndex;

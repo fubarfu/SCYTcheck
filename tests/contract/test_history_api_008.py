@@ -87,6 +87,9 @@ def test_reopen_and_get_video_contract(tmp_path: Path) -> None:
 
     reopen_status, reopen_body = handler.post_reopen({"history_id": history_id})
     assert reopen_status == 200
+    assert reopen_body["analysis_context"]["source_type"] == "youtube_url"
+    assert reopen_body["analysis_context"]["source_value"] == "https://youtube.com/watch?v=abc123"
+    assert reopen_body["derived_results"]["primary_csv_path"] == payload["result_csv_path"]
     assert reopen_body["review_route"] == f"/review?history_id={history_id}"
     assert reopen_body["derived_results"]["resolution_status"] in {
         "ready",

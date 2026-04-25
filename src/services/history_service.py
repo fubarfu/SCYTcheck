@@ -64,6 +64,7 @@ class HistoryService:
                 "history_id": history_id,
                 "canonical_source": canonical,
                 "source_type": source_type,
+                "source_value": source_value,
                 "duration_seconds": duration,
                 "merge_key": merge_key,
                 "potential_duplicate": potential_duplicate,
@@ -79,6 +80,8 @@ class HistoryService:
         run_id = f"run_{uuid.uuid4().hex[:12]}"
         context_id = f"ctx_{uuid.uuid4().hex[:12]}"
         entry["output_folder"] = output_folder
+        entry["source_type"] = source_type
+        entry["source_value"] = source_value
         entry["last_result_csv"] = result_csv_path
         entry["run_count"] = int(entry.get("run_count", 0)) + 1
         entry["deleted"] = False
@@ -97,6 +100,8 @@ class HistoryService:
         context_payload = {
             "context_id": context_id,
             "history_id": entry["history_id"],
+            "source_type": source_type,
+            "source_value": source_value,
             "scan_region": dict(context.get("scan_region", {})),
             "output_folder": output_folder,
             "context_patterns": list(context.get("context_patterns", [])),
@@ -128,11 +133,22 @@ class HistoryService:
         }
 
         output_folder = Path(str(latest_context.get("output_folder") or entry.get("output_folder", "")))
-        derived = derive_review_artifacts(output_folder)
+        derived = derive_review_artifacts(output_folder, preferred_csv_path=str(entry.get("last_result_csv") or ""))
+
+        source_type = str(latest_context.get("source_type") or entry.get("source_type") or "youtube_url")
+        source_value = str(latest_context.get("source_value") or entry.get("source_value") or "").strip()
+        if not source_value:
+            canonical_source = str(entry.get("canonical_source") or "").strip()
+            if source_type == "youtube_url" and canonical_source.startswith("youtube:"):
+                source_value = f"https://youtube.com/watch?v={canonical_source.split(':', 1)[1]}"
+            elif source_type == "local_file":
+                source_value = canonical_source
 
         return {
             "history_id": entry["history_id"],
             "analysis_context": {
+                "source_type": source_type,
+                "source_value": source_value,
                 "scan_region": dict(latest_context.get("scan_region", {})),
                 "output_folder": str(latest_context.get("output_folder", entry.get("output_folder", ""))),
                 "context_patterns": list(latest_context.get("context_patterns", [])),

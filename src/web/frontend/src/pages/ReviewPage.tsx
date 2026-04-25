@@ -30,9 +30,10 @@ interface ReviewPageProps {
     warningMessages: string[];
     hydratedAt: string;
   } | null;
+  autoCsvPath?: string | null;
 }
 
-export function ReviewPage({ reopenContext = null }: ReviewPageProps) {
+export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewPageProps) {
   const [sessions, setSessions] = useState<ReviewSessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
@@ -93,6 +94,13 @@ export function ReviewPage({ reopenContext = null }: ReviewPageProps) {
     window.addEventListener("scyt:open-review", openReview as EventListener);
     return () => window.removeEventListener("scyt:open-review", openReview as EventListener);
   }, []);
+
+  useEffect(() => {
+    const value = autoCsvPath?.trim() ?? "";
+    if (value) {
+      setCsvPathInput(value);
+    }
+  }, [autoCsvPath]);
 
   useEffect(() => {
     if (!reopenContext) {

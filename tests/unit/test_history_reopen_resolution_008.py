@@ -38,3 +38,16 @@ def test_reopen_resolution_missing_results(tmp_path: Path) -> None:
 def test_reopen_resolution_missing_folder(tmp_path: Path) -> None:
     resolved = derive_review_artifacts(tmp_path / "does-not-exist")
     assert resolved["resolution_status"] == "missing_folder"
+
+
+def test_reopen_resolution_prefers_requested_csv_when_present(tmp_path: Path) -> None:
+    output = tmp_path / "out"
+    output.mkdir()
+    first = output / "result_a.csv"
+    second = output / "result_b.csv"
+    first.write_text("#schema_version=1.0\nPlayerName,StartTimestamp\nA,1\n", encoding="utf-8")
+    second.write_text("#schema_version=1.0\nPlayerName,StartTimestamp\nB,2\n", encoding="utf-8")
+
+    resolved = derive_review_artifacts(output, preferred_csv_path=str(first))
+    assert resolved["primary_csv_path"] == str(first)
+    assert resolved["resolved_csv_paths"][0] == str(first)

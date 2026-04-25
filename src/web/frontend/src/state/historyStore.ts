@@ -17,6 +17,8 @@ export interface HistoryListResponse {
 export interface ReopenResponse {
   history_id: string;
   analysis_context: {
+    source_type: "youtube_url" | "local_file";
+    source_value: string;
     scan_region: { x: number; y: number; width: number; height: number };
     output_folder: string;
     context_patterns: Array<Record<string, unknown>>;
@@ -63,7 +65,7 @@ export async function reopenHistory(historyId: string): Promise<ReopenResponse> 
   });
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { message?: string };
-    throw new Error(body.message ?? "Unable to reopen history entry");
+    throw new Error(body.message ?? "Unable to open history entry");
   }
   return (await response.json()) as ReopenResponse;
 }

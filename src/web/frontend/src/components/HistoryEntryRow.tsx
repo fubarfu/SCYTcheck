@@ -30,7 +30,7 @@ export function HistoryEntryRow({ entry, onReopen, onDelete, busy }: HistoryEntr
             disabled={busy}
             onClick={() => onReopen(entry.history_id)}
           >
-            Reopen
+            Open
           </button>
           <button
             type="button"

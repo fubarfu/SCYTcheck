@@ -158,7 +158,10 @@ def guess_display_name(source_type: str, source_value: str) -> str:
     return Path(source_value).name or source_value.strip()
 
 
-def derive_review_artifacts(output_folder: Path) -> dict[str, Any]:
+def derive_review_artifacts(
+    output_folder: Path,
+    preferred_csv_path: str | None = None,
+) -> dict[str, Any]:
     if not output_folder.exists() or not output_folder.is_dir():
         return {
             "resolution_status": "missing_folder",
@@ -177,6 +180,13 @@ def derive_review_artifacts(output_folder: Path) -> dict[str, Any]:
             "primary_csv_path": None,
             "resolution_messages": ["No CSV files found in output folder"],
         }
+
+    if preferred_csv_path:
+        preferred = Path(preferred_csv_path)
+        for index, csv_path in enumerate(csv_paths):
+            if csv_path.resolve(strict=False) == preferred.resolve(strict=False):
+                csv_paths.insert(0, csv_paths.pop(index))
+                break
 
     sidecars: list[str] = []
     for csv_path in csv_paths:

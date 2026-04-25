@@ -43,7 +43,7 @@ export function HistoryPage({ onReopenToReview }: HistoryPageProps) {
       const payload = await reopenHistory(historyId);
       onReopenToReview(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to reopen entry";
+      const message = error instanceof Error ? error.message : "Unable to open entry";
       setState((prev) => ({ ...prev, error: message }));
     } finally {
       setBusyId(null);
@@ -67,10 +67,9 @@ export function HistoryPage({ onReopenToReview }: HistoryPageProps) {
   return (
     <section className="page-panel">
       <div className="page-heading-row">
-        <p className="eyebrow">History</p>
         <h2>Manage analyzed videos</h2>
         <p className="page-subtitle">
-          Reopen prior analyses instantly, or remove entries from the managed list without touching files on disk.
+          Open prior analyses instantly, or remove entries from the managed list without touching files on disk.
         </p>
       </div>
 

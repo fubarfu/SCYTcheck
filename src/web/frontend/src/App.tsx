@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AnalysisPage } from "./pages/AnalysisPage";
 import { HistoryPage } from "./pages/HistoryPage";
@@ -11,14 +11,32 @@ type ViewMode = "analysis" | "review" | "history";
 export function App() {
   const [view, setView] = useState<ViewMode>("analysis");
   const [reviewStore, setReviewStore] = useState(initialReviewStoreState);
+  const [lastReopenPayload, setLastReopenPayload] = useState<ReopenResponse | null>(null);
+  const [lastReviewCsvPath, setLastReviewCsvPath] = useState<string>("");
+
+  useEffect(() => {
+    const captureOpenReview = (event: Event) => {
+      const custom = event as CustomEvent<{ csvPath?: string }>;
+      const csvPath = custom.detail?.csvPath?.trim();
+      if (csvPath) {
+        setLastReviewCsvPath(csvPath);
+      }
+    };
+    window.addEventListener("scyt:open-review", captureOpenReview as EventListener);
+    return () => window.removeEventListener("scyt:open-review", captureOpenReview as EventListener);
+  }, []);
 
   const handleReopenToReview = (payload: ReopenResponse) => {
+    setLastReopenPayload(payload);
     setReviewStore((prev) => hydrateFromReopen(prev, payload));
     window.dispatchEvent(new CustomEvent("scyt:history-reopen", { detail: payload }));
-    if (payload.derived_results.primary_csv_path) {
+    const reopenCsvPath = payload.derived_results.primary_csv_path
+      ?? payload.derived_results.resolved_csv_paths[0]
+      ?? null;
+    if (reopenCsvPath) {
       window.dispatchEvent(
         new CustomEvent("scyt:open-review", {
-          detail: { csvPath: payload.derived_results.primary_csv_path, autoLoad: true },
+          detail: { csvPath: reopenCsvPath, autoLoad: true },
         }),
       );
     }
@@ -56,8 +74,10 @@ export function App() {
         </div>
         <ThemeToggle />
       </header>
-      {view === "analysis" && <AnalysisPage />}
-      {view === "review" && <ReviewPage reopenContext={reviewStore.reopenContext} />}
+      {view === "analysis" && <AnalysisPage reopenPayload={lastReopenPayload} />}
+      {view === "review" && (
+        <ReviewPage reopenContext={reviewStore.reopenContext} autoCsvPath={lastReviewCsvPath} />
+      )}
       {view === "history" && <HistoryPage onReopenToReview={handleReopenToReview} />}
     </main>
   );
