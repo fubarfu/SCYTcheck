@@ -307,10 +307,17 @@ class ReviewValidationFeedbackDTO:
 @dataclass(frozen=True)
 class ReviewGroupResponseDTO:
     group_id: str
+    display_name: str
     accepted_name: str | None
+    accepted_name_summary: str | None
     is_collapsed: bool
     resolution_status: str
     rejected_candidate_ids: list[str]
+    active_spellings: list[str]
+    active_candidate_count: int
+    total_candidate_count: int
+    occurrence_count: int
+    is_consensus: bool
 
     @staticmethod
     def from_payload(payload: dict[str, Any]) -> ReviewGroupResponseDTO:
@@ -319,23 +326,56 @@ class ReviewGroupResponseDTO:
             raise SchemaValidationError("group_id is required")
         accepted_name_raw = payload.get("accepted_name")
         accepted_name = str(accepted_name_raw).strip() if accepted_name_raw else None
+        display_name = str(payload.get("display_name", "")).strip()
+        active_spellings = [
+            str(item).strip()
+            for item in payload.get("active_spellings", [])
+            if str(item).strip()
+        ]
+        active_candidate_count = int(payload.get("active_candidate_count", len(active_spellings)))
+        total_candidate_count = int(payload.get("total_candidate_count", payload.get("occurrence_count", 0)))
+        occurrence_count = int(payload.get("occurrence_count", total_candidate_count))
+        resolution_status = str(payload.get("resolution_status", "UNRESOLVED"))
+        accepted_name_summary_raw = payload.get("accepted_name_summary")
+        accepted_name_summary = str(accepted_name_summary_raw).strip() if accepted_name_summary_raw else None
+        if not accepted_name_summary:
+            accepted_name_summary = accepted_name
         return ReviewGroupResponseDTO(
             group_id=group_id,
+            display_name=display_name,
             accepted_name=accepted_name,
+            accepted_name_summary=accepted_name_summary,
             is_collapsed=bool(payload.get("is_collapsed", False)),
-            resolution_status=str(payload.get("resolution_status", "UNRESOLVED")),
+            resolution_status=resolution_status,
             rejected_candidate_ids=[
                 str(item)
                 for item in payload.get("rejected_candidate_ids", [])
                 if str(item).strip()
             ],
+            active_spellings=active_spellings,
+            active_candidate_count=active_candidate_count,
+            total_candidate_count=total_candidate_count,
+            occurrence_count=occurrence_count,
+            is_consensus=bool(
+                payload.get(
+                    "is_consensus",
+                    resolution_status == "RESOLVED" and (bool(accepted_name) or len(active_spellings) == 1),
+                )
+            ),
         )
 
     def to_payload(self) -> dict[str, Any]:
         return {
             "group_id": self.group_id,
+            "display_name": self.display_name,
             "accepted_name": self.accepted_name,
+            "accepted_name_summary": self.accepted_name_summary,
             "is_collapsed": self.is_collapsed,
             "resolution_status": self.resolution_status,
             "rejected_candidate_ids": list(self.rejected_candidate_ids),
+            "active_spellings": list(self.active_spellings),
+            "active_candidate_count": self.active_candidate_count,
+            "total_candidate_count": self.total_candidate_count,
+            "occurrence_count": self.occurrence_count,
+            "is_consensus": self.is_consensus,
         }

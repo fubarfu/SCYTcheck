@@ -9,7 +9,7 @@ from src.web.app.review_grouping import recompute_groups
 from src.web.app.result_schema_validator import ResultSchemaValidator
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
-from src.web.api.schemas import ReviewLoadRequestDTO, SchemaValidationError
+from src.web.api.schemas import ReviewGroupResponseDTO, ReviewLoadRequestDTO, SchemaValidationError
 
 
 class ReviewSessionHandler:
@@ -105,12 +105,14 @@ class ReviewSessionHandler:
         if state is None:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
         refreshed_payload = recompute_groups(dict(state.payload or {}))
+        response_payload = dict(refreshed_payload)
+        response_payload["groups"] = _serialize_groups_for_session(list(refreshed_payload.get("groups", [])))
         self.sessions.upsert(state.session_id, state.csv_path, refreshed_payload)
         return 200, {
             "session_id": state.session_id,
             "csv_path": state.csv_path,
             "updated_at": state.updated_at.isoformat(),
-            **refreshed_payload,
+            **response_payload,
         }
 
     def patch_thresholds(self, session_id: str, payload: dict[str, Any]) -> tuple[int, dict]:
@@ -193,3 +195,16 @@ class ReviewSessionHandler:
             )
 
         return candidates
+
+
+def _serialize_groups_for_session(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
+    for group in groups:
+        payload = dict(group)
+        payload.setdefault("accepted_name_summary", payload.get("accepted_name"))
+        payload.setdefault("occurrence_count", int(payload.get("total_candidate_count", len(payload.get("candidates", [])))))
+        dto = ReviewGroupResponseDTO.from_payload(payload)
+        normalized = dict(group)
+        normalized.update(dto.to_payload())
+        serialized.append(normalized)
+    return serialized
