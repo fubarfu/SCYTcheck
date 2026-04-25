@@ -12,6 +12,7 @@ export interface CandidateGroup {
   total_candidate_count?: number;
   occurrence_count?: number;
   is_consensus?: boolean;
+  rejected_candidate_ids?: string[];
   group_recommendation_score?: number;
   candidates: Array<Candidate & { temporal_proximity?: number; recommendation_score?: number }>;
 }
@@ -35,6 +36,18 @@ export function CandidateGroupCard({
   onAction,
   onOpenThumbnail,
 }: Props) {
+  const normalizeName = (value: string | undefined | null): string => String(value ?? "").trim().toLowerCase();
+  const acceptedNormalized = normalizeName(group.accepted_name);
+  const selectedCandidateId = group.candidates.find((candidate) => {
+    if ((candidate.status ?? "pending") === "confirmed") {
+      return true;
+    }
+    if (!acceptedNormalized) {
+      return false;
+    }
+    return normalizeName(candidate.corrected_text ?? candidate.extracted_name) === acceptedNormalized;
+  })?.candidate_id ?? null;
+
   const ids = group.candidates.map((c) => c.candidate_id);
   const isCollapsed = Boolean(group.is_collapsed);
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
@@ -106,6 +119,8 @@ export function CandidateGroupCard({
             <CandidateRow
               key={candidate.candidate_id}
               candidate={candidate}
+              groupId={group.group_id}
+              selectedCandidateId={selectedCandidateId}
               sourceType={sourceType}
               sourceValue={sourceValue}
               occurrenceIndex={index + 1}

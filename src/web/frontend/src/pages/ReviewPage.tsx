@@ -7,6 +7,7 @@ import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
 import {
   applyGroupToggleState,
   deriveGroupToggleState,
+  reconcileGroupMutationState,
   updateGroupToggleState,
   type GroupToggleState,
 } from "../state/reviewStore";
@@ -181,9 +182,10 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     const resp = await fetch(`/api/review/sessions/${sessionId}`);
     if (!resp.ok) return;
     const session = await resp.json() as ReviewSessionPayload;
-    const nextToggles = deriveGroupToggleState(session.groups ?? []);
+    const reconciled = reconcileGroupMutationState(session);
+    const nextToggles = deriveGroupToggleState(reconciled.groups ?? []);
     setGroupToggles(nextToggles);
-    setSelectedSession(applyGroupToggleState(session, nextToggles));
+    setSelectedSession(applyGroupToggleState(reconciled, nextToggles));
     setSelectedSessionId(sessionId);
     setLoadingError(null);
   };
@@ -236,7 +238,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       return;
     }
     const session = await resp.json() as ReviewSessionPayload;
-    setSelectedSession(session);
+    setSelectedSession(reconcileGroupMutationState(session));
   };
 
   const handleUndo = async () => {

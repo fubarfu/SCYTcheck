@@ -46,3 +46,23 @@ export function isGroupCollapsedByDefault(group: CandidateGroup): boolean {
   const resolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
   return resolved && Boolean(group.is_collapsed);
 }
+
+function normalizeName(value: string | null | undefined): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+export function selectAcceptedCandidateId(group: CandidateGroup): string | null {
+  const accepted = normalizeName(group.accepted_name ?? null);
+  if (!accepted) {
+    return null;
+  }
+  const match = (group.candidates ?? []).find((candidate) => {
+    const candidateName = normalizeName(candidate.corrected_text ?? candidate.extracted_name);
+    return candidateName === accepted;
+  });
+  return match?.candidate_id ?? null;
+}
+
+export function selectRejectedCandidateIds(group: CandidateGroup): Set<string> {
+  return new Set((group.rejected_candidate_ids ?? []).map((candidateId) => String(candidateId)));
+}

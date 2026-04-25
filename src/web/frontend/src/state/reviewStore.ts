@@ -55,6 +55,14 @@ export interface ReviewGroupToggleShape {
   group_id: string;
   resolution_status?: string;
   is_collapsed?: boolean;
+  accepted_name?: string | null;
+  rejected_candidate_ids?: string[];
+  candidates?: Array<{
+    candidate_id: string;
+    extracted_name?: string;
+    corrected_text?: string;
+    status?: "pending" | "confirmed" | "rejected";
+  }>;
 }
 
 export type GroupToggleState = Record<string, boolean>;
@@ -69,6 +77,47 @@ export function deriveGroupToggleState(groups: ReviewGroupToggleShape[]): GroupT
     acc[groupId] = typeof group.is_collapsed === "boolean" ? group.is_collapsed : isResolved;
     return acc;
   }, {});
+}
+
+function normalizeName(value: string | null | undefined): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+export function reconcileGroupMutationState<T extends { groups?: ReviewGroupToggleShape[] }>(session: T): T {
+  if (!Array.isArray(session.groups)) {
+    return session;
+  }
+
+  return {
+    ...session,
+    groups: session.groups.map((group) => {
+      const accepted = normalizeName(group.accepted_name ?? null);
+      const rejected = new Set((group.rejected_candidate_ids ?? []).map((item) => String(item)));
+      const candidates = (group.candidates ?? []).map((candidate) => {
+        const candidateId = String(candidate.candidate_id ?? "");
+        const candidateName = normalizeName(candidate.corrected_text ?? candidate.extracted_name ?? "");
+        let nextStatus: "pending" | "confirmed" | "rejected" = "pending";
+        if (rejected.has(candidateId)) {
+          nextStatus = "rejected";
+        } else if (accepted && candidateName === accepted) {
+          nextStatus = "confirmed";
+        }
+        return {
+          ...candidate,
+          status: nextStatus,
+        };
+      });
+
+      const hasAccepted = Boolean(accepted);
+      return {
+        ...group,
+        candidates,
+        resolution_status: hasAccepted ? "RESOLVED" : (group.resolution_status ?? "UNRESOLVED"),
+        // Consensus transitions should end in collapsed state when accepted name is present.
+        is_collapsed: hasAccepted ? true : group.is_collapsed,
+      };
+    }),
+  };
 }
 
 export function applyGroupToggleState<T extends { groups?: ReviewGroupToggleShape[] }>(

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ValidationFeedback } from "./ValidationFeedback";
 
 export interface Candidate {
   candidate_id: string;
@@ -13,6 +14,8 @@ export interface Candidate {
 
 interface Props {
   candidate: Candidate;
+  groupId?: string;
+  selectedCandidateId?: string | null;
   sourceType: "local_file" | "youtube_url";
   sourceValue: string;
   occurrenceIndex?: number;
@@ -69,6 +72,8 @@ function buildYouTubeTimestampLink(sourceValue: string, timestampSeconds: number
 
 export function CandidateRow({
   candidate,
+  groupId,
+  selectedCandidateId = null,
   sourceType,
   sourceValue,
   occurrenceIndex,
@@ -103,6 +108,10 @@ export function CandidateRow({
   }, []);
 
   const currentText = candidate.corrected_text ?? candidate.extracted_name;
+  const currentStatus = candidate.status ?? "pending";
+  const isSelected = selectedCandidateId === candidate.candidate_id || currentStatus === "confirmed";
+  const isRejected = currentStatus === "rejected";
+  const radioGroupName = groupId ? `group-selection-${groupId}` : `group-selection-${candidate.candidate_id}`;
   const timestampSeconds = parseTimestampSeconds(candidate.start_timestamp);
   const deepLink =
     sourceType === "youtube_url" && sourceValue
@@ -113,7 +122,21 @@ export function CandidateRow({
     <div className="candidate-row" ref={rowRef}>
       <div className="candidate-main review-candidate-main">
         <div>
-          <strong>{currentText}</strong>
+          <div className="candidate-radio-row">
+            <input
+              type="radio"
+              name={radioGroupName}
+              aria-label={`Select candidate ${currentText}`}
+              checked={isSelected}
+              disabled={isRejected}
+              onChange={() => onAction({
+                action_type: "confirm",
+                target_ids: [candidate.candidate_id],
+                payload: groupId ? { group_id: groupId } : undefined,
+              })}
+            />
+            <strong>{currentText}</strong>
+          </div>
           <div className="candidate-meta-inline">
             <span>{candidate.start_timestamp ?? "-"}</span>
             {typeof candidate.temporal_proximity === "number" && (
@@ -129,7 +152,7 @@ export function CandidateRow({
             )}
           </div>
         </div>
-        <span className={`status-chip ${candidate.status ?? "pending"}`}>{candidate.status ?? "pending"}</span>
+        <span className={`status-chip ${currentStatus}`}>{currentStatus.charAt(0).toUpperCase()}{currentStatus.slice(1)}</span>
       </div>
       <div className="candidate-meta">
         <span>Candidate ID: {candidate.candidate_id}</span>
@@ -166,13 +189,44 @@ export function CandidateRow({
         </div>
       ) : (
         <div className="candidate-actions">
-          <button type="button" className="primary-action" onClick={() => onAction({ action_type: "confirm", target_ids: [candidate.candidate_id] })}>Confirm</button>
-          <button type="button" className="ghost-action" onClick={() => onAction({ action_type: "reject", target_ids: [candidate.candidate_id] })}>Reject</button>
+          {isSelected && (
+            <button
+              type="button"
+              className="primary-action"
+              onClick={() => onAction({
+                action_type: "deselect",
+                target_ids: [],
+                payload: groupId ? { group_id: groupId } : undefined,
+              })}
+            >
+              Clear selection
+            </button>
+          )}
+          <button
+            type="button"
+            className="ghost-action"
+            onClick={() => onAction({
+              action_type: isRejected ? "unreject" : "reject",
+              target_ids: [candidate.candidate_id],
+              payload: groupId ? { group_id: groupId } : undefined,
+            })}
+          >
+            {isRejected ? "Undo reject" : "Reject"}
+          </button>
           <button type="button" className="ghost-action" onClick={() => setEditing(true)}>Edit</button>
           <button type="button" className="ghost-action" onClick={() => onOpenThumbnail(candidate.candidate_id)} disabled={!thumbnailVisible}>Thumbnail</button>
           <button type="button" className="ghost-action" onClick={() => onAction({ action_type: "remove", target_ids: [candidate.candidate_id] })}>Remove</button>
         </div>
       )}
+
+      {isSelected && (
+        <ValidationFeedback
+          type="success"
+          message="Selection saved"
+          hint="This candidate is now the accepted name for the group."
+        />
+      )}
+      {isRejected && <ValidationFeedback type="error" message="Rejected" hint="This candidate is excluded until you undo reject." />}
     </div>
   );
 }
