@@ -94,7 +94,13 @@ def _hydrate_group_state(payload: dict[str, Any], groups: list[dict[str, Any]]) 
             resolution_status = "RESOLVED" if len(active_spellings) == 1 and active_candidates else "UNRESOLVED"
 
         explicit_collapsed = collapsed_map.get(group_id)
-        is_collapsed = bool(explicit_collapsed) if explicit_collapsed is not None else resolution_status == "RESOLVED"
+        remembered_is_collapsed = bool(explicit_collapsed) if explicit_collapsed is not None else None
+        is_collapsed = (
+            remembered_is_collapsed
+            if remembered_is_collapsed is not None
+            else resolution_status == "RESOLVED"
+        )
+        has_conflicting_spellings = len(active_spellings) > 1
 
         normalized_accepted[group_id] = accepted_name if accepted_name else ""
         normalized_collapsed[group_id] = is_collapsed
@@ -103,7 +109,10 @@ def _hydrate_group_state(payload: dict[str, Any], groups: list[dict[str, Any]]) 
         group["accepted_name"] = accepted_name or None
         group["rejected_candidate_ids"] = rejected_candidate_ids
         group["is_collapsed"] = is_collapsed
+        group["remembered_is_collapsed"] = remembered_is_collapsed
         group["resolution_status"] = normalized_status[group_id]
+        group["has_conflicting_spellings"] = has_conflicting_spellings
+        group["conflict_spelling_count"] = len(active_spellings)
         group["active_spellings"] = active_spellings
         group["active_candidate_count"] = len(active_candidates)
         group["total_candidate_count"] = len(candidates)
