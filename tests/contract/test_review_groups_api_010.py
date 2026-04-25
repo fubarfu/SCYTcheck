@@ -19,6 +19,20 @@ def _make_contract_csv(tmp_path: Path) -> Path:
     return csv_path
 
 
+def _make_duplicate_contract_csv(tmp_path: Path) -> Path:
+    csv_path = tmp_path / "review_groups_duplicate_contract.csv"
+    csv_path.write_text(
+        "#schema_version=1.0\n"
+        "PlayerName,StartTimestamp\n"
+        "Alice,00:00:01.000\n"
+        "Alice,00:00:01.200\n"
+        "Alyce,00:00:10.000\n"
+        "Alice,00:00:10.300\n",
+        encoding="utf-8",
+    )
+    return csv_path
+
+
 def _load_session(tmp_path: Path) -> tuple[ReviewSessionHandler, ReviewActionsHandler, str, dict]:
     manager = SessionManager()
     session_handler = ReviewSessionHandler(session_manager=manager)
@@ -150,3 +164,52 @@ def test_actions_contract_unreject_restores_candidate(tmp_path: Path) -> None:
     assert current_status == 200
     current_group = _first_group(current_body)
     assert candidate_id not in current_group["rejected_candidate_ids"]
+
+
+def test_actions_contract_duplicate_name_validation_returns_conflict_group_reference(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+
+    csv_path = _make_duplicate_contract_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    threshold_status, _ = session_handler.patch_thresholds(
+        session_id,
+        {
+            "similarity_threshold": 50,
+            "recommendation_threshold": 70,
+        },
+    )
+    assert threshold_status == 200
+
+    get_status, body = session_handler.get_session(session_id)
+    assert get_status == 200
+    groups = body.get("groups", [])
+    assert len(groups) == 2
+
+    resolved_group = next(group for group in groups if group["accepted_name"] == "Alice")
+    conflict_group = next(group for group in groups if group["group_id"] != resolved_group["group_id"])
+    conflict_candidate = next(
+        candidate
+        for candidate in conflict_group["candidates"]
+        if candidate["extracted_name"] == "Alice"
+    )
+
+    status, response = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "confirm",
+            "target_ids": [conflict_candidate["candidate_id"]],
+            "payload": {"group_id": conflict_group["group_id"]},
+        },
+    )
+
+    assert status == 422
+    assert response["error"] == "validation_error"
+    assert response["validation"]["is_valid"] is False
+    assert response["validation"]["candidate_name"] == "Alice"
+    assert response["validation"]["conflict_group_id"] == resolved_group["group_id"]
+    assert "already used" in response["validation"]["message"]
