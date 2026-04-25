@@ -98,6 +98,18 @@ class ReviewSidecarStore:
         payload["accepted_names"] = accepted
         return payload
 
+    def set_group_consensus(
+        self,
+        session_payload: dict[str, Any],
+        group_id: str,
+        accepted_name: str,
+    ) -> dict[str, Any]:
+        """Persist accepted name and collapsed resolved state as one atomic mutation."""
+        payload = self.set_group_accepted_name(session_payload, group_id, accepted_name)
+        payload = self.set_group_resolution_status(payload, group_id, "RESOLVED")
+        payload = self.set_group_collapsed(payload, group_id, True)
+        return payload
+
     def set_candidate_rejected(
         self,
         session_payload: dict[str, Any],

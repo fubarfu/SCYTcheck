@@ -77,6 +77,7 @@ class ReviewSessionHandler:
         }
         session_payload = recompute_groups(session_payload)
         self.sessions.upsert(session_id, str(csv_path), session_payload)
+        self._sidecar.save(csv_path, session_payload)
 
         return 200, {
             "session_id": session_id,
