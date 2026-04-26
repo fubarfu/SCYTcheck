@@ -94,6 +94,16 @@ class ReviewSidecarStore:
                 for group_id, value in status.items()
             }
 
+        overrides = payload.get("candidate_group_overrides")
+        if not isinstance(overrides, dict):
+            payload["candidate_group_overrides"] = {}
+        else:
+            payload["candidate_group_overrides"] = {
+                str(candidate_id): str(group_id)
+                for candidate_id, group_id in overrides.items()
+                if str(candidate_id).strip() and str(group_id).strip()
+            }
+
         return payload
 
     def set_group_accepted_name(
@@ -169,6 +179,33 @@ class ReviewSidecarStore:
         statuses = dict(payload["resolution_status"])
         statuses[group_id] = resolution_status
         payload["resolution_status"] = statuses
+        return payload
+
+    def set_candidate_group_override(
+        self,
+        session_payload: dict[str, Any],
+        candidate_id: str,
+        group_id: str,
+    ) -> dict[str, Any]:
+        payload = self.ensure_group_state_maps(session_payload)
+        overrides = dict(payload.get("candidate_group_overrides", {}))
+        overrides[str(candidate_id)] = str(group_id)
+        payload["candidate_group_overrides"] = overrides
+        return payload
+
+    def set_candidates_group_override(
+        self,
+        session_payload: dict[str, Any],
+        candidate_ids: list[str],
+        group_id: str,
+    ) -> dict[str, Any]:
+        payload = self.ensure_group_state_maps(session_payload)
+        overrides = dict(payload.get("candidate_group_overrides", {}))
+        for candidate_id in candidate_ids:
+            cleaned = str(candidate_id).strip()
+            if cleaned:
+                overrides[cleaned] = str(group_id)
+        payload["candidate_group_overrides"] = overrides
         return payload
 
     def resolve_group_collapsed_target(

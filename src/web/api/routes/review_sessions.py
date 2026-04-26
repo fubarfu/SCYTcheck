@@ -70,10 +70,15 @@ class ReviewSessionHandler:
             "rejected_candidates": existing.get("rejected_candidates", {}),
             "collapsed_groups": existing.get("collapsed_groups", {}),
             "resolution_status": existing.get("resolution_status", {}),
+            "candidate_group_overrides": existing.get("candidate_group_overrides", {}),
             "accepted_names_original": existing.get("accepted_names_original", existing.get("accepted_names", {})),
             "rejected_candidates_original": existing.get("rejected_candidates_original", existing.get("rejected_candidates", {})),
             "collapsed_groups_original": existing.get("collapsed_groups_original", existing.get("collapsed_groups", {})),
             "resolution_status_original": existing.get("resolution_status_original", existing.get("resolution_status", {})),
+            "candidate_group_overrides_original": existing.get(
+                "candidate_group_overrides_original",
+                existing.get("candidate_group_overrides", {}),
+            ),
         }
         session_payload = recompute_groups(session_payload)
         self.sessions.upsert(session_id, str(csv_path), session_payload)

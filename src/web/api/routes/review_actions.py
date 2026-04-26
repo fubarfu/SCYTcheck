@@ -65,6 +65,15 @@ class ReviewActionsHandler:
             action_payload,
         )
 
+        if not handled and action_type in {"merge_groups", "move_candidate"}:
+            return 422, {
+                "error": "validation_error",
+                "message": f"Action {action_type} could not be applied",
+                "action_type": action_type,
+                "group_id": str(action_payload.get("group_id", "")).strip() or None,
+                "candidate_id": (target_ids[0] if target_ids else None),
+            }
+
         if handled:
             if validation_payload and not validation_payload.get("is_valid", False):
                 feedback = ReviewValidationFeedbackDTO(
@@ -104,6 +113,8 @@ class ReviewActionsHandler:
             updated_payload["collapsed_groups_original"] = dict(updated_payload.get("collapsed_groups", {}))
         if "resolution_status_original" not in updated_payload:
             updated_payload["resolution_status_original"] = dict(updated_payload.get("resolution_status", {}))
+        if "candidate_group_overrides_original" not in updated_payload:
+            updated_payload["candidate_group_overrides_original"] = dict(updated_payload.get("candidate_group_overrides", {}))
 
         updated_payload = recompute_groups(updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
@@ -136,6 +147,7 @@ class ReviewActionsHandler:
             "rejected_candidates": dict(session_payload.get("rejected_candidates_original", {})),
             "collapsed_groups": dict(session_payload.get("collapsed_groups_original", {})),
             "resolution_status": dict(session_payload.get("resolution_status_original", {})),
+            "candidate_group_overrides": dict(session_payload.get("candidate_group_overrides_original", {})),
             "action_history": [],
         }
 

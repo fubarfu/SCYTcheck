@@ -85,3 +85,44 @@ def test_consensus_transition_auto_collapses_after_reject_then_confirm() -> None
     assert after_confirm["rejected_candidates"]["grp_1"] == ["c2"]
     assert after_confirm["resolution_status"]["grp_1"] == "RESOLVED"
     assert after_confirm["collapsed_groups"]["grp_1"] is True
+
+
+def test_move_candidate_sets_group_override_and_clears_source_consensus_if_moved_candidate_was_selected() -> None:
+    starting, _, _ = GroupMutationService.confirm_candidate(_group_payload(), "grp_1", "c1")
+
+    moved, validation, handled = GroupMutationService.move_candidate(starting, "c1", "grp_manual_1")
+
+    assert handled is True
+    assert validation is None
+    assert moved["candidate_group_overrides"]["c1"] == "grp_manual_1"
+    assert moved["accepted_names"].get("grp_1") is None
+    assert moved["resolution_status"]["grp_1"] == "UNRESOLVED"
+
+
+def test_merge_groups_sets_overrides_for_source_group_candidates() -> None:
+    payload = {
+        "groups": [
+            {
+                "group_id": "grp_1",
+                "candidates": [{"candidate_id": "c1", "extracted_name": "Alice", "status": "pending"}],
+            },
+            {
+                "group_id": "grp_2",
+                "candidates": [{"candidate_id": "c2", "extracted_name": "Alicia", "status": "pending"}],
+            },
+        ],
+        "candidates": [
+            {"candidate_id": "c1", "extracted_name": "Alice", "status": "pending"},
+            {"candidate_id": "c2", "extracted_name": "Alicia", "status": "pending"},
+        ],
+        "accepted_names": {},
+        "rejected_candidates": {},
+        "collapsed_groups": {},
+        "resolution_status": {},
+    }
+
+    merged, validation, handled = GroupMutationService.merge_groups(payload, "grp_2", "grp_1")
+
+    assert handled is True
+    assert validation is None
+    assert merged["candidate_group_overrides"]["c2"] == "grp_1"

@@ -293,3 +293,104 @@ def test_export_contract_blocks_when_accepted_names_are_duplicated(tmp_path: Pat
             "group_ids": sorted([first_group_id, second_group_id]),
         }
     ]
+
+
+def test_actions_contract_merge_groups_combines_source_into_target(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+
+    csv_path = _make_duplicate_contract_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    threshold_status, _ = session_handler.patch_thresholds(
+        session_id,
+        {
+            "similarity_threshold": 50,
+            "recommendation_threshold": 70,
+        },
+    )
+    assert threshold_status == 200
+
+    before_status, before_body = session_handler.get_session(session_id)
+    assert before_status == 200
+    groups = before_body.get("groups", [])
+    assert len(groups) == 2
+    source_group = groups[1]
+    target_group = groups[0]
+
+    action_status, action_body = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "merge_groups",
+            "target_ids": [source_group["group_id"]],
+            "payload": {
+                "source_group_id": source_group["group_id"],
+                "target_group_id": target_group["group_id"],
+            },
+        },
+    )
+
+    assert action_status == 200
+    assert action_body["persisted"] is True
+
+    merged_status, merged_body = session_handler.get_session(session_id)
+    assert merged_status == 200
+    merged_groups = merged_body.get("groups", [])
+    assert len(merged_groups) == 1
+    assert len(merged_groups[0]["candidates"]) == 4
+
+
+def test_actions_contract_move_candidate_to_new_group_creates_new_group(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+
+    csv_path = _make_duplicate_contract_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    threshold_status, _ = session_handler.patch_thresholds(
+        session_id,
+        {
+            "similarity_threshold": 50,
+            "recommendation_threshold": 70,
+        },
+    )
+    assert threshold_status == 200
+
+    before_status, before_body = session_handler.get_session(session_id)
+    assert before_status == 200
+    groups = before_body.get("groups", [])
+    assert len(groups) == 2
+    source_group = groups[0]
+    candidate_id = source_group["candidates"][0]["candidate_id"]
+
+    move_status, move_body = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "move_candidate",
+            "target_ids": [candidate_id],
+            "payload": {
+                "candidate_id": candidate_id,
+                "source_group_id": source_group["group_id"],
+                "create_new_group": True,
+            },
+        },
+    )
+
+    assert move_status == 200
+    assert move_body["persisted"] is True
+
+    moved_status, moved_body = session_handler.get_session(session_id)
+    assert moved_status == 200
+    moved_groups = moved_body.get("groups", [])
+    assert len(moved_groups) == 3
+    assert any(
+        any(candidate["candidate_id"] == candidate_id for candidate in group.get("candidates", []))
+        and group["group_id"].startswith("grp_manual_")
+        for group in moved_groups
+    )

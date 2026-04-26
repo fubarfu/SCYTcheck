@@ -29,6 +29,8 @@ def recompute_groups(session_payload: dict[str, Any]) -> dict[str, Any]:
         recommendation_threshold=thresholds["recommendation_threshold"],
     )
 
+    scored_groups = _apply_candidate_group_overrides(payload, scored_groups)
+
     groups = _hydrate_group_state(payload, scored_groups)
 
     payload["thresholds"] = thresholds
@@ -134,6 +136,95 @@ def _candidate_name(candidate: dict[str, Any]) -> str:
     if corrected:
         return corrected
     return str(candidate.get("extracted_name", "")).strip()
+
+
+def _apply_candidate_group_overrides(
+    payload: dict[str, Any],
+    groups: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    overrides = dict(payload.get("candidate_group_overrides", {}))
+    if not overrides:
+        return groups
+
+    base_groups_by_id: dict[str, dict[str, Any]] = {
+        str(group.get("group_id", "")).strip(): group
+        for group in groups
+        if str(group.get("group_id", "")).strip()
+    }
+    group_order = [
+        str(group.get("group_id", "")).strip()
+        for group in groups
+        if str(group.get("group_id", "")).strip()
+    ]
+
+    grouped_candidates: dict[str, list[dict[str, Any]]] = {}
+
+    for group in groups:
+        base_group_id = str(group.get("group_id", "")).strip()
+        for candidate in list(group.get("candidates", [])):
+            candidate_id = str(candidate.get("candidate_id", "")).strip()
+            if not candidate_id:
+                continue
+            target_group_id = str(overrides.get(candidate_id, base_group_id)).strip() or base_group_id
+            grouped_candidates.setdefault(target_group_id, []).append(candidate)
+            if target_group_id not in group_order:
+                group_order.append(target_group_id)
+
+    rebuilt: list[dict[str, Any]] = []
+    for group_id in group_order:
+        candidates = grouped_candidates.get(group_id, [])
+        if not candidates:
+            continue
+
+        base_group = base_groups_by_id.get(group_id)
+        display_name = _candidate_name(candidates[0])
+        anchor_timestamp = _parse_timestamp_seconds(candidates[0].get("start_timestamp"))
+        if base_group is not None:
+            display_name = str(base_group.get("display_name", display_name))
+            anchor_timestamp = float(base_group.get("anchor_timestamp", anchor_timestamp))
+
+        rebuilt.append(
+            {
+                "group_id": group_id,
+                "display_name": display_name,
+                "anchor_timestamp": anchor_timestamp,
+                "candidates": candidates,
+            }
+        )
+
+    payload["candidate_group_overrides"] = {
+        candidate_id: group_id
+        for candidate_id, group_id in overrides.items()
+        if group_id in grouped_candidates
+    }
+
+    return rebuilt
+
+
+def _parse_timestamp_seconds(raw: Any) -> float:
+    if raw is None:
+        return 0.0
+    value = str(raw).strip()
+    if not value:
+        return 0.0
+    try:
+        return float(value)
+    except ValueError:
+        pass
+    if ":" not in value:
+        return 0.0
+    parts = value.split(":")
+    total = 0.0
+    for index, part in enumerate(parts):
+        try:
+            piece = float(part)
+        except ValueError:
+            return 0.0
+        if piece < 0:
+            return 0.0
+        multiplier = 60 ** (len(parts) - index - 1)
+        total += piece * multiplier
+    return total
 
 
 def _normalize_thresholds(raw_thresholds: Any) -> dict[str, Any]:

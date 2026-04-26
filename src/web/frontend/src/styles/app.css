@@ -879,6 +879,28 @@ select,
   gap: 10px;
 }
 
+.group-drag-handle {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 78%, transparent 22%);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1;
+  padding: 6px 7px;
+  margin-right: 6px;
+  cursor: grab;
+}
+
+.group-drag-handle:active {
+  cursor: grabbing;
+}
+
+.group-drag-handle:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border) 60%);
+  color: var(--text);
+}
+
 .group-title-stack {
   display: grid;
   gap: 6px;
@@ -925,6 +947,32 @@ select,
   gap: 0;
 }
 
+.candidate-group-card.group-drop-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent 65%);
+}
+
+.candidate-group-card.group-dragging {
+  opacity: 0.78;
+}
+
+.new-group-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+  background: color-mix(in srgb, var(--panel) 85%, transparent 15%);
+}
+
+.new-group-dropzone.is-active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel) 90%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent 65%);
+}
+
 /* Flatten card styling for rows nested inside a group */
 .group-candidate-list .candidate-row {
   border: none;
@@ -967,6 +1015,11 @@ select,
   padding: 9px 12px;
   display: grid;
   gap: 6px;
+  cursor: grab;
+}
+
+.candidate-row:active {
+  cursor: grabbing;
 }
 
 .candidate-main {

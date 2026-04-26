@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import uuid
 
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 
@@ -52,7 +53,15 @@ def _set_group_candidate_statuses(
 
 
 def _find_group(groups: list[dict[str, Any]], group_id: str) -> dict[str, Any] | None:
-  return next((group for group in groups if str(group.get("group_id", "")) == group_id), None)
+  target = str(group_id).strip()
+  return next(
+    (
+      group
+      for group in groups
+      if str(group.get("group_id", "")).strip() == target
+    ),
+    None,
+  )
 
 
 def _find_group_for_candidate(groups: list[dict[str, Any]], candidate_id: str) -> str | None:
@@ -267,6 +276,37 @@ class GroupMutationService:
         current = bool(payload.get("collapsed_groups", {}).get(group_id, False))
         requested = not current
       return GroupMutationService.toggle_group_collapsed(payload, group_id, bool(requested))
+    if action_type == "move_candidate":
+      candidate_id = primary_target or str(action_payload.get("candidate_id", "")).strip()
+      if not candidate_id:
+        return payload, None, False
+      to_group_id = str(
+        action_payload.get("to_group_id")
+        or action_payload.get("target_group_id")
+        or action_payload.get("group_id")
+        or ""
+      ).strip()
+      create_new_group = bool(action_payload.get("create_new_group", False))
+      if create_new_group and not to_group_id:
+        to_group_id = f"grp_manual_{uuid.uuid4().hex[:8]}"
+        action_payload["to_group_id"] = to_group_id
+      if not to_group_id:
+        return payload, None, False
+      return GroupMutationService.move_candidate(payload, candidate_id, to_group_id)
+    if action_type == "merge_groups":
+      source_group_id = str(
+        action_payload.get("source_group_id")
+        or (target_ids[0] if target_ids else "")
+      ).strip()
+      target_group_id = str(
+        action_payload.get("target_group_id")
+        or action_payload.get("group_id")
+        or action_payload.get("to_group_id")
+        or ""
+      ).strip()
+      if not source_group_id or not target_group_id or source_group_id == target_group_id:
+        return payload, None, False
+      return GroupMutationService.merge_groups(payload, source_group_id, target_group_id)
 
     return payload, None, False
 
@@ -430,30 +470,73 @@ class GroupMutationService:
     return updated, None, True
 
   @staticmethod
-  def move_candidate(groups: list[dict], candidate_id: str, to_group_id: str) -> list[dict]:
-    moving = None
-    for group in groups:
-      for candidate in list(group.get("candidates", [])):
-        if candidate.get("candidate_id") == candidate_id:
-          moving = candidate
-          group["candidates"].remove(candidate)
-          break
-    if moving is None:
-      return groups
-    for group in groups:
-      if group.get("group_id") == to_group_id:
-        group.setdefault("candidates", []).append(moving)
-        break
-    return groups
+  def move_candidate(
+    session_payload: dict[str, Any],
+    candidate_id: str,
+    to_group_id: str,
+  ) -> tuple[dict[str, Any], dict[str, Any] | None, bool]:
+    store = ReviewSidecarStore()
+    payload = store.ensure_group_state_maps(session_payload)
+    groups = list(payload.get("groups", []))
+    source_group_id = _find_group_for_candidate(groups, candidate_id)
+    if source_group_id is None:
+      return payload, None, False
+
+    source_group = _find_group(groups, source_group_id)
+    target_group = _find_group(groups, to_group_id)
+    if source_group is None:
+      return payload, None, False
+    if source_group_id == to_group_id:
+      return payload, None, True
+
+    updated = store.set_candidate_group_override(payload, candidate_id, to_group_id)
+
+    # Moving a selected candidate should clear stale accepted name for the source group.
+    source_accepted = str(dict(updated.get("accepted_names", {})).get(source_group_id, "")).strip()
+    moving_candidate = _find_candidate(source_group, candidate_id)
+    moving_name = _candidate_name(moving_candidate or {})
+    if source_accepted and moving_name and source_accepted == moving_name:
+      updated = store.set_group_accepted_name(updated, source_group_id, None)
+      updated = store.set_group_resolution_status(updated, source_group_id, "UNRESOLVED")
+      updated = store.set_group_collapsed(updated, source_group_id, False)
+
+    # Ensure a new group target starts expanded and unresolved until consensus is recomputed.
+    if target_group is None:
+      updated = store.set_group_resolution_status(updated, to_group_id, "UNRESOLVED")
+      updated = store.set_group_collapsed(updated, to_group_id, False)
+
+    return updated, None, True
 
   @staticmethod
-  def merge_groups(groups: list[dict], group_a_id: str, group_b_id: str) -> list[dict]:
-    a = next((g for g in groups if g.get("group_id") == group_a_id), None)
-    b = next((g for g in groups if g.get("group_id") == group_b_id), None)
-    if a is None or b is None:
-      return groups
-    a.setdefault("candidates", []).extend(b.get("candidates", []))
-    return [g for g in groups if g.get("group_id") != group_b_id]
+  def merge_groups(
+    session_payload: dict[str, Any],
+    source_group_id: str,
+    target_group_id: str,
+  ) -> tuple[dict[str, Any], dict[str, Any] | None, bool]:
+    store = ReviewSidecarStore()
+    payload = store.ensure_group_state_maps(session_payload)
+    groups = list(payload.get("groups", []))
+    source_group = _find_group(groups, source_group_id)
+    target_group = _find_group(groups, target_group_id)
+    if source_group is None or target_group is None:
+      return payload, None, False
+
+    source_candidate_ids = [
+      str(candidate.get("candidate_id", "")).strip()
+      for candidate in list(source_group.get("candidates", []))
+      if str(candidate.get("candidate_id", "")).strip()
+    ]
+    if not source_candidate_ids:
+      return payload, None, False
+
+    updated = store.set_candidates_group_override(payload, source_candidate_ids, target_group_id)
+
+    # Merging groups invalidates explicit source state; recompute/hydration will normalize target state.
+    updated = store.set_group_accepted_name(updated, source_group_id, None)
+    updated = store.set_group_resolution_status(updated, source_group_id, "UNRESOLVED")
+    updated = store.set_group_collapsed(updated, source_group_id, False)
+
+    return updated, None, True
 
   @staticmethod
   def reorder_group(groups: list[dict], group_id: str, to_index: int) -> list[dict]:

@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { ValidationFeedback } from "./ValidationFeedback";
+import {
+  getDropCommitted,
+  getHoveredGroupId,
+  getHoveredNewGroupZone,
+  resetDragSession,
+  setDropCommitted,
+  setDraggedCandidate,
+  setDraggedGroupId,
+} from "../state/dragPayload";
+
+const CANDIDATE_DRAG_MIME = "application/x-scyt-candidate";
+const FALLBACK_DRAG_MIME = "text/plain";
 
 export interface Candidate {
   candidate_id: string;
@@ -125,7 +137,61 @@ export function CandidateRow({
       : null;
 
   return (
-    <div className="candidate-row" ref={rowRef}>
+    <div
+      className="candidate-row"
+      ref={rowRef}
+      draggable
+      onDragStart={(event) => {
+        event.stopPropagation();
+        if (typeof event.dataTransfer.clearData === "function") {
+          event.dataTransfer.clearData();
+        }
+        const payload = JSON.stringify({
+          kind: "candidate",
+          candidate_id: candidate.candidate_id,
+          source_group_id: groupId ?? null,
+        });
+        event.dataTransfer.setData(CANDIDATE_DRAG_MIME, payload);
+        event.dataTransfer.setData(FALLBACK_DRAG_MIME, payload);
+        event.dataTransfer.effectAllowed = "move";
+        setDropCommitted(false);
+        setDraggedGroupId(null);
+        setDraggedCandidate({
+          candidate_id: candidate.candidate_id,
+          source_group_id: groupId ?? null,
+        });
+      }}
+      onDragEnd={() => {
+        const didCommit = getDropCommitted();
+        const hoveredGroupId = getHoveredGroupId();
+        const hoveredNewGroup = getHoveredNewGroupZone();
+
+        if (!didCommit && hoveredGroupId && hoveredGroupId !== (groupId ?? null)) {
+          onAction({
+            action_type: "move_candidate",
+            target_ids: [candidate.candidate_id],
+            payload: {
+              candidate_id: candidate.candidate_id,
+              source_group_id: groupId ?? null,
+              to_group_id: hoveredGroupId,
+              group_id: hoveredGroupId,
+            },
+          });
+        } else if (!didCommit && hoveredNewGroup) {
+          onAction({
+            action_type: "move_candidate",
+            target_ids: [candidate.candidate_id],
+            payload: {
+              candidate_id: candidate.candidate_id,
+              source_group_id: groupId ?? null,
+              create_new_group: true,
+            },
+          });
+        }
+
+        resetDragSession();
+      }}
+    >
       <div className="candidate-main review-candidate-main">
         <div>
           <div className="candidate-radio-row">

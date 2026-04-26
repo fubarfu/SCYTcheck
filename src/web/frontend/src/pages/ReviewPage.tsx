@@ -17,6 +17,16 @@ import {
   selectVisibleCandidateIds,
   type ReviewFilterState,
 } from "../state/reviewSelectors";
+import {
+  clearDraggedCandidate,
+  getDraggedCandidate,
+  setDropCommitted,
+  setHoveredGroupId,
+  setHoveredNewGroupZone,
+} from "../state/dragPayload";
+
+const CANDIDATE_DRAG_MIME = "application/x-scyt-candidate";
+const FALLBACK_DRAG_MIME = "text/plain";
 
 interface ReviewSessionSummary {
   session_id: string;
@@ -54,6 +64,29 @@ interface ReviewPageProps {
   autoCsvPath?: string | null;
 }
 
+function parseCandidateFallbackPayload(raw: string): { candidate_id?: string; source_group_id?: string | null } | null {
+  const text = raw.trim();
+  if (!text.startsWith("{")) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(text) as {
+      kind?: string;
+      candidate_id?: string;
+      source_group_id?: string | null;
+    };
+    if (payload.kind !== "candidate") {
+      return null;
+    }
+    return {
+      candidate_id: payload.candidate_id,
+      source_group_id: payload.source_group_id ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewPageProps) {
   const [sessions, setSessions] = useState<ReviewSessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -64,6 +97,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [undoCount, setUndoCount] = useState(0);
   const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
   const [groupValidationFeedback, setGroupValidationFeedback] = useState<Record<string, GroupValidationFeedbackState>>({});
+  const [newGroupDropActive, setNewGroupDropActive] = useState(false);
   const [filter, setFilter] = useState<ReviewFilterState>({
     searchText: "",
     status: "all",
@@ -187,7 +221,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   const fetchSession = async (sessionId: string) => {
-    const resp = await fetch(`/api/review/sessions/${sessionId}`);
+    const resp = await fetch(`/api/review/sessions/${sessionId}?_ts=${Date.now()}`, { cache: "no-store" });
     if (!resp.ok) return;
     const session = await resp.json() as ReviewSessionPayload;
     const reconciled = reconcileGroupMutationState(session);
@@ -333,6 +367,26 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     );
   };
 
+  const handleDropCandidateIntoNewGroup = (rawPayload: string) => {
+    const parsed = parseCandidateFallbackPayload(rawPayload);
+    if (!parsed) {
+      return;
+    }
+    const candidateId = String(parsed.candidate_id ?? "").trim();
+    if (!candidateId) {
+      return;
+    }
+    void postAction({
+      action_type: "move_candidate",
+      target_ids: [candidateId],
+      payload: {
+        candidate_id: candidateId,
+        source_group_id: parsed.source_group_id ?? null,
+        create_new_group: true,
+      },
+    });
+  };
+
   return (
     <section className="page-panel">
       <div className="page-heading-row">
@@ -420,6 +474,43 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         </div>
 
         <div className="candidate-list review-candidate-stack review-group-list">
+          <div
+            className={`new-group-dropzone${newGroupDropActive ? " is-active" : ""}`}
+            onDragOver={(event) => {
+              const types = Array.from(event.dataTransfer.types);
+              const hasCandidateMime = types.includes(CANDIDATE_DRAG_MIME);
+              const fallbackPayload = parseCandidateFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+              const hasActiveCandidate = Boolean(getDraggedCandidate());
+              if (!hasCandidateMime && !fallbackPayload && !hasActiveCandidate) {
+                return;
+              }
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setHoveredGroupId(null);
+              setHoveredNewGroupZone(true);
+              setNewGroupDropActive(true);
+            }}
+            onDragLeave={() => {
+              setHoveredNewGroupZone(false);
+              setNewGroupDropActive(false);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setHoveredNewGroupZone(false);
+              setNewGroupDropActive(false);
+              const payload = event.dataTransfer.getData(CANDIDATE_DRAG_MIME).trim()
+                || event.dataTransfer.getData(FALLBACK_DRAG_MIME).trim()
+                || (() => {
+                  const active = getDraggedCandidate();
+                  return active ? JSON.stringify({ kind: "candidate", ...active }) : "";
+                })();
+              handleDropCandidateIntoNewGroup(payload);
+              setDropCommitted(true);
+              clearDraggedCandidate();
+            }}
+          >
+            Drop candidate here to create a new group
+          </div>
           {filteredCandidates.length === 0 ? (
             <div className="panel-card">
               <div className="panel-card-body empty-region-state">

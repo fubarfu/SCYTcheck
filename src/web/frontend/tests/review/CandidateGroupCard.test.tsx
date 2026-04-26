@@ -7,6 +7,23 @@ afterEach(() => {
   cleanup();
 });
 
+function createDataTransferMock() {
+  const data = new Map<string, string>();
+  return {
+    data,
+    dropEffect: "move",
+    effectAllowed: "all",
+    types: [] as string[],
+    setData(type: string, value: string) {
+      data.set(type, value);
+      this.types = Array.from(data.keys());
+    },
+    getData(type: string) {
+      return data.get(type) ?? "";
+    },
+  };
+}
+
 describe("CandidateGroupCard feature 010", () => {
   it("renders resolved groups collapsed by default with accepted-name summary", () => {
     render(
@@ -255,6 +272,107 @@ describe("CandidateGroupCard feature 010", () => {
         group_id: "grp_resolved_hydrated",
         is_collapsed: false,
         resolution_status: "RESOLVED",
+      },
+    });
+  });
+
+  it("dispatches merge_groups when a group header is dropped onto another group", () => {
+    const onAction = vi.fn();
+    const sourceData = createDataTransferMock();
+
+    const { getByTestId, getByText } = render(
+      <>
+        <CandidateGroupCard
+          group={{
+            group_id: "grp_source",
+            display_name: "Source",
+            is_collapsed: false,
+            resolution_status: "UNRESOLVED",
+            candidates: [{ candidate_id: "c1", extracted_name: "Alice", status: "pending" }],
+          }}
+          sourceType="local_file"
+          sourceValue=""
+          onAction={onAction}
+          onOpenThumbnail={() => {}}
+        />
+        <CandidateGroupCard
+          group={{
+            group_id: "grp_target",
+            display_name: "Target",
+            is_collapsed: false,
+            resolution_status: "UNRESOLVED",
+            candidates: [{ candidate_id: "c2", extracted_name: "Alicia", status: "pending" }],
+          }}
+          sourceType="local_file"
+          sourceValue=""
+          onAction={onAction}
+          onOpenThumbnail={() => {}}
+        />
+      </>,
+    );
+
+    fireEvent.dragStart(screen.getAllByLabelText("Drag group to merge")[0], { dataTransfer: sourceData });
+    fireEvent.dragOver(getByTestId("candidate-group-grp_target"), { dataTransfer: sourceData });
+    fireEvent.drop(getByTestId("candidate-group-grp_target"), { dataTransfer: sourceData });
+
+    expect(onAction).toHaveBeenCalledWith({
+      action_type: "merge_groups",
+      target_ids: ["grp_source"],
+      payload: {
+        source_group_id: "grp_source",
+        target_group_id: "grp_target",
+        group_id: "grp_target",
+      },
+    });
+  });
+
+  it("dispatches move_candidate when a candidate row is dropped onto another group", () => {
+    const onAction = vi.fn();
+    const dragData = createDataTransferMock();
+
+    const { getByTestId, getByText } = render(
+      <>
+        <CandidateGroupCard
+          group={{
+            group_id: "grp_source",
+            display_name: "Source",
+            is_collapsed: false,
+            resolution_status: "UNRESOLVED",
+            candidates: [{ candidate_id: "c1", extracted_name: "Alice", status: "pending" }],
+          }}
+          sourceType="local_file"
+          sourceValue=""
+          onAction={onAction}
+          onOpenThumbnail={() => {}}
+        />
+        <CandidateGroupCard
+          group={{
+            group_id: "grp_target",
+            display_name: "Target",
+            is_collapsed: false,
+            resolution_status: "UNRESOLVED",
+            candidates: [{ candidate_id: "c2", extracted_name: "Alicia", status: "pending" }],
+          }}
+          sourceType="local_file"
+          sourceValue=""
+          onAction={onAction}
+          onOpenThumbnail={() => {}}
+        />
+      </>,
+    );
+
+    fireEvent.dragStart(getByText("Alice").closest(".candidate-row")!, { dataTransfer: dragData });
+    fireEvent.dragOver(getByTestId("candidate-group-grp_target"), { dataTransfer: dragData });
+    fireEvent.drop(getByTestId("candidate-group-grp_target"), { dataTransfer: dragData });
+
+    expect(onAction).toHaveBeenCalledWith({
+      action_type: "move_candidate",
+      target_ids: ["c1"],
+      payload: {
+        candidate_id: "c1",
+        source_group_id: "grp_source",
+        to_group_id: "grp_target",
+        group_id: "grp_target",
       },
     });
   });

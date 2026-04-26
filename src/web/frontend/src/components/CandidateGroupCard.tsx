@@ -1,4 +1,43 @@
+import { DragEvent, useState } from "react";
 import { CandidateRow, type Candidate } from "./CandidateRow";
+import {
+  clearDraggedCandidate,
+  getDropCommitted,
+  getDraggedCandidate,
+  getDraggedGroupId,
+  getHoveredGroupId,
+  resetDragSession,
+  setDropCommitted,
+  setDraggedGroupId,
+  setHoveredGroupId,
+} from "../state/dragPayload";
+
+const GROUP_DRAG_MIME = "application/x-scyt-group-id";
+const CANDIDATE_DRAG_MIME = "application/x-scyt-candidate";
+const FALLBACK_DRAG_MIME = "text/plain";
+
+type DragPayload = {
+  kind?: "group" | "candidate";
+  group_id?: string;
+  candidate_id?: string;
+  source_group_id?: string | null;
+};
+
+function parseFallbackPayload(raw: string): DragPayload | null {
+  const text = raw.trim();
+  if (!text.startsWith("{")) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(text) as DragPayload;
+    if (parsed.kind !== "group" && parsed.kind !== "candidate") {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 export interface CandidateGroup {
   group_id: string;
@@ -44,6 +83,8 @@ export function CandidateGroupCard({
   onAction,
   onOpenThumbnail,
 }: Props) {
+  const [dragOver, setDragOver] = useState(false);
+  const [draggingGroup, setDraggingGroup] = useState(false);
   const normalizeName = (value: string | undefined | null): string => String(value ?? "").trim().toLowerCase();
   const acceptedNormalized = normalizeName(group.accepted_name);
   const selectedCandidateId = group.candidates.find((candidate) => {
@@ -73,14 +114,141 @@ export function CandidateGroupCard({
     },
   };
 
+  const handleGroupDragStart = (event: DragEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (typeof event.dataTransfer.clearData === "function") {
+      event.dataTransfer.clearData();
+    }
+    const fallback = JSON.stringify({ kind: "group", group_id: group.group_id });
+    event.dataTransfer.setData(GROUP_DRAG_MIME, group.group_id);
+    event.dataTransfer.setData(FALLBACK_DRAG_MIME, fallback);
+    event.dataTransfer.effectAllowed = "move";
+    setDropCommitted(false);
+    setHoveredGroupId(null);
+    clearDraggedCandidate();
+    setDraggedGroupId(group.group_id);
+    setDraggingGroup(true);
+  };
+
+  const handleGroupDragEnd = () => {
+    const sourceGroupId = getDraggedGroupId();
+    const hoveredTargetGroupId = getHoveredGroupId();
+    const didCommit = getDropCommitted();
+    if (!didCommit && sourceGroupId && hoveredTargetGroupId && sourceGroupId !== hoveredTargetGroupId) {
+      onAction({
+        action_type: "merge_groups",
+        target_ids: [sourceGroupId],
+        payload: {
+          source_group_id: sourceGroupId,
+          target_group_id: hoveredTargetGroupId,
+          group_id: hoveredTargetGroupId,
+        },
+      });
+    }
+    resetDragSession();
+    setDraggingGroup(false);
+    setDragOver(false);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLElement>) => {
+    const hasGroup = Array.from(event.dataTransfer.types).includes(GROUP_DRAG_MIME);
+    const hasCandidate = Array.from(event.dataTransfer.types).includes(CANDIDATE_DRAG_MIME);
+    const fallbackPayload = parseFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+    const hasFallback = Boolean(fallbackPayload);
+    const hasActiveGroup = Boolean(getDraggedGroupId());
+    const hasActiveCandidate = Boolean(getDraggedCandidate());
+    if (!hasGroup && !hasCandidate && !hasFallback && !hasActiveGroup && !hasActiveCandidate) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setHoveredGroupId(group.group_id);
+    setDragOver(true);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    setDragOver(false);
+
+    const fallbackPayload = parseFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+
+    const draggedGroupId = (
+      event.dataTransfer.getData(GROUP_DRAG_MIME).trim()
+      || (fallbackPayload?.kind === "group" ? String(fallbackPayload.group_id ?? "").trim() : "")
+      || (getDraggedGroupId() ?? "")
+    );
+    if (draggedGroupId && draggedGroupId !== group.group_id) {
+      setDropCommitted(true);
+      onAction({
+        action_type: "merge_groups",
+        target_ids: [draggedGroupId],
+        payload: {
+          source_group_id: draggedGroupId,
+          target_group_id: group.group_id,
+          group_id: group.group_id,
+        },
+      });
+      return;
+    }
+
+    const draggedCandidate = (
+      event.dataTransfer.getData(CANDIDATE_DRAG_MIME).trim()
+      || (fallbackPayload?.kind === "candidate" ? JSON.stringify(fallbackPayload) : "")
+      || (() => {
+        const active = getDraggedCandidate();
+        return active ? JSON.stringify({ kind: "candidate", ...active }) : "";
+      })()
+    );
+    if (!draggedCandidate) {
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(draggedCandidate) as { candidate_id?: string; source_group_id?: string | null };
+      const candidateId = String(payload.candidate_id ?? "").trim();
+      if (!candidateId) {
+        return;
+      }
+      onAction({
+        action_type: "move_candidate",
+        target_ids: [candidateId],
+        payload: {
+          candidate_id: candidateId,
+          source_group_id: payload.source_group_id ?? null,
+          to_group_id: group.group_id,
+          group_id: group.group_id,
+        },
+      });
+      setDropCommitted(true);
+      clearDraggedCandidate();
+    } catch {
+      // Ignore malformed drag payload.
+    }
+  };
+
   return (
     <section
-      className={isResolved ? "candidate-group-card group-resolved" : "candidate-group-card group-unresolved"}
+      className={`${isResolved ? "candidate-group-card group-resolved" : "candidate-group-card group-unresolved"}${dragOver ? " group-drop-target" : ""}${draggingGroup ? " group-dragging" : ""}`}
       data-testid={`candidate-group-${group.group_id}`}
       data-collapsed={isCollapsed ? "true" : "false"}
       data-resolution={isResolved ? "resolved" : "unresolved"}
+      onDragOver={handleDragOver}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={handleDrop}
     >
-      <header className={isResolved ? "group-card-header" : "group-card-header group-card-header-unresolved"}>
+      <header
+        className={isResolved ? "group-card-header" : "group-card-header group-card-header-unresolved"}
+      >
+        <button
+          type="button"
+          className="group-drag-handle"
+          aria-label="Drag group to merge"
+          draggable
+          onDragStart={handleGroupDragStart}
+          onDragEnd={handleGroupDragEnd}
+        >
+          ::
+        </button>
         <div className="group-title-stack">
           <h4>{group.display_name}</h4>
           <div className="group-meta-row">
