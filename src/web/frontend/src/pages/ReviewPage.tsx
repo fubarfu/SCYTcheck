@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CandidateRow, type Candidate } from "../components/CandidateRow";
 import { CandidateGroupCard, type CandidateGroup } from "../components/CandidateGroupCard";
+import { GroupListItem } from "../components/GroupListItem";
 import { FrameThumbnailModal } from "../components/FrameThumbnailModal";
 import { ReviewFilterBar } from "../components/ReviewFilterBar";
 import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
@@ -106,6 +107,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [thumbnailCandidateId, setThumbnailCandidateId] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [reopenWarning, setReopenWarning] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const autoLoadedHistoryCsvPathRef = useRef<string | null>(null);
 
   const sourceType = selectedSession?.source_type ?? "local_file";
@@ -195,6 +197,27 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     }
     setReopenWarning(null);
   }, [reopenContext]);
+
+  // Keep selectedGroupId valid: prefer an unresolved group (with validation error first),
+  // then any visible group. Reset to null when no groups remain.
+  useEffect(() => {
+    if (visibleGroups.length === 0) {
+      if (selectedGroupId !== null) {
+        setSelectedGroupId(null);
+      }
+      return;
+    }
+    const stillVisible = selectedGroupId
+      ? visibleGroups.some((g) => g.group_id === selectedGroupId)
+      : false;
+    if (stillVisible) {
+      return;
+    }
+    const errorGroup = visibleGroups.find((g) => Boolean(groupValidationFeedback[g.group_id]));
+    const unresolved = visibleGroups.find((g) => (g.resolution_status ?? "UNRESOLVED") !== "RESOLVED");
+    const next = errorGroup ?? unresolved ?? visibleGroups[0];
+    setSelectedGroupId(next.group_id);
+  }, [visibleGroups, selectedGroupId, groupValidationFeedback]);
 
   const loadSessionFromCsv = async (csvPathOverride?: string) => {
     setLoadingError(null);
@@ -473,87 +496,121 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
           </div>
         </div>
 
-        <div className="candidate-list review-candidate-stack review-group-list">
-          <div
-            className={`new-group-dropzone${newGroupDropActive ? " is-active" : ""}`}
-            onDragOver={(event) => {
-              const types = Array.from(event.dataTransfer.types);
-              const hasCandidateMime = types.includes(CANDIDATE_DRAG_MIME);
-              const fallbackPayload = parseCandidateFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
-              const hasActiveCandidate = Boolean(getDraggedCandidate());
-              if (!hasCandidateMime && !fallbackPayload && !hasActiveCandidate) {
-                return;
-              }
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "move";
-              setHoveredGroupId(null);
-              setHoveredNewGroupZone(true);
-              setNewGroupDropActive(true);
-            }}
-            onDragLeave={() => {
-              setHoveredNewGroupZone(false);
-              setNewGroupDropActive(false);
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setHoveredNewGroupZone(false);
-              setNewGroupDropActive(false);
-              const payload = event.dataTransfer.getData(CANDIDATE_DRAG_MIME).trim()
-                || event.dataTransfer.getData(FALLBACK_DRAG_MIME).trim()
-                || (() => {
-                  const active = getDraggedCandidate();
-                  return active ? JSON.stringify({ kind: "candidate", ...active }) : "";
-                })();
-              handleDropCandidateIntoNewGroup(payload);
-              setDropCommitted(true);
-              clearDraggedCandidate();
-            }}
-          >
-            Drop candidate here to create a new group
-          </div>
-          {filteredCandidates.length === 0 ? (
-            <div className="panel-card">
-              <div className="panel-card-body empty-region-state">
-                <div>
-                  <strong>No candidates to review yet.</strong>
-                  <p>Load a result file or adjust the current filters.</p>
+        <div className="review-workspace">
+          <aside className="review-group-rail" aria-label="Candidate groups">
+            <div className="group-rail-header">
+              <span className="group-rail-header-title">Groups</span>
+              <span className="group-rail-header-count">{visibleGroups.length}</span>
+            </div>
+            <div
+              className={`new-group-dropzone${newGroupDropActive ? " is-active" : ""}`}
+              onDragOver={(event) => {
+                const types = Array.from(event.dataTransfer.types);
+                const hasCandidateMime = types.includes(CANDIDATE_DRAG_MIME);
+                const fallbackPayload = parseCandidateFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+                const hasActiveCandidate = Boolean(getDraggedCandidate());
+                if (!hasCandidateMime && !fallbackPayload && !hasActiveCandidate) {
+                  return;
+                }
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setHoveredGroupId(null);
+                setHoveredNewGroupZone(true);
+                setNewGroupDropActive(true);
+              }}
+              onDragLeave={() => {
+                setHoveredNewGroupZone(false);
+                setNewGroupDropActive(false);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setHoveredNewGroupZone(false);
+                setNewGroupDropActive(false);
+                const payload = event.dataTransfer.getData(CANDIDATE_DRAG_MIME).trim()
+                  || event.dataTransfer.getData(FALLBACK_DRAG_MIME).trim()
+                  || (() => {
+                    const active = getDraggedCandidate();
+                    return active ? JSON.stringify({ kind: "candidate", ...active }) : "";
+                  })();
+                handleDropCandidateIntoNewGroup(payload);
+                setDropCommitted(true);
+                clearDraggedCandidate();
+              }}
+            >
+              Drop candidate here to create a new group
+            </div>
+            <div className="group-rail-list">
+              {visibleGroups.length === 0 ? (
+                <p className="group-rail-empty">No groups match the current filters.</p>
+              ) : (
+                visibleGroups.map((group) => (
+                  <GroupListItem
+                    key={group.group_id}
+                    group={group}
+                    isSelected={group.group_id === selectedGroupId}
+                    hasValidationError={Boolean(groupValidationFeedback[group.group_id])}
+                    onSelect={setSelectedGroupId}
+                  />
+                ))
+              )}
+            </div>
+          </aside>
+
+          <div className="review-workspace-pane">
+            {filteredCandidates.length === 0 ? (
+              <div className="panel-card">
+                <div className="panel-card-body empty-region-state">
+                  <div>
+                    <strong>No candidates to review yet.</strong>
+                    <p>Load a result file or adjust the current filters.</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : visibleGroups.length > 0 ? (
-            visibleGroups.map((group) => (
-              <CandidateGroupCard
-                key={group.group_id}
-                group={group}
-                sourceType={sourceType}
-                sourceValue={sourceValue}
-                validationFeedback={groupValidationFeedback[group.group_id] ?? null}
-                onAction={(action) => {
-                  if (action.target_ids.length > 1) {
-                    action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));
-                  }
-                  void postAction(action);
-                }}
-                onOpenThumbnail={(id) => { void openThumbnail(id); }}
-              />
-            ))
-          ) : (
-            filteredCandidates.map((c) => (
-              <CandidateRow
-                key={c.candidate_id}
-                candidate={c}
-                sourceType={sourceType}
-                sourceValue={sourceValue}
-                onAction={(action) => {
-                  if (action.target_ids.length > 1) {
-                    action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));
-                  }
-                  void postAction(action);
-                }}
-                onOpenThumbnail={(id) => { void openThumbnail(id); }}
-              />
-            ))
-          )}
+            ) : visibleGroups.length > 0 ? (
+              (() => {
+                const activeGroup = visibleGroups.find((g) => g.group_id === selectedGroupId) ?? visibleGroups[0];
+                if (!activeGroup) {
+                  return null;
+                }
+                return (
+                  <CandidateGroupCard
+                    key={activeGroup.group_id}
+                    group={activeGroup}
+                    sourceType={sourceType}
+                    sourceValue={sourceValue}
+                    validationFeedback={groupValidationFeedback[activeGroup.group_id] ?? null}
+                    forceExpanded
+                    hideCollapseControl
+                    onAction={(action) => {
+                      if (action.target_ids.length > 1) {
+                        action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));
+                      }
+                      void postAction(action);
+                    }}
+                    onOpenThumbnail={(id) => { void openThumbnail(id); }}
+                  />
+                );
+              })()
+            ) : (
+              <div className="candidate-list review-candidate-stack">
+                {filteredCandidates.map((c) => (
+                  <CandidateRow
+                    key={c.candidate_id}
+                    candidate={c}
+                    sourceType={sourceType}
+                    sourceValue={sourceValue}
+                    onAction={(action) => {
+                      if (action.target_ids.length > 1) {
+                        action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));
+                      }
+                      void postAction(action);
+                    }}
+                    onOpenThumbnail={(id) => { void openThumbnail(id); }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

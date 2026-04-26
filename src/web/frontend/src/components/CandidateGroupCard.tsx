@@ -67,6 +67,8 @@ interface Props {
     hint?: string | null;
     conflictGroupId?: string | null;
   } | null;
+  forceExpanded?: boolean;
+  hideCollapseControl?: boolean;
   onAction: (action: {
     action_type: string;
     target_ids: string[];
@@ -80,6 +82,8 @@ export function CandidateGroupCard({
   sourceType,
   sourceValue,
   validationFeedback = null,
+  forceExpanded = false,
+  hideCollapseControl = false,
   onAction,
   onOpenThumbnail,
 }: Props) {
@@ -98,7 +102,7 @@ export function CandidateGroupCard({
   })?.candidate_id ?? null;
 
   const ids = group.candidates.map((c) => c.candidate_id);
-  const isCollapsed = Boolean(group.is_collapsed);
+  const isCollapsed = forceExpanded ? false : Boolean(group.is_collapsed);
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
   const activeSpellings = Array.isArray(group.active_spellings) ? group.active_spellings : [];
   const hasConflict = !isResolved && activeSpellings.length > 1;
@@ -268,16 +272,18 @@ export function CandidateGroupCard({
           )}
         </div>
         <div className="group-actions">
-          <button
-            type="button"
-            className="ghost-action"
-            aria-label={isCollapsed ? "Expand group" : "Collapse group"}
-            data-testid={`toggle-group-${group.group_id}`}
-            onClick={() => onAction(collapseAction)}
-          >
-            <span aria-hidden="true" className="group-toggle-chevron">{isCollapsed ? ">" : "v"}</span>
-            <span>{isCollapsed ? "Expand" : "Collapse"}</span>
-          </button>
+          {!hideCollapseControl && (
+            <button
+              type="button"
+              className="ghost-action"
+              aria-label={isCollapsed ? "Expand group" : "Collapse group"}
+              data-testid={`toggle-group-${group.group_id}`}
+              onClick={() => onAction(collapseAction)}
+            >
+              <span aria-hidden="true" className="group-toggle-chevron">{isCollapsed ? ">" : "v"}</span>
+              <span>{isCollapsed ? "Expand" : "Collapse"}</span>
+            </button>
+          )}
           {!isCollapsed && (
             <>
               <button type="button" className="primary-action" onClick={() => onAction({ action_type: "confirm", target_ids: ids })}>
