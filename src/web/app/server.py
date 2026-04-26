@@ -68,6 +68,12 @@ class _RequestHandler(SimpleHTTPRequestHandler):
         decoded = json.loads(raw.decode("utf-8"))
         return decoded if isinstance(decoded, dict) else {}
 
+    @staticmethod
+    def _normalize_api_path(path: str) -> str:
+        if path.startswith("/api/"):
+            return path.rstrip("/") or "/"
+        return path
+
     def _dispatch_api(self, method: str, path: str) -> bool:
         if path == "/api/health" and method == "GET":
             self._send_json(HTTPStatus.OK, {"status": "ok"})
@@ -109,7 +115,7 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
-        if path == "/api/review/sessions" and method == "GET":
+        if path in {"/api/review/sessions", "/api/review/sessions/"} and method == "GET":
             status, body = self._services.review_sessions.get_sessions()
             self._send_json(status, body)
             return True
@@ -167,7 +173,7 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
-        recalculate_match = re.fullmatch(r"/api/review/sessions/([^/]+)/recalculate", path)
+        recalculate_match = re.fullmatch(r"/api/review/sessions/([^/]+)/recalculate/?", path)
         if recalculate_match and method == "POST":
             status, body = self._services.review_sessions.post_recalculate(recalculate_match.group(1))
             self._send_json(status, body)
@@ -260,7 +266,7 @@ class _RequestHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        request_path = parsed.path or "/"
+        request_path = self._normalize_api_path(parsed.path or "/")
 
         if request_path.startswith("/api/"):
             self._dispatch_api("GET", request_path)
@@ -274,25 +280,25 @@ class _RequestHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        request_path = parsed.path or "/"
+        request_path = self._normalize_api_path(parsed.path or "/")
         if self._dispatch_api("POST", request_path):
             return
 
     def do_PUT(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        request_path = parsed.path or "/"
+        request_path = self._normalize_api_path(parsed.path or "/")
         if self._dispatch_api("PUT", request_path):
             return
 
     def do_PATCH(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        request_path = parsed.path or "/"
+        request_path = self._normalize_api_path(parsed.path or "/")
         if self._dispatch_api("PATCH", request_path):
             return
 
     def do_DELETE(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        request_path = parsed.path or "/"
+        request_path = self._normalize_api_path(parsed.path or "/")
         if self._dispatch_api("DELETE", request_path):
             return
 

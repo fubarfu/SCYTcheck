@@ -1115,12 +1115,6 @@ select,
   background: color-mix(in srgb, var(--accent) 14%, transparent 86%);
 }
 
-.group-rail-status.status-review {
-  border-color: color-mix(in srgb, var(--danger) 50%, var(--border) 50%);
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 12%, transparent 88%);
-}
-
 .group-rail-status.status-error {
   border-color: var(--danger);
   color: var(--danger);

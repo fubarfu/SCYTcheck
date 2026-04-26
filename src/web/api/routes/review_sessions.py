@@ -64,8 +64,8 @@ class ReviewSessionHandler:
                     "similarity_threshold": 80,
                     "recommendation_threshold": 70,
                     "temporal_window_seconds": 2.0,
-                    "spelling_influence": 100,
-                    "temporal_influence": 60,
+                    "spelling_influence": 50,
+                    "temporal_influence": 50,
                 },
             ),
             "accepted_names": existing.get("accepted_names", {}),
@@ -134,8 +134,8 @@ class ReviewSessionHandler:
         similarity_threshold = int(payload.get("similarity_threshold", existing_thresholds.get("similarity_threshold", 85)))
         recommendation_threshold = int(payload.get("recommendation_threshold", existing_thresholds.get("recommendation_threshold", 70)))
         temporal_window_seconds = float(payload.get("temporal_window_seconds", existing_thresholds.get("temporal_window_seconds", 2.0)))
-        spelling_influence = int(payload.get("spelling_influence", existing_thresholds.get("spelling_influence", 100)))
-        temporal_influence = int(payload.get("temporal_influence", existing_thresholds.get("temporal_influence", 60)))
+        spelling_influence = int(payload.get("spelling_influence", existing_thresholds.get("spelling_influence", 50)))
+        temporal_influence = int(payload.get("temporal_influence", existing_thresholds.get("temporal_influence", 50)))
 
         session_payload["thresholds"] = {
             "similarity_threshold": similarity_threshold,

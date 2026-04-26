@@ -9,13 +9,11 @@ interface Props {
 
 /**
  * Compact entry shown in the left "groups rail" of the review workspace.
- * Mirrors the Stitch designs: status pill (Resolved / In Review / Conflict) plus
+ * Mirrors the Stitch designs: status pill (Resolved / Unresolved / Conflict) plus
  * a count of matched candidates.
  */
 export function GroupListItem({ group, isSelected, hasValidationError = false, onSelect }: Props) {
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
-  const activeSpellings = Array.isArray(group.active_spellings) ? group.active_spellings : [];
-  const hasConflict = !isResolved && activeSpellings.length > 1;
   const hasIssue = !isResolved;
   const candidateCount = group.total_candidate_count ?? group.candidates.length;
   const occurrenceCount = group.occurrence_count ?? candidateCount;
@@ -27,7 +25,7 @@ export function GroupListItem({ group, isSelected, hasValidationError = false, o
     statusLabel = "Conflict";
     statusVariant = "status-error";
   } else if (hasIssue) {
-    statusLabel = hasConflict ? "In Review" : "Unresolved";
+    statusLabel = "Unresolved";
     statusVariant = "status-error";
   } else if (isResolved) {
     statusLabel = "Resolved";

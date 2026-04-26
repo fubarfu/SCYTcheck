@@ -59,6 +59,11 @@ interface GroupValidationFeedbackState {
   conflictGroupId?: string | null;
 }
 
+interface GroupingSettingsDraft {
+  spellingInfluence: number;
+  temporalInfluence: number;
+}
+
 interface ReviewPageProps {
   reopenContext?: {
     historyId: string;
@@ -98,11 +103,16 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [csvPathInput, setCsvPathInput] = useState("");
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isRecalculatingGroups, setIsRecalculatingGroups] = useState(false);
+  const [hasPendingGroupingSettings, setHasPendingGroupingSettings] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [undoCount, setUndoCount] = useState(0);
   const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
   const [groupValidationFeedback, setGroupValidationFeedback] = useState<Record<string, GroupValidationFeedbackState>>({});
   const [newGroupDropActive, setNewGroupDropActive] = useState(false);
+  const [groupingSettingsDraft, setGroupingSettingsDraft] = useState<GroupingSettingsDraft>({
+    spellingInfluence: 50,
+    temporalInfluence: 50,
+  });
   const [filter, setFilter] = useState<ReviewFilterState>({
     searchText: "",
     status: "all",
@@ -144,8 +154,10 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   }, [selectedSession, selectedSession?.candidates, groupToggles, filter]);
   const similarityThreshold = selectedSession?.thresholds?.similarity_threshold ?? 80;
   const recommendationThreshold = selectedSession?.thresholds?.recommendation_threshold ?? 70;
-  const spellingInfluence = selectedSession?.thresholds?.spelling_influence ?? 100;
-  const temporalInfluence = selectedSession?.thresholds?.temporal_influence ?? 60;
+  const appliedSpellingInfluence = selectedSession?.thresholds?.spelling_influence ?? 50;
+  const appliedTemporalInfluence = selectedSession?.thresholds?.temporal_influence ?? 50;
+  const spellingInfluence = groupingSettingsDraft.spellingInfluence;
+  const temporalInfluence = groupingSettingsDraft.temporalInfluence;
   const totalCandidates = selectedSession?.candidates?.length ?? 0;
   const reviewedCandidates = useMemo(
     () => (selectedSession?.candidates ?? []).filter((candidate) => (candidate.status ?? "pending") !== "pending").length,
@@ -157,6 +169,14 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     if (!resp.ok) return;
     const data = await resp.json() as { sessions: ReviewSessionSummary[] };
     setSessions(data.sessions);
+  };
+
+  const syncGroupingSettingsDraft = (session: ReviewSessionPayload) => {
+    setGroupingSettingsDraft({
+      spellingInfluence: session.thresholds?.spelling_influence ?? 50,
+      temporalInfluence: session.thresholds?.temporal_influence ?? 50,
+    });
+    setHasPendingGroupingSettings(false);
   };
 
   useEffect(() => {
@@ -245,14 +265,19 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       return;
     }
     const body = await resp.json() as { session_id: string };
+    setHasPendingGroupingSettings(false);
     setSelectedSessionId(body.session_id);
     await refreshSessions();
-    await fetchSession(body.session_id);
+    await fetchSession(body.session_id, { syncGroupingSettingsDraft: true });
   };
 
-  const fetchSession = async (sessionId: string) => {
+  const fetchSession = async (sessionId: string, options?: { syncGroupingSettingsDraft?: boolean }) => {
+    const normalizedSessionId = sessionId.trim();
+    if (!normalizedSessionId) {
+      return;
+    }
     const fetchToken = ++latestSessionFetchTokenRef.current;
-    const resp = await fetch(`/api/review/sessions/${sessionId}?_ts=${Date.now()}`, { cache: "no-store" });
+    const resp = await fetch(`/api/review/sessions/${normalizedSessionId}?_ts=${Date.now()}`, { cache: "no-store" });
     if (!resp.ok) return;
     const session = await resp.json() as ReviewSessionPayload;
     if (fetchToken !== latestSessionFetchTokenRef.current) {
@@ -262,8 +287,11 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     const nextToggles = deriveGroupToggleState(reconciled.groups ?? []);
     setGroupToggles(nextToggles);
     setSelectedSession(applyGroupToggleState(reconciled, nextToggles));
+    if (options?.syncGroupingSettingsDraft) {
+      syncGroupingSettingsDraft(reconciled);
+    }
     setGroupValidationFeedback({});
-    setSelectedSessionId(sessionId);
+    setSelectedSessionId(normalizedSessionId);
     setLoadingError(null);
   };
 
@@ -344,29 +372,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     await fetchSession(selectedSessionId);
   };
 
-  const patchThresholds = async (
-    next: { similarity?: number; recommendation?: number; spellingInfluence?: number; temporalInfluence?: number },
-  ) => {
-    if (!selectedSessionId) return;
-    const payload = {
-      similarity_threshold: next.similarity ?? similarityThreshold,
-      recommendation_threshold: next.recommendation ?? recommendationThreshold,
-      spelling_influence: next.spellingInfluence ?? spellingInfluence,
-      temporal_influence: next.temporalInfluence ?? temporalInfluence,
-    };
-    const resp = await fetch(`/api/review/sessions/${selectedSessionId}/thresholds`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!resp.ok) {
-      setLoadingError("Unable to update grouping settings");
-      return;
-    }
-    const session = await resp.json() as ReviewSessionPayload;
-    setSelectedSession(reconcileGroupMutationState(session));
-  };
-
   const recalculateGroups = async () => {
     if (!selectedSessionId || isRecalculatingGroups) return;
     const shouldContinue = window.confirm(
@@ -381,7 +386,31 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setGroupValidationFeedback({});
     setLoadingError(null);
     try {
-      const resp = await fetch(`/api/review/sessions/${selectedSessionId}/recalculate`, {
+      const normalizedSessionId = selectedSessionId.trim();
+      if (!normalizedSessionId) {
+        setLoadingError("No session selected");
+        return;
+      }
+      const thresholdPayload = {
+        similarity_threshold: similarityThreshold,
+        recommendation_threshold: recommendationThreshold,
+        spelling_influence: spellingInfluence,
+        temporal_influence: temporalInfluence,
+      };
+      const thresholdsChanged = spellingInfluence !== appliedSpellingInfluence
+        || temporalInfluence !== appliedTemporalInfluence;
+      if (thresholdsChanged) {
+        const thresholdsResp = await fetch(`/api/review/sessions/${normalizedSessionId}/thresholds`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(thresholdPayload),
+        });
+        if (!thresholdsResp.ok) {
+          setLoadingError("Unable to update grouping settings");
+          return;
+        }
+      }
+      const resp = await fetch(`/api/review/sessions/${normalizedSessionId}/recalculate`, {
         method: "POST",
       });
       if (!resp.ok) {
@@ -389,7 +418,9 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         return;
       }
       const session = await resp.json() as ReviewSessionPayload;
-      setSelectedSession(reconcileGroupMutationState(session));
+      const reconciled = reconcileGroupMutationState(session);
+      setSelectedSession(reconciled);
+      syncGroupingSettingsDraft(reconciled);
       setUndoCount(0);
     } finally {
       setIsRecalculatingGroups(false);
@@ -467,6 +498,11 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       {loadingError && <SessionLoadErrorState message={loadingError} onRetry={() => setLoadingError(null)} />}
       {exportMessage && <div className="export-banner">{exportMessage}</div>}
       {reopenWarning && <div className="export-banner">{reopenWarning}</div>}
+      {hasPendingGroupingSettings && (
+        <div className="export-banner">
+          Grouping settings changed. Click Recalculate in Grouping settings to apply them to existing groups.
+        </div>
+      )}
 
       <div className="review-stack">
         <div className="panel-card">
@@ -493,7 +529,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                       key={s.session_id}
                       type="button"
                       className={s.session_id === selectedSessionId ? "session-item active" : "session-item"}
-                      onClick={() => { void fetchSession(s.session_id); }}
+                      onClick={() => { void fetchSession(s.session_id, { syncGroupingSettingsDraft: true }); }}
                     >
                       <span>{s.display_name}</span>
                       <small>{new Date(s.updated_at).toLocaleDateString()}</small>
@@ -599,8 +635,14 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
               temporalInfluence={temporalInfluence}
               isRecalculating={isRecalculatingGroups}
               disabled={!selectedSessionId}
-              onSpellingInfluenceChange={(value) => { void patchThresholds({ spellingInfluence: value }); }}
-              onTemporalInfluenceChange={(value) => { void patchThresholds({ temporalInfluence: value }); }}
+              onSpellingInfluenceChange={(value) => {
+                setGroupingSettingsDraft((previous) => ({ ...previous, spellingInfluence: value }));
+                setHasPendingGroupingSettings(value !== appliedSpellingInfluence || temporalInfluence !== appliedTemporalInfluence);
+              }}
+              onTemporalInfluenceChange={(value) => {
+                setGroupingSettingsDraft((previous) => ({ ...previous, temporalInfluence: value }));
+                setHasPendingGroupingSettings(spellingInfluence !== appliedSpellingInfluence || value !== appliedTemporalInfluence);
+              }}
               onRecalculate={() => { void recalculateGroups(); }}
             />
           </aside>

@@ -180,7 +180,7 @@ def test_actions_contract_duplicate_name_validation_returns_conflict_group_refer
     threshold_status, _ = session_handler.patch_thresholds(
         session_id,
         {
-            "similarity_threshold": 50,
+            "similarity_threshold": 75,
             "recommendation_threshold": 70,
         },
     )
@@ -263,7 +263,7 @@ def test_export_contract_blocks_when_accepted_names_are_duplicated(tmp_path: Pat
     threshold_status, _ = session_handler.patch_thresholds(
         session_id,
         {
-            "similarity_threshold": 50,
+            "similarity_threshold": 75,
             "recommendation_threshold": 70,
         },
     )
@@ -308,7 +308,7 @@ def test_actions_contract_merge_groups_combines_source_into_target(tmp_path: Pat
     threshold_status, _ = session_handler.patch_thresholds(
         session_id,
         {
-            "similarity_threshold": 50,
+            "similarity_threshold": 75,
             "recommendation_threshold": 70,
         },
     )
@@ -356,7 +356,7 @@ def test_actions_contract_move_candidate_to_new_group_creates_new_group(tmp_path
     threshold_status, _ = session_handler.patch_thresholds(
         session_id,
         {
-            "similarity_threshold": 50,
+            "similarity_threshold": 75,
             "recommendation_threshold": 70,
         },
     )
@@ -409,7 +409,7 @@ def test_recalculate_contract_resets_review_decisions_and_regroups(tmp_path: Pat
     threshold_status, _ = session_handler.patch_thresholds(
         session_id,
         {
-            "similarity_threshold": 50,
+            "similarity_threshold": 75,
             "recommendation_threshold": 70,
             "spelling_influence": 100,
             "temporal_influence": 60,

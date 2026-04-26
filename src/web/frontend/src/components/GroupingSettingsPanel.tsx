@@ -70,7 +70,7 @@ export function GroupingSettingsPanel({
             onClick={onRecalculate}
             disabled={disabled || isRecalculating}
           >
-            {isRecalculating ? "Recalculating..." : "Recalculate"}
+            {isRecalculating ? "Recalculating..." : "Recalculate Groups"}
           </button>
         </div>
       </div>
