@@ -71,6 +71,20 @@ class ReviewSidecarStore:
                 for group_id, is_collapsed in collapsed.items()
             }
 
+        if not payload["collapsed_groups"]:
+            fallback_collapsed: dict[str, bool] = {}
+            for group in list(payload.get("groups", [])):
+                if not isinstance(group, dict):
+                    continue
+                group_id = str(group.get("group_id", "")).strip()
+                if not group_id:
+                    continue
+                if "is_collapsed" not in group:
+                    continue
+                fallback_collapsed[group_id] = bool(group.get("is_collapsed"))
+            if fallback_collapsed:
+                payload["collapsed_groups"] = fallback_collapsed
+
         status = payload.get("resolution_status")
         if not isinstance(status, dict):
             payload["resolution_status"] = {}

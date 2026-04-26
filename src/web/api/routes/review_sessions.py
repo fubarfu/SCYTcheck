@@ -44,7 +44,7 @@ class ReviewSessionHandler:
             }
 
         session_id = f"sess_{csv_path.stem}_{uuid.uuid4().hex[:8]}"
-        existing = self._sidecar.load(csv_path) or {}
+        existing = ReviewSidecarStore.ensure_group_state_maps(self._sidecar.load(csv_path) or {})
         source_type = existing.get("source_type", "local_file")
         source_value = existing.get("source_value", "")
         candidates = existing.get("candidates")
