@@ -198,9 +198,6 @@ export function CandidateRow({
           </div>
           <div className="candidate-meta-inline">
             <span>{candidate.start_timestamp ?? "-"}</span>
-            {typeof candidate.temporal_proximity === "number" && (
-              <span className="chip">Temporal {Math.round(candidate.temporal_proximity)}%</span>
-            )}
             {typeof candidate.recommendation_score === "number" && (
               <span className="chip recommendation">Rec {Math.round(candidate.recommendation_score)}</span>
             )}
