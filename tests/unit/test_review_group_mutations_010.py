@@ -173,7 +173,47 @@ def test_move_candidate_sets_group_override_and_clears_source_consensus_if_moved
     assert validation is None
     assert moved["candidate_group_overrides"]["c1"] == "grp_manual_1"
     assert moved["accepted_names"].get("grp_1") is None
-    assert moved["resolution_status"]["grp_1"] == "UNRESOLVED"
+    assert "grp_1" not in moved["resolution_status"]
+
+
+def test_move_candidate_recalculates_resolution_status_for_source_and_target_groups() -> None:
+    payload = {
+        "groups": [
+            {
+                "group_id": "grp_source",
+                "candidates": [
+                    {"candidate_id": "s1", "extracted_name": "Alice", "status": "pending"},
+                    {"candidate_id": "s2", "extracted_name": "Alicia", "status": "pending"},
+                ],
+            },
+            {
+                "group_id": "grp_target",
+                "candidates": [
+                    {"candidate_id": "t1", "extracted_name": "Alice", "status": "pending"},
+                ],
+            },
+        ],
+        "candidates": [
+            {"candidate_id": "s1", "extracted_name": "Alice", "status": "pending"},
+            {"candidate_id": "s2", "extracted_name": "Alicia", "status": "pending"},
+            {"candidate_id": "t1", "extracted_name": "Alice", "status": "pending"},
+        ],
+        "accepted_names": {"grp_target": "Alice"},
+        "rejected_candidates": {},
+        "collapsed_groups": {"grp_target": True},
+        "resolution_status": {"grp_source": "UNRESOLVED", "grp_target": "RESOLVED"},
+    }
+
+    moved, validation, handled = GroupMutationService.move_candidate(payload, "s2", "grp_target")
+
+    assert handled is True
+    assert validation is None
+    assert moved["candidate_group_overrides"]["s2"] == "grp_target"
+
+    # Source and target existing groups are cleared so recompute can derive fresh status.
+    assert "grp_source" not in moved["resolution_status"]
+    assert "grp_target" not in moved["resolution_status"]
+    assert "grp_target" not in moved["collapsed_groups"]
 
 
 def test_merge_groups_sets_overrides_for_source_group_candidates() -> None:
@@ -203,3 +243,34 @@ def test_merge_groups_sets_overrides_for_source_group_candidates() -> None:
     assert handled is True
     assert validation is None
     assert merged["candidate_group_overrides"]["c2"] == "grp_1"
+
+
+def test_merge_groups_recalculates_target_resolution_status_after_membership_change() -> None:
+    payload = {
+        "groups": [
+            {
+                "group_id": "grp_1",
+                "candidates": [{"candidate_id": "c1", "extracted_name": "Alice", "status": "pending"}],
+            },
+            {
+                "group_id": "grp_2",
+                "candidates": [{"candidate_id": "c2", "extracted_name": "Bob", "status": "pending"}],
+            },
+        ],
+        "candidates": [
+            {"candidate_id": "c1", "extracted_name": "Alice", "status": "pending"},
+            {"candidate_id": "c2", "extracted_name": "Bob", "status": "pending"},
+        ],
+        "accepted_names": {"grp_1": "Alice", "grp_2": "Bob"},
+        "rejected_candidates": {},
+        "collapsed_groups": {"grp_1": True, "grp_2": True},
+        "resolution_status": {"grp_1": "RESOLVED", "grp_2": "RESOLVED"},
+    }
+
+    merged, validation, handled = GroupMutationService.merge_groups(payload, "grp_2", "grp_1")
+
+    assert handled is True
+    assert validation is None
+    assert "grp_2" not in merged["accepted_names"]
+    assert "grp_2" not in merged["resolution_status"]
+    assert "grp_1" not in merged["resolution_status"]

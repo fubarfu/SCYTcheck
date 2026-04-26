@@ -94,10 +94,21 @@ def _hydrate_group_state(payload: dict[str, Any], groups: list[dict[str, Any]]) 
         accepted_name = str(accepted_map.get(group_id, "")).strip()
         if accepted_name and accepted_name not in active_spellings:
             accepted_name = ""
-        if not accepted_name and len(active_spellings) == 1 and not preserve_unresolved:
-            accepted_name = active_spellings[0]
 
-        if accepted_name:
+        if not accepted_name:
+            has_pending_candidate = bool(active_candidates)
+        else:
+            accepted_normalized = accepted_name.strip().lower()
+            has_pending_candidate = any(
+                _candidate_name(candidate).strip().lower() != accepted_normalized
+                for candidate in active_candidates
+            )
+        if has_pending_candidate:
+            accepted_name = ""
+
+        if has_pending_candidate:
+            resolution_status = "UNRESOLVED"
+        elif accepted_name:
             resolution_status = "RESOLVED"
         elif preserve_unresolved:
             resolution_status = "UNRESOLVED"

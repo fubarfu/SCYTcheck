@@ -69,7 +69,7 @@ def test_review_sidecar_helpers_persist_group_state_maps(tmp_path: Path) -> None
     assert "rejected_candidates" in on_disk
 
 
-def test_recompute_groups_exact_match_consensus_defaults_to_resolved_and_collapsed() -> None:
+def test_recompute_groups_exact_match_consensus_with_pending_candidates_defaults_to_unresolved() -> None:
     payload = recompute_groups(_seed_payload())
 
     assert len(payload["groups"]) == 1
@@ -77,10 +77,10 @@ def test_recompute_groups_exact_match_consensus_defaults_to_resolved_and_collaps
     group_id = group["group_id"]
 
     assert group["active_spellings"] == ["Alice"]
-    assert group["resolution_status"] == "RESOLVED"
-    assert group["accepted_name"] == "Alice"
-    assert group["is_collapsed"] is True
-    assert payload["accepted_names"][group_id] == "Alice"
+    assert group["resolution_status"] == "UNRESOLVED"
+    assert group["accepted_name"] is None
+    assert group["is_collapsed"] is False
+    assert group_id not in payload["accepted_names"]
 
 
 def test_recompute_groups_respects_rejections_when_computing_consensus_state() -> None:
@@ -100,8 +100,8 @@ def test_recompute_groups_respects_rejections_when_computing_consensus_state() -
     payload["resolution_status"] = {}
     payload = recompute_groups(payload)
     group = payload["groups"][0]
-    assert group["resolution_status"] == "RESOLVED"
-    assert group["accepted_name"] == "Alice"
+    assert group["resolution_status"] == "UNRESOLVED"
+    assert group["accepted_name"] is None
     assert group["rejected_candidate_ids"] == ["c2"]
 
 
@@ -113,6 +113,20 @@ def test_recompute_groups_preserves_explicit_unresolved_override_for_single_spel
     payload["accepted_names"] = {}
     payload["resolution_status"] = {group_id: "UNRESOLVED"}
     payload["collapsed_groups"] = {group_id: False}
+
+    payload = recompute_groups(payload)
+    group = payload["groups"][0]
+
+    assert group["accepted_name"] is None
+    assert group["resolution_status"] == "UNRESOLVED"
+    assert group["is_collapsed"] is False
+
+
+def test_recompute_groups_treats_active_candidates_as_pending_without_explicit_acceptance() -> None:
+    payload = _seed_payload()
+    # Simulate stale statuses after merge/move: statuses alone must not imply resolved state.
+    payload["candidates"][0]["status"] = "confirmed"
+    payload["candidates"][1]["status"] = "confirmed"
 
     payload = recompute_groups(payload)
     group = payload["groups"][0]

@@ -169,6 +169,13 @@ class ReviewSidecarStore:
         payload["collapsed_groups"] = collapsed
         return payload
 
+    def clear_group_collapsed(self, session_payload: dict[str, Any], group_id: str) -> dict[str, Any]:
+        payload = self.ensure_group_state_maps(session_payload)
+        collapsed = dict(payload["collapsed_groups"])
+        collapsed.pop(group_id, None)
+        payload["collapsed_groups"] = collapsed
+        return payload
+
     def set_group_resolution_status(
         self,
         session_payload: dict[str, Any],
@@ -178,6 +185,13 @@ class ReviewSidecarStore:
         payload = self.ensure_group_state_maps(session_payload)
         statuses = dict(payload["resolution_status"])
         statuses[group_id] = resolution_status
+        payload["resolution_status"] = statuses
+        return payload
+
+    def clear_group_resolution_status(self, session_payload: dict[str, Any], group_id: str) -> dict[str, Any]:
+        payload = self.ensure_group_state_maps(session_payload)
+        statuses = dict(payload["resolution_status"])
+        statuses.pop(group_id, None)
         payload["resolution_status"] = statuses
         return payload
 

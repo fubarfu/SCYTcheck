@@ -222,6 +222,21 @@ def _sync_group_resolution_state(
   return payload
 
 
+def _clear_group_recompute_overrides(
+  payload: dict[str, Any],
+  group_id: str,
+  *,
+  clear_accepted_name: bool,
+) -> dict[str, Any]:
+  store = ReviewSidecarStore()
+  updated = payload
+  if clear_accepted_name:
+    updated = store.set_group_accepted_name(updated, group_id, None)
+  updated = store.clear_group_resolution_status(updated, group_id)
+  updated = store.clear_group_collapsed(updated, group_id)
+  return updated
+
+
 class GroupMutationService:
   @staticmethod
   def evaluate_completion_gate(session_payload: dict[str, Any]) -> dict[str, Any]:
@@ -545,13 +560,23 @@ class GroupMutationService:
     moving_name = _candidate_name(moving_candidate or {})
     if source_accepted and moving_name and source_accepted == moving_name:
       updated = store.set_group_accepted_name(updated, source_group_id, None)
-      updated = store.set_group_resolution_status(updated, source_group_id, "UNRESOLVED")
-      updated = store.set_group_collapsed(updated, source_group_id, False)
 
-    # Ensure a new group target starts expanded and unresolved until consensus is recomputed.
+    # Group membership changed for both source and target, so derived state must be recomputed.
+    updated = _clear_group_recompute_overrides(
+      updated,
+      source_group_id,
+      clear_accepted_name=False,
+    )
     if target_group is None:
+      # New manual groups should start unresolved and expanded until reviewer confirms.
       updated = store.set_group_resolution_status(updated, to_group_id, "UNRESOLVED")
       updated = store.set_group_collapsed(updated, to_group_id, False)
+    else:
+      updated = _clear_group_recompute_overrides(
+        updated,
+        to_group_id,
+        clear_accepted_name=True,
+      )
 
     return updated, None, True
 
@@ -579,10 +604,17 @@ class GroupMutationService:
 
     updated = store.set_candidates_group_override(payload, source_candidate_ids, target_group_id)
 
-    # Merging groups invalidates explicit source state; recompute/hydration will normalize target state.
-    updated = store.set_group_accepted_name(updated, source_group_id, None)
-    updated = store.set_group_resolution_status(updated, source_group_id, "UNRESOLVED")
-    updated = store.set_group_collapsed(updated, source_group_id, False)
+    # Merge changes membership of both source and target groups, so recompute from fresh state.
+    updated = _clear_group_recompute_overrides(
+      updated,
+      source_group_id,
+      clear_accepted_name=True,
+    )
+    updated = _clear_group_recompute_overrides(
+      updated,
+      target_group_id,
+      clear_accepted_name=True,
+    )
 
     return updated, None, True
 

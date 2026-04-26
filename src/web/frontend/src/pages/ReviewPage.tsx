@@ -626,6 +626,17 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                     isSelected={group.group_id === selectedGroupId}
                     hasValidationError={Boolean(groupValidationFeedback[group.group_id])}
                     onSelect={setSelectedGroupId}
+                    onMergeGroups={(sourceGroupId, targetGroupId) => {
+                      void postAction({
+                        action_type: "merge_groups",
+                        target_ids: [sourceGroupId],
+                        payload: {
+                          source_group_id: sourceGroupId,
+                          target_group_id: targetGroupId,
+                          group_id: targetGroupId,
+                        },
+                      });
+                    }}
                   />
                 ))
               )}

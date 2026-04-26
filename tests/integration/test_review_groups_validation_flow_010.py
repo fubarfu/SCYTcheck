@@ -48,7 +48,11 @@ def test_duplicate_name_validation_blocks_action_and_preserves_group_state(tmp_p
     assert before_status == 200
     groups = before_body.get("groups", [])
 
-    resolved_group = next(group for group in groups if group["accepted_name"] == "Alice")
+    resolved_group = next(
+        group
+        for group in groups
+        if any(candidate["extracted_name"] == "Alice" for candidate in group["candidates"])
+    )
     target_candidate = next(
         candidate
         for candidate in resolved_group["candidates"]
@@ -147,7 +151,11 @@ def test_validation_feedback_latency_stays_under_500ms_for_duplicate_block(tmp_p
     get_status, body = session_handler.get_session(session_id)
     assert get_status == 200
     groups = body.get("groups", [])
-    resolved_group = next(group for group in groups if group["accepted_name"] == "Alice")
+    resolved_group = next(
+        group
+        for group in groups
+        if any(candidate["extracted_name"] == "Alice" for candidate in group["candidates"])
+    )
     conflict_candidate = next(
         candidate
         for candidate in resolved_group["candidates"]
@@ -206,6 +214,90 @@ def test_validation_feedback_latency_stays_under_500ms_for_duplicate_block(tmp_p
     assert status == 422
     assert response["error"] == "validation_error"
     assert elapsed_ms < 500
+
+
+def test_move_candidate_recomputes_resolution_for_changed_existing_groups(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+
+    csv_path = _make_duplicate_validation_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    get_status, body = session_handler.get_session(session_id)
+    assert get_status == 200
+    groups = body.get("groups", [])
+    source_group = next(
+        group
+        for group in groups
+        if any(candidate["extracted_name"] == "Alice" for candidate in group["candidates"])
+    )
+    target_group = next(group for group in groups if group["group_id"] != source_group["group_id"])
+
+    moved_candidate = next(
+        candidate
+        for candidate in source_group["candidates"]
+        if candidate["extracted_name"] == "Alice"
+    )
+
+    move_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "move_candidate",
+            "target_ids": [moved_candidate["candidate_id"]],
+            "payload": {
+                "candidate_id": moved_candidate["candidate_id"],
+                "source_group_id": source_group["group_id"],
+                "to_group_id": target_group["group_id"],
+            },
+        },
+    )
+    assert move_status == 200
+
+    after_status, after_body = session_handler.get_session(session_id)
+    assert after_status == 200
+    after_groups = {group["group_id"]: group for group in after_body.get("groups", [])}
+    assert after_groups[source_group["group_id"]]["resolution_status"] == "UNRESOLVED"
+    assert after_groups[target_group["group_id"]]["resolution_status"] == "UNRESOLVED"
+
+
+def test_merge_groups_recomputes_target_group_resolution_status(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+
+    csv_path = _make_duplicate_validation_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    get_status, body = session_handler.get_session(session_id)
+    assert get_status == 200
+    groups = body.get("groups", [])
+    source_group = next(group for group in groups if group.get("accepted_name") != "Alice")
+    target_group = next(group for group in groups if group["group_id"] != source_group["group_id"])
+
+    merge_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "merge_groups",
+            "target_ids": [source_group["group_id"]],
+            "payload": {
+                "source_group_id": source_group["group_id"],
+                "target_group_id": target_group["group_id"],
+            },
+        },
+    )
+    assert merge_status == 200
+
+    merged_status, merged_body = session_handler.get_session(session_id)
+    assert merged_status == 200
+    merged_groups = merged_body.get("groups", [])
+    assert len(merged_groups) == 1
+    assert merged_groups[0]["group_id"] == target_group["group_id"]
+    assert merged_groups[0]["resolution_status"] == "UNRESOLVED"
 
 
 def test_export_gate_blocks_unresolved_and_all_rejected_groups_until_recovered(tmp_path: Path) -> None:

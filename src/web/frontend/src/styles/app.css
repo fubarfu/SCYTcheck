@@ -1273,6 +1273,12 @@ select,
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent 65%);
 }
 
+.group-rail-item.is-drop-target {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel) 86%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent 65%);
+}
+
 .candidate-group-card.group-dragging {
   opacity: 0.78;
 }
