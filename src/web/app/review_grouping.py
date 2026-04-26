@@ -42,6 +42,7 @@ def _hydrate_group_state(payload: dict[str, Any], groups: list[dict[str, Any]]) 
     accepted_map = dict(payload.get("accepted_names", {}))
     rejected_map = dict(payload.get("rejected_candidates", {}))
     collapsed_map = dict(payload.get("collapsed_groups", {}))
+    status_map = dict(payload.get("resolution_status", {}))
 
     hydrated: list[dict[str, Any]] = []
     normalized_accepted: dict[str, str] = {}
@@ -83,14 +84,19 @@ def _hydrate_group_state(payload: dict[str, Any], groups: list[dict[str, Any]]) 
             }
         )
 
+        explicit_status = str(status_map.get(group_id, "")).strip().upper()
+        preserve_unresolved = explicit_status == "UNRESOLVED"
+
         accepted_name = str(accepted_map.get(group_id, "")).strip()
         if accepted_name and accepted_name not in active_spellings:
             accepted_name = ""
-        if not accepted_name and len(active_spellings) == 1:
+        if not accepted_name and len(active_spellings) == 1 and not preserve_unresolved:
             accepted_name = active_spellings[0]
 
         if accepted_name:
             resolution_status = "RESOLVED"
+        elif preserve_unresolved:
+            resolution_status = "UNRESOLVED"
         else:
             # Exact-match consensus is based on active candidates only.
             resolution_status = "RESOLVED" if len(active_spellings) == 1 and active_candidates else "UNRESOLVED"

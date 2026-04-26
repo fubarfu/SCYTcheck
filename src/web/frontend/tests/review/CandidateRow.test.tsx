@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe("CandidateRow feature 010", () => {
-  it("dispatches confirm when radio selection changes", () => {
+  it("dispatches confirm when accept is clicked", () => {
     const onAction = vi.fn();
 
     render(
@@ -23,7 +23,7 @@ describe("CandidateRow feature 010", () => {
       />,
     );
 
-    fireEvent.click(screen.getByLabelText("Select candidate Alice"));
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
 
     expect(onAction).toHaveBeenCalledWith({
       action_type: "confirm",
@@ -32,9 +32,7 @@ describe("CandidateRow feature 010", () => {
     });
   });
 
-  it("dispatches deselect for the selected candidate and renders success feedback", () => {
-    const onAction = vi.fn();
-
+  it("renders accepted state for confirmed candidate", () => {
     render(
       <CandidateRow
         candidate={{ candidate_id: "c1", extracted_name: "Alice", status: "confirmed" }}
@@ -42,23 +40,16 @@ describe("CandidateRow feature 010", () => {
         selectedCandidateId="c1"
         sourceType="local_file"
         sourceValue=""
-        onAction={onAction}
+        onAction={() => {}}
         onOpenThumbnail={() => {}}
       />,
     );
 
     expect(screen.getByText("Selection saved")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
-
-    expect(onAction).toHaveBeenCalledWith({
-      action_type: "deselect",
-      target_ids: [],
-      payload: { group_id: "grp_1" },
-    });
+    expect(screen.getByRole("button", { name: "Accept" })).toBeTruthy();
   });
 
-  it("renders rejected candidate state and dispatches unreject", () => {
+  it("renders rejected candidate state and dispatches unreject from reject button", () => {
     const onAction = vi.fn();
 
     render(
@@ -75,7 +66,7 @@ describe("CandidateRow feature 010", () => {
 
     expect(screen.getByRole("alert")).toBeTruthy();
     expect(screen.getByRole("alert").textContent).toContain("Rejected");
-    fireEvent.click(screen.getByRole("button", { name: "Undo reject" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
 
     expect(onAction).toHaveBeenCalledWith({
       action_type: "unreject",

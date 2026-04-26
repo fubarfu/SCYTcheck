@@ -101,7 +101,6 @@ export function CandidateGroupCard({
     return normalizeName(candidate.corrected_text ?? candidate.extracted_name) === acceptedNormalized;
   })?.candidate_id ?? null;
 
-  const ids = group.candidates.map((c) => c.candidate_id);
   const isCollapsed = forceExpanded ? false : Boolean(group.is_collapsed);
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
   const activeSpellings = Array.isArray(group.active_spellings) ? group.active_spellings : [];
@@ -285,14 +284,17 @@ export function CandidateGroupCard({
             </button>
           )}
           {!isCollapsed && (
-            <>
-              <button type="button" className="primary-action" onClick={() => onAction({ action_type: "confirm", target_ids: ids })}>
-                Confirm all
-              </button>
-              <button type="button" className="ghost-action" onClick={() => onAction({ action_type: "reject", target_ids: ids })}>
-                Reject all
-              </button>
-            </>
+            <button
+              type="button"
+              className="ghost-action"
+              onClick={() => onAction({
+                action_type: "deselect",
+                target_ids: [],
+                payload: { group_id: group.group_id },
+              })}
+            >
+              Reset
+            </button>
           )}
         </div>
       </header>

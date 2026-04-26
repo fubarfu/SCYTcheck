@@ -1285,6 +1285,63 @@ select,
   gap: 8px;
 }
 
+.candidate-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.candidate-decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-self: start;
+}
+
+.candidate-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-self: end;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.icon-tool-button {
+  min-width: 30px;
+  min-height: 30px;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-tool-button .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.decision-action {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: var(--text-sm);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 86%, transparent 14%);
+}
+
+.decision-action:hover {
+  border-color: var(--text);
+  background: color-mix(in srgb, var(--panel) 72%, transparent 28%);
+}
+
+.decision-action.is-selected {
+  border-color: var(--accent-strong);
+  background: var(--accent);
+  color: #fff;
+}
+
 .error-banner {
   border: 1px solid var(--danger);
   background: color-mix(in srgb, var(--danger) 16%, transparent 84%);

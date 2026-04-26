@@ -109,6 +109,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [reopenWarning, setReopenWarning] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const autoLoadedHistoryCsvPathRef = useRef<string | null>(null);
+  const latestSessionFetchTokenRef = useRef(0);
 
   const sourceType = selectedSession?.source_type ?? "local_file";
   const sourceValue = selectedSession?.source_value ?? "";
@@ -244,9 +245,13 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   const fetchSession = async (sessionId: string) => {
+    const fetchToken = ++latestSessionFetchTokenRef.current;
     const resp = await fetch(`/api/review/sessions/${sessionId}?_ts=${Date.now()}`, { cache: "no-store" });
     if (!resp.ok) return;
     const session = await resp.json() as ReviewSessionPayload;
+    if (fetchToken !== latestSessionFetchTokenRef.current) {
+      return;
+    }
     const reconciled = reconcileGroupMutationState(session);
     const nextToggles = deriveGroupToggleState(reconciled.groups ?? []);
     setGroupToggles(nextToggles);

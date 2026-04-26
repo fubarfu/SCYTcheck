@@ -27,7 +27,7 @@ def _set_group_candidate_statuses(
   candidates: list[dict[str, Any]],
   group: dict[str, Any],
   rejected_candidate_ids: set[str],
-  confirmed_candidate_id: str | None,
+  confirmed_candidate_ids: set[str] | None,
 ) -> list[dict[str, Any]]:
   group_candidate_ids = {
     str(item.get("candidate_id", "")).strip()
@@ -44,12 +44,46 @@ def _set_group_candidate_statuses(
     if candidate_id in group_candidate_ids:
       if candidate_id in rejected_candidate_ids:
         item["status"] = "rejected"
-      elif confirmed_candidate_id and candidate_id == confirmed_candidate_id:
+      elif confirmed_candidate_ids and candidate_id in confirmed_candidate_ids:
         item["status"] = "confirmed"
       else:
         item["status"] = "pending"
     updated.append(item)
   return updated
+
+
+def _candidate_ids_for_name(
+  group: dict[str, Any],
+  accepted_name: str,
+  rejected_candidate_ids: set[str],
+) -> set[str]:
+  target = accepted_name.strip().lower()
+  if not target:
+    return set()
+
+  confirmed_ids: set[str] = set()
+  for candidate in list(group.get("candidates", [])):
+    candidate_id = str(candidate.get("candidate_id", "")).strip()
+    if not candidate_id or candidate_id in rejected_candidate_ids:
+      continue
+    if _candidate_name(candidate).strip().lower() == target:
+      confirmed_ids.add(candidate_id)
+  return confirmed_ids
+
+
+def _candidate_ids_matching_name(group: dict[str, Any], target_name: str) -> set[str]:
+  normalized = target_name.strip().lower()
+  if not normalized:
+    return set()
+
+  matched_ids: set[str] = set()
+  for candidate in list(group.get("candidates", [])):
+    candidate_id = str(candidate.get("candidate_id", "")).strip()
+    if not candidate_id:
+      continue
+    if _candidate_name(candidate).strip().lower() == normalized:
+      matched_ids.add(candidate_id)
+  return matched_ids
 
 
 def _find_group(groups: list[dict[str, Any]], group_id: str) -> dict[str, Any] | None:
@@ -339,7 +373,19 @@ class GroupMutationService:
         conflict_group_id=conflict_group,
       ), True
 
-    updated = store.set_candidate_rejected(payload, group_id, candidate_id, False)
+    updated = payload
+    for group_candidate in list(group.get("candidates", [])):
+      group_candidate_id = str(group_candidate.get("candidate_id", "")).strip()
+      if not group_candidate_id:
+        continue
+      same_spelling = _candidate_name(group_candidate).strip().lower() == accepted_name.strip().lower()
+      updated = store.set_candidate_rejected(
+        updated,
+        group_id,
+        group_candidate_id,
+        rejected=not same_spelling,
+      )
+
     updated = _sync_group_resolution_state(
       updated,
       group,
@@ -347,11 +393,12 @@ class GroupMutationService:
       preferred_accepted_name=accepted_name,
     )
     rejected_ids = set(dict(updated.get("rejected_candidates", {})).get(group_id, []))
+    confirmed_ids = _candidate_ids_for_name(group, accepted_name, rejected_ids)
     updated["candidates"] = _set_group_candidate_statuses(
       list(updated.get("candidates", [])),
       group,
       rejected_ids,
-      candidate_id,
+      confirmed_ids,
     )
     return updated, _validation_payload(is_valid=True, candidate_name=accepted_name), True
 
@@ -372,7 +419,9 @@ class GroupMutationService:
       return payload, None, False
 
     candidate_name = _candidate_name(candidate)
-    updated = store.set_candidate_rejected(payload, group_id, candidate_id, True)
+    updated = payload
+    for grouped_candidate_id in _candidate_ids_matching_name(group, candidate_name):
+      updated = store.set_candidate_rejected(updated, group_id, grouped_candidate_id, True)
     preferred_accepted_name = str(dict(updated.get("accepted_names", {})).get(group_id, "")).strip()
     if preferred_accepted_name == candidate_name:
       preferred_accepted_name = ""
@@ -383,17 +432,14 @@ class GroupMutationService:
       preferred_accepted_name=preferred_accepted_name,
     )
     rejected_ids = set(dict(updated.get("rejected_candidates", {})).get(group_id, []))
-    confirmed_candidate_id = None
+    confirmed_candidate_ids: set[str] = set()
     if preferred_accepted_name:
-      for group_candidate in list(group.get("candidates", [])):
-        if _candidate_name(group_candidate) == preferred_accepted_name:
-          confirmed_candidate_id = str(group_candidate.get("candidate_id", "")).strip()
-          break
+      confirmed_candidate_ids = _candidate_ids_for_name(group, preferred_accepted_name, rejected_ids)
     updated["candidates"] = _set_group_candidate_statuses(
       list(updated.get("candidates", [])),
       group,
       rejected_ids,
-      confirmed_candidate_id,
+      confirmed_candidate_ids,
     )
     return updated, None, True
 
@@ -416,17 +462,14 @@ class GroupMutationService:
     updated = _sync_group_resolution_state(updated, group, group_id)
     rejected_ids = set(dict(updated.get("rejected_candidates", {})).get(group_id, []))
     accepted_name = str(dict(updated.get("accepted_names", {})).get(group_id, "")).strip()
-    confirmed_candidate_id = None
+    confirmed_candidate_ids: set[str] = set()
     if accepted_name:
-      for group_candidate in list(group.get("candidates", [])):
-        if _candidate_name(group_candidate) == accepted_name:
-          confirmed_candidate_id = str(group_candidate.get("candidate_id", "")).strip()
-          break
+      confirmed_candidate_ids = _candidate_ids_for_name(group, accepted_name, rejected_ids)
     updated["candidates"] = _set_group_candidate_statuses(
       list(updated.get("candidates", [])),
       group,
       rejected_ids,
-      confirmed_candidate_id,
+      confirmed_candidate_ids,
     )
     return updated, None, True
 
@@ -445,6 +488,11 @@ class GroupMutationService:
       return payload, None, False
 
     updated = store.set_group_accepted_name(payload, group_id, None)
+    for group_candidate in list(group.get("candidates", [])):
+      candidate_id = str(group_candidate.get("candidate_id", "")).strip()
+      if not candidate_id:
+        continue
+      updated = store.set_candidate_rejected(updated, group_id, candidate_id, False)
     updated = store.set_group_resolution_status(updated, group_id, "UNRESOLVED")
     updated = store.set_group_collapsed(updated, group_id, False)
     rejected_ids = set(dict(updated.get("rejected_candidates", {})).get(group_id, []))
@@ -452,7 +500,7 @@ class GroupMutationService:
       list(updated.get("candidates", [])),
       group,
       rejected_ids,
-      None,
+      set(),
     )
     return updated, None, True
 

@@ -104,6 +104,23 @@ def test_recompute_groups_respects_rejections_when_computing_consensus_state() -
     assert group["rejected_candidate_ids"] == ["c2"]
 
 
+def test_recompute_groups_preserves_explicit_unresolved_override_for_single_spelling_group() -> None:
+    payload = recompute_groups(_seed_payload())
+    group = payload["groups"][0]
+    group_id = group["group_id"]
+
+    payload["accepted_names"] = {}
+    payload["resolution_status"] = {group_id: "UNRESOLVED"}
+    payload["collapsed_groups"] = {group_id: False}
+
+    payload = recompute_groups(payload)
+    group = payload["groups"][0]
+
+    assert group["accepted_name"] is None
+    assert group["resolution_status"] == "UNRESOLVED"
+    assert group["is_collapsed"] is False
+
+
 def test_review_action_dto_parity_for_confirmation_and_toggle() -> None:
     action = ReviewActionRequestDTO.from_payload(
         {

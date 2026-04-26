@@ -129,7 +129,6 @@ export function CandidateRow({
   const currentStatus = candidate.status ?? "pending";
   const isSelected = selectedCandidateId === candidate.candidate_id || currentStatus === "confirmed";
   const isRejected = currentStatus === "rejected";
-  const radioGroupName = groupId ? `group-selection-${groupId}` : `group-selection-${candidate.candidate_id}`;
   const timestampSeconds = parseTimestampSeconds(candidate.start_timestamp);
   const deepLink =
     sourceType === "youtube_url" && sourceValue
@@ -195,18 +194,6 @@ export function CandidateRow({
       <div className="candidate-main review-candidate-main">
         <div>
           <div className="candidate-radio-row">
-            <input
-              type="radio"
-              name={radioGroupName}
-              aria-label={`Select candidate ${currentText}`}
-              checked={isSelected}
-              disabled={isRejected}
-              onChange={() => onAction({
-                action_type: "confirm",
-                target_ids: [candidate.candidate_id],
-                payload: groupId ? { group_id: groupId } : undefined,
-              })}
-            />
             <strong>{currentText}</strong>
           </div>
           <div className="candidate-meta-inline">
@@ -261,33 +248,60 @@ export function CandidateRow({
         </div>
       ) : (
         <div className="candidate-actions">
-          {isSelected && (
+          <div className="candidate-decision-actions" role="group" aria-label="Decision actions">
             <button
               type="button"
-              className="primary-action"
+              className={`decision-action${isSelected ? " is-selected" : ""}`}
               onClick={() => onAction({
-                action_type: "deselect",
-                target_ids: [],
+                action_type: "confirm",
+                target_ids: [candidate.candidate_id],
                 payload: groupId ? { group_id: groupId } : undefined,
               })}
             >
-              Clear selection
+              Accept
             </button>
-          )}
-          <button
-            type="button"
-            className="ghost-action"
-            onClick={() => onAction({
-              action_type: isRejected ? "unreject" : "reject",
-              target_ids: [candidate.candidate_id],
-              payload: groupId ? { group_id: groupId } : undefined,
-            })}
-          >
-            {isRejected ? "Undo reject" : "Reject"}
-          </button>
-          <button type="button" className="ghost-action" onClick={() => setEditing(true)}>Edit</button>
-          <button type="button" className="ghost-action" onClick={() => onOpenThumbnail(candidate.candidate_id)} disabled={!thumbnailVisible}>Thumbnail</button>
-          <button type="button" className="ghost-action" onClick={() => onAction({ action_type: "remove", target_ids: [candidate.candidate_id] })}>Remove</button>
+            <button
+              type="button"
+              className={`decision-action${isRejected ? " is-selected" : ""}`}
+              onClick={() => onAction({
+                action_type: isRejected ? "unreject" : "reject",
+                target_ids: [candidate.candidate_id],
+                payload: groupId ? { group_id: groupId } : undefined,
+              })}
+            >
+              Reject
+            </button>
+          </div>
+          <div className="candidate-secondary-actions" role="group" aria-label="Candidate tools">
+            <button
+              type="button"
+              className="ghost-action icon-tool-button"
+              aria-label="Open thumbnail"
+              title="Open thumbnail"
+              onClick={() => onOpenThumbnail(candidate.candidate_id)}
+              disabled={!thumbnailVisible}
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">image</span>
+            </button>
+            <button
+              type="button"
+              className="ghost-action icon-tool-button"
+              aria-label="Edit candidate"
+              title="Edit candidate"
+              onClick={() => setEditing(true)}
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">edit</span>
+            </button>
+            <button
+              type="button"
+              className="ghost-action icon-tool-button"
+              aria-label="Remove candidate"
+              title="Remove candidate"
+              onClick={() => onAction({ action_type: "remove", target_ids: [candidate.candidate_id] })}
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">delete</span>
+            </button>
+          </div>
         </div>
       )}
 
