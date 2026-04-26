@@ -158,17 +158,17 @@
 
 **Purpose**: Reconcile the implementation against the approved Stitch artifacts, run the full validation matrix, and capture end-to-end notes.
 
-- [ ] T046 [P] Run and fix the backend unit suite for review-group foundation, mutation, and uniqueness behavior in `tests/unit/test_review_group_foundation_010.py`, `tests/unit/test_review_group_mutations_010.py`, and `tests/unit/test_review_group_uniqueness_010.py`
-- [ ] T047 [P] Run and fix the review-group contract and integration suites in `tests/contract/test_review_groups_api_010.py`, `tests/integration/test_review_groups_consensus_flow_010.py`, `tests/integration/test_review_groups_conflict_flow_010.py`, `tests/integration/test_review_groups_validation_flow_010.py`, and `tests/integration/test_review_groups_toggle_persistence_010.py`
-- [ ] T048 [P] Run and fix the frontend Vitest suite for review-group UI behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`, `src/web/frontend/tests/review/CandidateRow.test.tsx`, and `src/web/frontend/tests/review/reviewStore.test.ts`
-- [ ] T049 Reconcile implementation against the approved Stitch screens and document any justified deviations in `specs/010-collapse-player-groups/stitch/README.md` and `specs/010-collapse-player-groups/quickstart.md`
-- [ ] T050 Execute the quickstart end-to-end validation flow and capture final implementation notes in `specs/010-collapse-player-groups/quickstart.md`
-- [ ] T051 [P] Add backend export-gate checks that reject export when any group is unresolved or accepted names are duplicated in `tests/contract/test_review_groups_api_010.py` and `tests/integration/test_review_groups_validation_flow_010.py`
-- [ ] T052 Implement completion/export gating rules in `src/web/api/routes/review_export.py` and `src/web/app/group_mutation_service.py` to satisfy FR-021 and SC-006/SC-008
-- [ ] T053 [P] Add integration timing assertions for SC-003 (resolve under 10s simulated workflow) and SC-003b (validation feedback under 500ms) in `tests/integration/test_review_groups_consensus_flow_010.py` and `tests/integration/test_review_groups_validation_flow_010.py`
-- [ ] T054 [P] Add frontend perf timing checks for validation response and toggle latency in `src/web/frontend/tests/review/perfBenchmark.test.tsx`
-- [ ] T055 Document completion/export gate behavior and timing measurement procedure in `specs/010-collapse-player-groups/quickstart.md`
-- [ ] T056 [P] Add explicit recovery test for the all-candidates-rejected edge case (user must recover by unreject/select before export) in `tests/integration/test_review_groups_validation_flow_010.py`
+- [X] T046 [P] Run and fix the backend unit suite for review-group foundation, mutation, and uniqueness behavior in `tests/unit/test_review_group_foundation_010.py`, `tests/unit/test_review_group_mutations_010.py`, and `tests/unit/test_review_group_uniqueness_010.py`
+- [X] T047 [P] Run and fix the review-group contract and integration suites in `tests/contract/test_review_groups_api_010.py`, `tests/integration/test_review_groups_consensus_flow_010.py`, `tests/integration/test_review_groups_conflict_flow_010.py`, `tests/integration/test_review_groups_validation_flow_010.py`, and `tests/integration/test_review_groups_toggle_persistence_010.py`
+- [X] T048 [P] Run and fix the frontend Vitest suite for review-group UI behavior in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx`, `src/web/frontend/tests/review/CandidateRow.test.tsx`, and `src/web/frontend/tests/review/reviewStore.test.ts`
+- [X] T049 Reconcile implementation against the approved Stitch screens and document any justified deviations in `specs/010-collapse-player-groups/stitch/README.md` and `specs/010-collapse-player-groups/quickstart.md`
+- [X] T050 Execute the quickstart end-to-end validation flow and capture final implementation notes in `specs/010-collapse-player-groups/quickstart.md`
+- [X] T051 [P] Add backend export-gate checks that reject export when any group is unresolved or accepted names are duplicated in `tests/contract/test_review_groups_api_010.py` and `tests/integration/test_review_groups_validation_flow_010.py`
+- [X] T052 Implement completion/export gating rules in `src/web/api/routes/review_export.py` and `src/web/app/group_mutation_service.py` to satisfy FR-021 and SC-006/SC-008
+- [X] T053 [P] Add integration timing assertions for SC-003 (resolve under 10s simulated workflow) and SC-003b (validation feedback under 500ms) in `tests/integration/test_review_groups_consensus_flow_010.py` and `tests/integration/test_review_groups_validation_flow_010.py`
+- [X] T054 [P] Add frontend perf timing checks for validation response and toggle latency in `src/web/frontend/tests/review/perfBenchmark.test.tsx`
+- [X] T055 Document completion/export gate behavior and timing measurement procedure in `specs/010-collapse-player-groups/quickstart.md`
+- [X] T056 [P] Add explicit recovery test for the all-candidates-rejected edge case (user must recover by unreject/select before export) in `tests/integration/test_review_groups_validation_flow_010.py`
 
 ---
 

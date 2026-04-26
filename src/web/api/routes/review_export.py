@@ -3,6 +3,8 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
+from src.web.app.group_mutation_service import GroupMutationService
+from src.web.app.review_grouping import recompute_groups
 from src.web.app.session_manager import SessionManager
 
 
@@ -17,7 +19,18 @@ class ReviewExportHandler:
         if state is None:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
 
-        session_payload = state.payload or {}
+        session_payload = recompute_groups(dict(state.payload or {}))
+        gate = GroupMutationService.evaluate_completion_gate(session_payload)
+        if not gate["is_complete"]:
+            return 422, {
+                "error": "completion_gate_failed",
+                "message": "Review cannot be exported until all groups are resolved and accepted names are unique",
+                "details": {
+                    "unresolved_group_ids": gate["unresolved_group_ids"],
+                    "duplicate_name_conflicts": gate["duplicate_name_conflicts"],
+                },
+            }
+
         candidates: list[dict] = session_payload.get("candidates", [])
         confirmed = [c for c in candidates if c.get("status") in {"confirmed", None}]
 

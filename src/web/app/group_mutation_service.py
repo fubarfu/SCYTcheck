@@ -181,6 +181,51 @@ def _sync_group_resolution_state(
 
 class GroupMutationService:
   @staticmethod
+  def evaluate_completion_gate(session_payload: dict[str, Any]) -> dict[str, Any]:
+    payload = ReviewSidecarStore.ensure_group_state_maps(session_payload)
+    groups = list(payload.get("groups", []))
+    unresolved_group_ids: list[str] = []
+    duplicates: dict[str, dict[str, Any]] = {}
+
+    for group in groups:
+      group_id = str(group.get("group_id", "")).strip()
+      if not group_id:
+        continue
+      accepted_raw = group.get("accepted_name")
+      accepted_name = accepted_raw.strip() if isinstance(accepted_raw, str) else ""
+      if not accepted_name:
+        accepted_name = str(dict(payload.get("accepted_names", {})).get(group_id, "")).strip()
+      if not accepted_name:
+        unresolved_group_ids.append(group_id)
+        continue
+
+      key = accepted_name.lower()
+      entry = duplicates.setdefault(
+        key,
+        {
+          "name": accepted_name,
+          "group_ids": [],
+        },
+      )
+      entry["group_ids"].append(group_id)
+
+    duplicate_name_conflicts = [
+      {
+        "name": item["name"],
+        "group_ids": sorted(item["group_ids"]),
+      }
+      for item in duplicates.values()
+      if len(item["group_ids"]) > 1
+    ]
+    duplicate_name_conflicts.sort(key=lambda item: item["name"].lower())
+
+    return {
+      "is_complete": not unresolved_group_ids and not duplicate_name_conflicts,
+      "unresolved_group_ids": sorted(unresolved_group_ids),
+      "duplicate_name_conflicts": duplicate_name_conflicts,
+    }
+
+  @staticmethod
   def apply_action(
     session_payload: dict[str, Any],
     action_type: str,

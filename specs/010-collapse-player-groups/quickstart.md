@@ -145,3 +145,33 @@ In this runtime, session completion is defined as meeting export gate criteria.
 - Deselect behavior matches FR-020 semantics.
 - Timing criteria SC-003 and SC-003b are asserted in automated checks.
 - Stitch alignment notes captured in `specs/010-collapse-player-groups/stitch/README.md`.
+
+## 9. Stitch Reconciliation
+
+- The implemented review-group UI aligns with the authoritative feature 010 Stitch artifacts documented in `specs/010-collapse-player-groups/stitch/README.md`.
+- No approved deviations are currently recorded.
+
+## 10. Validation Run Notes (2026-04-26)
+
+Executed commands:
+
+```powershell
+pytest tests/unit/test_review_group_foundation_010.py tests/unit/test_review_group_mutations_010.py tests/unit/test_review_group_uniqueness_010.py -v
+pytest tests/contract/test_review_groups_api_010.py -v
+pytest tests/integration/test_review_groups_consensus_flow_010.py tests/integration/test_review_groups_conflict_flow_010.py tests/integration/test_review_groups_validation_flow_010.py tests/integration/test_review_groups_toggle_persistence_010.py -v
+cd src/web/frontend
+npx vitest run tests/review/CandidateGroupCard.test.tsx tests/review/CandidateRow.test.tsx tests/review/reviewStore.test.ts tests/review/perfBenchmark.test.tsx --environment jsdom
+```
+
+Coverage outcomes captured by these runs:
+
+- Export gate rejects unresolved sessions with `422 completion_gate_failed`.
+- Export gate rejects duplicate accepted names with `422 completion_gate_failed` and conflict details.
+- Recovery path from all-candidates-rejected state is validated by unreject/select before export.
+- SC-003 and SC-003b timing assertions are exercised in integration tests.
+
+## 11. Timing Measurement Procedure
+
+- SC-003 (<10s per group): measure elapsed wall-clock around scripted load + resolve + verify cycle in integration tests.
+- SC-003b (<500ms validation feedback): measure elapsed wall-clock around duplicate-confirm action to validation response in integration tests.
+- Frontend interaction timing: use `performance.now()` around collapse toggle dispatch and validation-feedback render assertions in Vitest benchmarks.

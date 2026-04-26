@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from time import perf_counter
 from pathlib import Path
 
 from src.web.api.routes.review_actions import ReviewActionsHandler
@@ -67,3 +68,39 @@ def test_consensus_groups_default_collapsed_and_expand_reveals_occurrence_metada
     assert expanded_group["is_collapsed"] is False
     assert len(expanded_group["candidates"]) == 2
     assert expanded_group["candidates"][0]["start_timestamp"]
+
+
+def test_resolution_workflow_completes_under_ten_seconds(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+
+    csv_path = _make_consensus_csv(tmp_path)
+
+    started_at = perf_counter()
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    session_status, session_body = session_handler.get_session(session_id)
+    assert session_status == 200
+    group = _get_group(session_body)
+    candidate_id = group["candidates"][0]["candidate_id"]
+
+    confirm_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "confirm",
+            "target_ids": [candidate_id],
+            "payload": {"group_id": group["group_id"]},
+        },
+    )
+    assert confirm_status == 200
+
+    final_status, final_body = session_handler.get_session(session_id)
+    assert final_status == 200
+    final_group = _get_group(final_body)
+    elapsed_seconds = perf_counter() - started_at
+
+    assert final_group["resolution_status"] == "RESOLVED"
+    assert elapsed_seconds < 10

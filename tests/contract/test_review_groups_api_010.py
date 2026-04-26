@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.web.api.routes.review_actions import ReviewActionsHandler
+from src.web.api.routes.review_export import ReviewExportHandler
 from src.web.api.routes.review_sessions import ReviewSessionHandler
 from src.web.app.session_manager import SessionManager
 
@@ -213,3 +214,82 @@ def test_actions_contract_duplicate_name_validation_returns_conflict_group_refer
     assert response["validation"]["candidate_name"] == "Alice"
     assert response["validation"]["conflict_group_id"] == resolved_group["group_id"]
     assert "already used" in response["validation"]["message"]
+
+
+def test_export_contract_blocks_when_any_group_is_unresolved(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+    export_handler = ReviewExportHandler(session_manager=manager)
+
+    csv_path = _make_contract_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+
+    session_id = load_body["session_id"]
+    get_status, get_body = session_handler.get_session(session_id)
+    assert get_status == 200
+    first_group = get_body["groups"][0]
+
+    deselect_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "deselect",
+            "target_ids": [],
+            "payload": {"group_id": first_group["group_id"]},
+        },
+    )
+    assert deselect_status == 200
+
+    export_status, export_body = export_handler.post_export(session_id)
+
+    assert export_status == 422
+    assert export_body["error"] == "completion_gate_failed"
+    assert isinstance(export_body["details"]["unresolved_group_ids"], list)
+    assert export_body["details"]["unresolved_group_ids"]
+    assert export_body["details"]["duplicate_name_conflicts"] == []
+
+
+def test_export_contract_blocks_when_accepted_names_are_duplicated(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    export_handler = ReviewExportHandler(session_manager=manager)
+
+    csv_path = _make_duplicate_contract_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    threshold_status, _ = session_handler.patch_thresholds(
+        session_id,
+        {
+            "similarity_threshold": 50,
+            "recommendation_threshold": 70,
+        },
+    )
+    assert threshold_status == 200
+
+    state = manager.get(session_id)
+    assert state is not None
+    payload = dict(state.payload)
+    groups = payload.get("groups", [])
+    assert len(groups) == 2
+    first_group_id = groups[0]["group_id"]
+    second_group_id = groups[1]["group_id"]
+    payload["accepted_names"] = {
+      first_group_id: "Alice",
+      second_group_id: "Alice",
+    }
+    manager.upsert(session_id, state.csv_path, payload)
+
+    export_status, export_body = export_handler.post_export(session_id)
+
+    assert export_status == 422
+    assert export_body["error"] == "completion_gate_failed"
+    assert export_body["details"]["unresolved_group_ids"] == []
+    assert export_body["details"]["duplicate_name_conflicts"] == [
+        {
+            "name": "Alice",
+            "group_ids": sorted([first_group_id, second_group_id]),
+        }
+    ]
