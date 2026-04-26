@@ -1,19 +1,19 @@
 interface Props {
-  spellingInfluence: number;
+  spellingRelaxation: number;
   temporalInfluence: number;
   disabled?: boolean;
   isRecalculating?: boolean;
-  onSpellingInfluenceChange: (value: number) => void;
+  onSpellingRelaxationChange: (value: number) => void;
   onTemporalInfluenceChange: (value: number) => void;
   onRecalculate: () => void;
 }
 
 export function GroupingSettingsPanel({
-  spellingInfluence,
+  spellingRelaxation,
   temporalInfluence,
   disabled = false,
   isRecalculating = false,
-  onSpellingInfluenceChange,
+  onSpellingRelaxationChange,
   onTemporalInfluenceChange,
   onRecalculate,
 }: Props) {
@@ -22,24 +22,24 @@ export function GroupingSettingsPanel({
       <summary className="grouping-settings-summary">
         <span className="grouping-settings-title">Grouping settings</span>
         <span className="grouping-settings-inline-values">
-          <span className="grouping-settings-chip">S {spellingInfluence}%</span>
+          <span className="grouping-settings-chip">R {spellingRelaxation}%</span>
           <span className="grouping-settings-chip">T {temporalInfluence}%</span>
         </span>
       </summary>
       <div className="grouping-settings-body">
         <label className="grouping-settings-control">
-          <span>Spelling influence</span>
+          <span>Relax spelling</span>
           <div>
             <input
               type="range"
               min={0}
               max={100}
-              value={spellingInfluence}
+              value={spellingRelaxation}
               disabled={disabled}
-              onChange={(event) => onSpellingInfluenceChange(Number(event.target.value))}
-              aria-label="Spelling influence"
+              onChange={(event) => onSpellingRelaxationChange(Number(event.target.value))}
+              aria-label="Relax spelling"
             />
-            <strong>{spellingInfluence}%</strong>
+            <strong>{spellingRelaxation}%</strong>
           </div>
         </label>
 

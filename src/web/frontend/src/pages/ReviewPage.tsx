@@ -60,7 +60,7 @@ interface GroupValidationFeedbackState {
 }
 
 interface GroupingSettingsDraft {
-  spellingInfluence: number;
+  spellingRelaxation: number;
   temporalInfluence: number;
 }
 
@@ -110,7 +110,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [groupValidationFeedback, setGroupValidationFeedback] = useState<Record<string, GroupValidationFeedbackState>>({});
   const [newGroupDropActive, setNewGroupDropActive] = useState(false);
   const [groupingSettingsDraft, setGroupingSettingsDraft] = useState<GroupingSettingsDraft>({
-    spellingInfluence: 50,
+    spellingRelaxation: 50,
     temporalInfluence: 50,
   });
   const [filter, setFilter] = useState<ReviewFilterState>({
@@ -154,14 +154,14 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   }, [selectedSession, selectedSession?.candidates, groupToggles, filter]);
   const similarityThreshold = selectedSession?.thresholds?.similarity_threshold ?? 80;
   const recommendationThreshold = selectedSession?.thresholds?.recommendation_threshold ?? 70;
-  const appliedSpellingInfluence = selectedSession?.thresholds?.spelling_influence ?? 50;
+  const appliedSpellingRelaxation = 100 - (selectedSession?.thresholds?.spelling_influence ?? 50);
   const appliedTemporalInfluence = selectedSession?.thresholds?.temporal_influence ?? 50;
-  const spellingInfluence = groupingSettingsDraft.spellingInfluence;
+  const spellingRelaxation = groupingSettingsDraft.spellingRelaxation;
   const temporalInfluence = groupingSettingsDraft.temporalInfluence;
-  const totalCandidates = selectedSession?.candidates?.length ?? 0;
-  const reviewedCandidates = useMemo(
-    () => (selectedSession?.candidates ?? []).filter((candidate) => (candidate.status ?? "pending") !== "pending").length,
-    [selectedSession?.candidates],
+  const totalGroups = selectedSession?.groups?.length ?? 0;
+  const resolvedGroups = useMemo(
+    () => (selectedSession?.groups ?? []).filter((group) => (group.resolution_status ?? "UNRESOLVED") === "RESOLVED").length,
+    [selectedSession?.groups],
   );
 
   const refreshSessions = async () => {
@@ -172,8 +172,9 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   const syncGroupingSettingsDraft = (session: ReviewSessionPayload) => {
+    const spellingInfluence = session.thresholds?.spelling_influence ?? 50;
     setGroupingSettingsDraft({
-      spellingInfluence: session.thresholds?.spelling_influence ?? 50,
+      spellingRelaxation: 100 - spellingInfluence,
       temporalInfluence: session.thresholds?.temporal_influence ?? 50,
     });
     setHasPendingGroupingSettings(false);
@@ -394,10 +395,10 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       const thresholdPayload = {
         similarity_threshold: similarityThreshold,
         recommendation_threshold: recommendationThreshold,
-        spelling_influence: spellingInfluence,
+        spelling_influence: 100 - spellingRelaxation,
         temporal_influence: temporalInfluence,
       };
-      const thresholdsChanged = spellingInfluence !== appliedSpellingInfluence
+      const thresholdsChanged = spellingRelaxation !== appliedSpellingRelaxation
         || temporalInfluence !== appliedTemporalInfluence;
       if (thresholdsChanged) {
         const thresholdsResp = await fetch(`/api/review/sessions/${normalizedSessionId}/thresholds`, {
@@ -541,13 +542,13 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
 
             <div className="review-summary-block">
               <div className="review-progress-meta">
-                <span>{reviewedCandidates} / {totalCandidates} reviewed</span>
+                <span>{resolvedGroups} / {totalGroups} resolved</span>
                 <span>{filteredCandidates.length} visible</span>
               </div>
               <progress
                 className="review-progress-track"
-                value={reviewedCandidates}
-                max={Math.max(totalCandidates, 1)}
+                value={resolvedGroups}
+                max={Math.max(totalGroups, 1)}
               />
               <div className="candidate-list-actions">
                 <button type="button" className="ghost-action" onClick={() => { void handleUndo(); }} disabled={undoCount <= 0}>
@@ -642,17 +643,17 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
               )}
             </div>
             <GroupingSettingsPanel
-              spellingInfluence={spellingInfluence}
+              spellingRelaxation={spellingRelaxation}
               temporalInfluence={temporalInfluence}
               isRecalculating={isRecalculatingGroups}
               disabled={!selectedSessionId}
-              onSpellingInfluenceChange={(value) => {
-                setGroupingSettingsDraft((previous) => ({ ...previous, spellingInfluence: value }));
-                setHasPendingGroupingSettings(value !== appliedSpellingInfluence || temporalInfluence !== appliedTemporalInfluence);
+              onSpellingRelaxationChange={(value) => {
+                setGroupingSettingsDraft((previous) => ({ ...previous, spellingRelaxation: value }));
+                setHasPendingGroupingSettings(value !== appliedSpellingRelaxation || temporalInfluence !== appliedTemporalInfluence);
               }}
               onTemporalInfluenceChange={(value) => {
                 setGroupingSettingsDraft((previous) => ({ ...previous, temporalInfluence: value }));
-                setHasPendingGroupingSettings(spellingInfluence !== appliedSpellingInfluence || value !== appliedTemporalInfluence);
+                setHasPendingGroupingSettings(spellingRelaxation !== appliedSpellingRelaxation || value !== appliedTemporalInfluence);
               }}
               onRecalculate={() => { void recalculateGroups(); }}
             />
