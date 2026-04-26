@@ -6,6 +6,7 @@ export interface CandidateGroup {
   accepted_name?: string | null;
   accepted_name_summary?: string | null;
   is_collapsed?: boolean;
+  remembered_is_collapsed?: boolean | null;
   resolution_status?: string;
   active_spellings?: string[];
   active_candidate_count?: number;
@@ -68,6 +69,7 @@ export function CandidateGroupCard({
     payload: {
       group_id: group.group_id,
       is_collapsed: !isCollapsed,
+      resolution_status: group.resolution_status ?? "UNRESOLVED",
     },
   };
 

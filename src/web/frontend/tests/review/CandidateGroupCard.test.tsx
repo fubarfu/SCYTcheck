@@ -70,6 +70,7 @@ describe("CandidateGroupCard feature 010", () => {
       payload: {
         group_id: "grp_1",
         is_collapsed: false,
+        resolution_status: "RESOLVED",
       },
     });
   });
@@ -136,6 +137,7 @@ describe("CandidateGroupCard feature 010", () => {
       payload: {
         group_id: "grp_conflict",
         is_collapsed: true,
+        resolution_status: "UNRESOLVED",
       },
     });
 
@@ -157,6 +159,102 @@ describe("CandidateGroupCard feature 010", () => {
       payload: {
         group_id: "grp_conflict",
         is_collapsed: false,
+        resolution_status: "UNRESOLVED",
+      },
+    });
+  });
+
+  it("dispatches manual collapse and re-expand actions for resolved groups", () => {
+    const onAction = vi.fn();
+    const resolvedGroup = {
+      group_id: "grp_resolved",
+      display_name: "Alice",
+      accepted_name: "Alice",
+      accepted_name_summary: "Alice",
+      resolution_status: "RESOLVED" as const,
+      occurrence_count: 2,
+      candidates: [
+        { candidate_id: "c1", extracted_name: "Alice #1", status: "pending" as const },
+        { candidate_id: "c2", extracted_name: "Alice #2", status: "pending" as const },
+      ],
+    };
+
+    const { rerender } = render(
+      <CandidateGroupCard
+        group={{ ...resolvedGroup, is_collapsed: false }}
+        sourceType="local_file"
+        sourceValue=""
+        onAction={onAction}
+        onOpenThumbnail={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Collapse group"));
+    expect(onAction).toHaveBeenCalledWith({
+      action_type: "toggle_collapse",
+      target_ids: [],
+      payload: {
+        group_id: "grp_resolved",
+        is_collapsed: true,
+        resolution_status: "RESOLVED",
+      },
+    });
+
+    rerender(
+      <CandidateGroupCard
+        group={{ ...resolvedGroup, is_collapsed: true }}
+        sourceType="local_file"
+        sourceValue=""
+        onAction={onAction}
+        onOpenThumbnail={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Expand group"));
+    expect(onAction).toHaveBeenLastCalledWith({
+      action_type: "toggle_collapse",
+      target_ids: [],
+      payload: {
+        group_id: "grp_resolved",
+        is_collapsed: false,
+        resolution_status: "RESOLVED",
+      },
+    });
+  });
+
+  it("retains resolved-group toggle controls after reload-hydrated state", () => {
+    const onAction = vi.fn();
+    render(
+      <CandidateGroupCard
+        group={{
+          group_id: "grp_resolved_hydrated",
+          display_name: "Mia",
+          accepted_name: "Mia",
+          accepted_name_summary: "Mia",
+          is_collapsed: true,
+          remembered_is_collapsed: true,
+          resolution_status: "RESOLVED",
+          occurrence_count: 1,
+          candidates: [
+            { candidate_id: "c1", extracted_name: "Mia", status: "confirmed" },
+          ],
+        }}
+        sourceType="local_file"
+        sourceValue=""
+        onAction={onAction}
+        onOpenThumbnail={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Expand group"));
+
+    expect(onAction).toHaveBeenCalledWith({
+      action_type: "toggle_collapse",
+      target_ids: [],
+      payload: {
+        group_id: "grp_resolved_hydrated",
+        is_collapsed: false,
+        resolution_status: "RESOLVED",
       },
     });
   });

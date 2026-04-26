@@ -209,13 +209,15 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       const groupId = String(action.payload?.group_id ?? "").trim();
       const requested = action.payload?.is_collapsed;
       if (groupId && typeof requested === "boolean") {
-        const nextToggles = updateGroupToggleState(groupToggles, groupId, requested);
-        setGroupToggles(nextToggles);
-        setSelectedSession((prev) => {
-          if (!prev) {
-            return prev;
-          }
-          return applyGroupToggleState(prev, nextToggles);
+        setGroupToggles((previous) => {
+          const nextToggles = updateGroupToggleState(previous, groupId, requested);
+          setSelectedSession((prev) => {
+            if (!prev) {
+              return prev;
+            }
+            return applyGroupToggleState(prev, nextToggles);
+          });
+          return nextToggles;
         });
       }
     }

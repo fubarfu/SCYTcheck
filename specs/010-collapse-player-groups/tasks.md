@@ -141,14 +141,14 @@
 
 ### Tests for User Story 5
 
-- [ ] T041 [P] [US5] Add Vitest coverage for resolved-group manual toggle persistence in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx` and `src/web/frontend/tests/review/reviewStore.test.ts`
-- [ ] T042 [P] [US5] Add integration coverage for persisted mixed collapse states across session reload in `tests/integration/test_review_groups_toggle_persistence_010.py`
+- [X] T041 [P] [US5] Add Vitest coverage for resolved-group manual toggle persistence in `src/web/frontend/tests/review/CandidateGroupCard.test.tsx` and `src/web/frontend/tests/review/reviewStore.test.ts`
+- [X] T042 [P] [US5] Add integration coverage for persisted mixed collapse states across session reload in `tests/integration/test_review_groups_toggle_persistence_010.py`
 
 ### Implementation for User Story 5
 
-- [ ] T043 [US5] Implement persisted per-group toggle state and reload hydration for resolved groups in `src/web/app/review_sidecar_store.py` and `src/web/api/routes/review_sessions.py`
-- [ ] T044 [US5] Add resolved-group manual toggle controls and associated review actions in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/components/CandidateGroupCard.tsx`
-- [ ] T045 [US5] Preserve mixed collapse states after confirm, reject, undo, and reload flows in `src/web/frontend/src/state/reviewStore.ts` and `src/web/frontend/src/state/reviewSelectors.ts`
+- [X] T043 [US5] Implement persisted per-group toggle state and reload hydration for resolved groups in `src/web/app/review_sidecar_store.py` and `src/web/api/routes/review_sessions.py`
+- [X] T044 [US5] Add resolved-group manual toggle controls and associated review actions in `src/web/frontend/src/pages/ReviewPage.tsx` and `src/web/frontend/src/components/CandidateGroupCard.tsx`
+- [X] T045 [US5] Preserve mixed collapse states after confirm, reject, undo, and reload flows in `src/web/frontend/src/state/reviewStore.ts` and `src/web/frontend/src/state/reviewSelectors.ts`
 
 **Checkpoint**: Resolved-group layout control is independently functional and survives session reloads.
 

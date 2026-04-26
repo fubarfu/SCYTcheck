@@ -44,7 +44,13 @@ export function selectVisibleGroups(
 
 export function isGroupCollapsedByDefault(group: CandidateGroup): boolean {
   const resolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
-  return resolved && Boolean(group.is_collapsed);
+  if (typeof group.is_collapsed === "boolean") {
+    return group.is_collapsed;
+  }
+  if (typeof group.remembered_is_collapsed === "boolean") {
+    return group.remembered_is_collapsed;
+  }
+  return resolved;
 }
 
 function normalizeName(value: string | null | undefined): string {

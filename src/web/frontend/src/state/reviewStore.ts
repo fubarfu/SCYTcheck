@@ -55,6 +55,7 @@ export interface ReviewGroupToggleShape {
   group_id: string;
   resolution_status?: string;
   is_collapsed?: boolean;
+  remembered_is_collapsed?: boolean | null;
   accepted_name?: string | null;
   rejected_candidate_ids?: string[];
   candidates?: Array<{
@@ -74,7 +75,15 @@ export function deriveGroupToggleState(groups: ReviewGroupToggleShape[]): GroupT
       return acc;
     }
     const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
-    acc[groupId] = typeof group.is_collapsed === "boolean" ? group.is_collapsed : isResolved;
+    if (typeof group.is_collapsed === "boolean") {
+      acc[groupId] = group.is_collapsed;
+      return acc;
+    }
+    if (typeof group.remembered_is_collapsed === "boolean") {
+      acc[groupId] = group.remembered_is_collapsed;
+      return acc;
+    }
+    acc[groupId] = isResolved;
     return acc;
   }, {});
 }
@@ -109,12 +118,19 @@ export function reconcileGroupMutationState<T extends { groups?: ReviewGroupTogg
       });
 
       const hasAccepted = Boolean(accepted);
+      const resolved = group.resolution_status ?? (hasAccepted ? "RESOLVED" : "UNRESOLVED");
+      const nextCollapsed =
+        typeof group.is_collapsed === "boolean"
+          ? group.is_collapsed
+          : typeof group.remembered_is_collapsed === "boolean"
+            ? group.remembered_is_collapsed
+          : resolved === "RESOLVED";
       return {
         ...group,
         candidates,
-        resolution_status: hasAccepted ? "RESOLVED" : (group.resolution_status ?? "UNRESOLVED"),
-        // Consensus transitions should end in collapsed state when accepted name is present.
-        is_collapsed: hasAccepted ? true : group.is_collapsed,
+        resolution_status: resolved,
+        // Preserve explicitly persisted/manual toggle state whenever available.
+        is_collapsed: nextCollapsed,
       };
     }),
   };
