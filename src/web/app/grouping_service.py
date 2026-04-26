@@ -3,10 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+_TEMPORAL_RELAXATION_MAX = 15.0
+_MIN_SIMILARITY_FLOOR = 50.0
+
+
 @dataclass
 class GroupingThresholds:
     similarity_threshold: int = 85
     temporal_window_seconds: float = 2.0
+    spelling_influence: int = 100
+    temporal_influence: int = 60
 
 
 def _name_similarity(a: str, b: str) -> float:
@@ -31,11 +37,16 @@ class GroupingService:
                 ref_name = str(group["display_name"])
                 ref_ts = float(group.get("anchor_timestamp", ts))
                 sim = _name_similarity(name, ref_name)
-                temporal_proximity = max(0.0, 100.0 - abs(ts - ref_ts) * 20.0)
-                if (
-                    sim >= thresholds.similarity_threshold
-                    and abs(ts - ref_ts) <= thresholds.temporal_window_seconds
-                ):
+                time_distance = abs(ts - ref_ts)
+                temporal_proximity = max(0.0, 100.0 - time_distance * 20.0)
+                required_similarity = _required_similarity(
+                    thresholds.similarity_threshold,
+                    thresholds.temporal_window_seconds,
+                    thresholds.spelling_influence,
+                    thresholds.temporal_influence,
+                    time_distance,
+                )
+                if sim >= required_similarity:
                     enriched = dict(candidate)
                     enriched["temporal_proximity"] = round(temporal_proximity, 1)
                     group["candidates"].append(enriched)
@@ -53,6 +64,35 @@ class GroupingService:
                     }
                 )
         return groups
+
+
+def _required_similarity(
+    similarity_threshold: int,
+    temporal_window_seconds: float,
+    spelling_influence: int,
+    temporal_influence: int,
+    time_distance_seconds: float,
+) -> float:
+    """Return required similarity using spelling strictness plus temporal boost.
+
+    Temporal proximity is suggestive (not mandatory): close timestamps may relax
+    the required similarity, but a spelling floor always remains.
+    """
+    influence_ratio = max(0.0, min(1.0, float(spelling_influence) / 100.0))
+    base = _MIN_SIMILARITY_FLOOR + ((float(similarity_threshold) - _MIN_SIMILARITY_FLOOR) * influence_ratio)
+
+    if temporal_window_seconds <= 0:
+        return max(_MIN_SIMILARITY_FLOOR, base)
+
+    if time_distance_seconds > temporal_window_seconds:
+        return max(_MIN_SIMILARITY_FLOOR, base)
+
+    temporal_ratio = max(0.0, min(1.0, float(temporal_influence) / 100.0))
+    max_relaxation = _TEMPORAL_RELAXATION_MAX * temporal_ratio
+    closeness = 1.0 - (time_distance_seconds / temporal_window_seconds)
+    closeness = max(0.0, min(1.0, closeness))
+    relaxed = base - (max_relaxation * closeness)
+    return max(_MIN_SIMILARITY_FLOOR, relaxed)
 
 
 def _parse_timestamp_seconds(raw: object) -> float:

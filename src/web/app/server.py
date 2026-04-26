@@ -167,6 +167,12 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
+        recalculate_match = re.fullmatch(r"/api/review/sessions/([^/]+)/recalculate", path)
+        if recalculate_match and method == "POST":
+            status, body = self._services.review_sessions.post_recalculate(recalculate_match.group(1))
+            self._send_json(status, body)
+            return True
+
         actions_match = re.fullmatch(r"/api/review/sessions/([^/]+)/actions", path)
         if actions_match and method == "POST":
             status, body = self._services.review_actions.post_action(

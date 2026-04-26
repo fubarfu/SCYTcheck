@@ -16,6 +16,7 @@ export function GroupListItem({ group, isSelected, hasValidationError = false, o
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
   const activeSpellings = Array.isArray(group.active_spellings) ? group.active_spellings : [];
   const hasConflict = !isResolved && activeSpellings.length > 1;
+  const hasIssue = !isResolved;
   const candidateCount = group.total_candidate_count ?? group.candidates.length;
   const occurrenceCount = group.occurrence_count ?? candidateCount;
   const acceptedSummary = group.accepted_name_summary ?? group.accepted_name ?? null;
@@ -25,12 +26,12 @@ export function GroupListItem({ group, isSelected, hasValidationError = false, o
   if (hasValidationError) {
     statusLabel = "Conflict";
     statusVariant = "status-error";
+  } else if (hasIssue) {
+    statusLabel = hasConflict ? "In Review" : "Unresolved";
+    statusVariant = "status-error";
   } else if (isResolved) {
     statusLabel = "Resolved";
     statusVariant = "status-resolved";
-  } else if (hasConflict) {
-    statusLabel = "In Review";
-    statusVariant = "status-review";
   }
 
   const subtitle = isResolved && acceptedSummary
@@ -40,13 +41,16 @@ export function GroupListItem({ group, isSelected, hasValidationError = false, o
   return (
     <button
       type="button"
-      className={`group-rail-item${isSelected ? " is-selected" : ""}${hasValidationError ? " has-error" : ""}`}
+      className={`group-rail-item${isSelected ? " is-selected" : ""}${hasValidationError || hasIssue ? " has-issue" : ""}`}
       data-testid={`group-rail-item-${group.group_id}`}
       data-status={statusVariant}
       data-selected={isSelected ? "true" : "false"}
       onClick={() => onSelect(group.group_id)}
     >
       <div className="group-rail-heading">
+        {(hasValidationError || hasIssue) && (
+          <span className="group-rail-issue-icon material-symbols-outlined" aria-hidden="true">warning</span>
+        )}
         <span className="group-rail-title">{group.display_name}</span>
         <span className={`group-rail-status ${statusVariant}`}>{statusLabel}</span>
       </div>

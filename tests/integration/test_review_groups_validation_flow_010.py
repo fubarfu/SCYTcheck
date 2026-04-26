@@ -16,8 +16,7 @@ def _make_duplicate_validation_csv(tmp_path: Path) -> Path:
         "PlayerName,StartTimestamp\n"
         "Alice,00:00:01.000\n"
         "Alice,00:00:01.200\n"
-        "Alyce,00:00:10.000\n"
-        "Alice,00:00:10.300\n",
+        "Bob,00:00:10.000\n",
         encoding="utf-8",
     )
     return csv_path
@@ -45,47 +44,68 @@ def test_duplicate_name_validation_blocks_action_and_preserves_group_state(tmp_p
     assert load_status == 200
     session_id = load_body["session_id"]
 
-    threshold_status, _ = session_handler.patch_thresholds(
-        session_id,
-        {
-            "similarity_threshold": 50,
-            "recommendation_threshold": 70,
-        },
-    )
-    assert threshold_status == 200
-
-    threshold_status, _ = session_handler.patch_thresholds(
-        session_id,
-        {
-            "similarity_threshold": 50,
-            "recommendation_threshold": 70,
-        },
-    )
-    assert threshold_status == 200
-
     before_status, before_body = session_handler.get_session(session_id)
     assert before_status == 200
     groups = before_body.get("groups", [])
-    assert len(groups) == 2
 
     resolved_group = next(group for group in groups if group["accepted_name"] == "Alice")
-    target_group = next(group for group in groups if group["group_id"] != resolved_group["group_id"])
-    target_group_accepted_before = target_group.get("accepted_name")
-    target_group_resolution_before = target_group.get("resolution_status")
-    target_group_collapsed_before = target_group.get("is_collapsed")
     target_candidate = next(
         candidate
-        for candidate in target_group["candidates"]
+        for candidate in resolved_group["candidates"]
         if candidate["extracted_name"] == "Alice"
     )
-    target_candidate_status_before = target_candidate.get("status") or "pending"
+
+    move_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "move_candidate",
+            "target_ids": [target_candidate["candidate_id"]],
+            "payload": {
+                "candidate_id": target_candidate["candidate_id"],
+                "source_group_id": resolved_group["group_id"],
+                "create_new_group": True,
+            },
+        },
+    )
+    assert move_status == 200
+
+    mid_status, mid_body = session_handler.get_session(session_id)
+    assert mid_status == 200
+    mid_groups = mid_body.get("groups", [])
+    moved_target_group = next(
+        group
+        for group in mid_groups
+        if any(candidate["candidate_id"] == target_candidate["candidate_id"] for candidate in group["candidates"])
+    )
+    source_group_after_move = next(group for group in mid_groups if group["group_id"] == resolved_group["group_id"])
+    source_candidate_after_move = next(
+        candidate
+        for candidate in source_group_after_move["candidates"]
+        if candidate["candidate_id"] != target_candidate["candidate_id"] and candidate["extracted_name"] == "Alice"
+    )
+    source_confirm_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "confirm",
+            "target_ids": [source_candidate_after_move["candidate_id"]],
+            "payload": {"group_id": source_group_after_move["group_id"]},
+        },
+    )
+    assert source_confirm_status == 200
+
+    target_group_accepted_before = moved_target_group.get("accepted_name")
+    target_group_resolution_before = moved_target_group.get("resolution_status")
+    target_group_collapsed_before = moved_target_group.get("is_collapsed")
+    target_candidate_status_before = next(
+        candidate for candidate in moved_target_group["candidates"] if candidate["candidate_id"] == target_candidate["candidate_id"]
+    ).get("status") or "pending"
 
     action_status, action_body = actions_handler.post_action(
         session_id,
         {
             "action_type": "confirm",
             "target_ids": [target_candidate["candidate_id"]],
-            "payload": {"group_id": target_group["group_id"]},
+            "payload": {"group_id": moved_target_group["group_id"]},
         },
     )
 
@@ -100,7 +120,7 @@ def test_duplicate_name_validation_blocks_action_and_preserves_group_state(tmp_p
     after_target_group = next(
         group
         for group in after_body["groups"]
-        if group["group_id"] == target_group["group_id"]
+        if group["group_id"] == moved_target_group["group_id"]
     )
     assert after_target_group["accepted_name"] == target_group_accepted_before
     assert after_target_group["resolution_status"] == target_group_resolution_before
@@ -124,25 +144,53 @@ def test_validation_feedback_latency_stays_under_500ms_for_duplicate_block(tmp_p
     assert load_status == 200
     session_id = load_body["session_id"]
 
-    threshold_status, _ = session_handler.patch_thresholds(
-        session_id,
-        {
-            "similarity_threshold": 50,
-            "recommendation_threshold": 70,
-        },
-    )
-    assert threshold_status == 200
-
     get_status, body = session_handler.get_session(session_id)
     assert get_status == 200
     groups = body.get("groups", [])
     resolved_group = next(group for group in groups if group["accepted_name"] == "Alice")
-    conflict_group = next(group for group in groups if group["group_id"] != resolved_group["group_id"])
     conflict_candidate = next(
         candidate
-        for candidate in conflict_group["candidates"]
+        for candidate in resolved_group["candidates"]
         if candidate["extracted_name"] == "Alice"
     )
+
+    move_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "move_candidate",
+            "target_ids": [conflict_candidate["candidate_id"]],
+            "payload": {
+                "candidate_id": conflict_candidate["candidate_id"],
+                "source_group_id": resolved_group["group_id"],
+                "create_new_group": True,
+            },
+        },
+    )
+    assert move_status == 200
+
+    moved_status, moved_body = session_handler.get_session(session_id)
+    assert moved_status == 200
+    moved_groups = moved_body.get("groups", [])
+    conflict_group = next(
+        group
+        for group in moved_groups
+        if any(candidate["candidate_id"] == conflict_candidate["candidate_id"] for candidate in group["candidates"])
+    )
+    source_group_after_move = next(group for group in moved_groups if group["group_id"] == resolved_group["group_id"])
+    source_candidate_after_move = next(
+        candidate
+        for candidate in source_group_after_move["candidates"]
+        if candidate["candidate_id"] != conflict_candidate["candidate_id"] and candidate["extracted_name"] == "Alice"
+    )
+    source_confirm_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "confirm",
+            "target_ids": [source_candidate_after_move["candidate_id"]],
+            "payload": {"group_id": source_group_after_move["group_id"]},
+        },
+    )
+    assert source_confirm_status == 200
 
     started_at = perf_counter()
     status, response = actions_handler.post_action(

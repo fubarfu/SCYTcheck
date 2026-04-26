@@ -44,6 +44,7 @@ def build_router() -> RouteRegistry:
     router.add("GET", "/api/review/sessions/{session_id}", lambda session_id: session_id)
     router.add("POST", "/api/review/sessions/{session_id}/actions", lambda session_id, payload=None: payload)
     router.add("POST", "/api/review/sessions/{session_id}/undo", lambda session_id: session_id)
+    router.add("POST", "/api/review/sessions/{session_id}/recalculate", lambda session_id: session_id)
 
     router.add("GET", "/api/history/videos", lambda: {})
     router.add("GET", "/api/history/videos/{history_id}", lambda history_id: history_id)

@@ -394,3 +394,101 @@ def test_actions_contract_move_candidate_to_new_group_creates_new_group(tmp_path
         and group["group_id"].startswith("grp_manual_")
         for group in moved_groups
     )
+
+
+def test_recalculate_contract_resets_review_decisions_and_regroups(tmp_path: Path) -> None:
+    manager = SessionManager()
+    session_handler = ReviewSessionHandler(session_manager=manager)
+    actions_handler = ReviewActionsHandler(session_manager=manager)
+
+    csv_path = _make_duplicate_contract_csv(tmp_path)
+    load_status, load_body = session_handler.post_load({"csv_path": str(csv_path)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+
+    threshold_status, _ = session_handler.patch_thresholds(
+        session_id,
+        {
+            "similarity_threshold": 50,
+            "recommendation_threshold": 70,
+            "spelling_influence": 100,
+            "temporal_influence": 60,
+        },
+    )
+    assert threshold_status == 200
+
+    before_status, before_body = session_handler.get_session(session_id)
+    assert before_status == 200
+    before_groups = before_body.get("groups", [])
+    assert len(before_groups) == 2
+
+    source_group = before_groups[0]
+    target_group = before_groups[1]
+    move_candidate_id = source_group["candidates"][0]["candidate_id"]
+    edit_candidate_id = source_group["candidates"][1]["candidate_id"]
+    confirm_candidate_id = target_group["candidates"][0]["candidate_id"]
+
+    move_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "move_candidate",
+            "target_ids": [move_candidate_id],
+            "payload": {
+                "candidate_id": move_candidate_id,
+                "source_group_id": source_group["group_id"],
+                "create_new_group": True,
+            },
+        },
+    )
+    assert move_status == 200
+
+    confirm_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "confirm",
+            "target_ids": [confirm_candidate_id],
+            "payload": {"group_id": target_group["group_id"]},
+        },
+    )
+    assert confirm_status == 200
+
+    reject_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "reject",
+            "target_ids": [confirm_candidate_id],
+            "payload": {"group_id": target_group["group_id"]},
+        },
+    )
+    assert reject_status == 200
+
+    edit_status, _ = actions_handler.post_action(
+        session_id,
+        {
+            "action_type": "edit",
+            "target_ids": [edit_candidate_id],
+            "payload": {
+                "group_id": source_group["group_id"],
+                "corrected_text": "AliceEdited",
+            },
+        },
+    )
+    assert edit_status == 200
+
+    recalc_status, recalc_body = session_handler.post_recalculate(session_id)
+    assert recalc_status == 200
+
+    assert recalc_body["accepted_names"] == {}
+    assert recalc_body["rejected_candidates"] == {}
+    assert recalc_body["resolution_status"]
+    assert recalc_body["candidate_group_overrides"] == {}
+    assert recalc_body["action_history"] == []
+
+    for candidate in recalc_body.get("candidates", []):
+        assert candidate.get("status") == "pending"
+        assert "corrected_text" not in candidate
+
+    after_status, after_body = session_handler.get_session(session_id)
+    assert after_status == 200
+    assert len(after_body.get("groups", [])) == 2
+    assert all(group["group_id"].startswith("grp_") for group in after_body.get("groups", []))

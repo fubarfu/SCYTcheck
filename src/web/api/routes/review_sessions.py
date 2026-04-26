@@ -64,6 +64,8 @@ class ReviewSessionHandler:
                     "similarity_threshold": 80,
                     "recommendation_threshold": 70,
                     "temporal_window_seconds": 2.0,
+                    "spelling_influence": 100,
+                    "temporal_influence": 60,
                 },
             ),
             "accepted_names": existing.get("accepted_names", {}),
@@ -127,13 +129,61 @@ class ReviewSessionHandler:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
 
         session_payload = dict(state.payload or {})
-        similarity_threshold = int(payload.get("similarity_threshold", 85))
-        recommendation_threshold = int(payload.get("recommendation_threshold", 70))
+        existing_thresholds = dict(session_payload.get("thresholds", {}))
+
+        similarity_threshold = int(payload.get("similarity_threshold", existing_thresholds.get("similarity_threshold", 85)))
+        recommendation_threshold = int(payload.get("recommendation_threshold", existing_thresholds.get("recommendation_threshold", 70)))
+        temporal_window_seconds = float(payload.get("temporal_window_seconds", existing_thresholds.get("temporal_window_seconds", 2.0)))
+        spelling_influence = int(payload.get("spelling_influence", existing_thresholds.get("spelling_influence", 100)))
+        temporal_influence = int(payload.get("temporal_influence", existing_thresholds.get("temporal_influence", 60)))
 
         session_payload["thresholds"] = {
             "similarity_threshold": similarity_threshold,
             "recommendation_threshold": recommendation_threshold,
+            "temporal_window_seconds": temporal_window_seconds,
+            "spelling_influence": spelling_influence,
+            "temporal_influence": temporal_influence,
         }
+        session_payload = recompute_groups(session_payload)
+        self.sessions.upsert(state.session_id, state.csv_path, session_payload)
+        self._sidecar.save(Path(state.csv_path), session_payload)
+
+        return 200, {
+            "session_id": state.session_id,
+            "csv_path": state.csv_path,
+            **session_payload,
+        }
+
+    def post_recalculate(self, session_id: str) -> tuple[int, dict]:
+        state = self.sessions.get(session_id)
+        if state is None:
+            return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
+
+        session_payload = dict(state.payload or {})
+        current_candidates = list(session_payload.get("candidates", []))
+
+        reset_candidates: list[dict[str, Any]] = []
+        for raw_candidate in current_candidates:
+            candidate = dict(raw_candidate)
+            candidate["status"] = "pending"
+            candidate.pop("corrected_text", None)
+            reset_candidates.append(candidate)
+
+        session_payload["candidates"] = reset_candidates
+        session_payload["candidates_original"] = [dict(candidate) for candidate in reset_candidates]
+        session_payload["accepted_names"] = {}
+        session_payload["rejected_candidates"] = {}
+        session_payload["collapsed_groups"] = {}
+        session_payload["resolution_status"] = {}
+        session_payload["candidate_group_overrides"] = {}
+        session_payload["action_history"] = []
+
+        session_payload["accepted_names_original"] = {}
+        session_payload["rejected_candidates_original"] = {}
+        session_payload["collapsed_groups_original"] = {}
+        session_payload["resolution_status_original"] = {}
+        session_payload["candidate_group_overrides_original"] = {}
+
         session_payload = recompute_groups(session_payload)
         self.sessions.upsert(state.session_id, state.csv_path, session_payload)
         self._sidecar.save(Path(state.csv_path), session_payload)

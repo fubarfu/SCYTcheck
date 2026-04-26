@@ -97,6 +97,7 @@ def test_recompute_groups_respects_rejections_when_computing_consensus_state() -
     assert group["is_collapsed"] is False
 
     payload["rejected_candidates"] = {group_id: ["c2"]}
+    payload["resolution_status"] = {}
     payload = recompute_groups(payload)
     group = payload["groups"][0]
     assert group["resolution_status"] == "RESOLVED"

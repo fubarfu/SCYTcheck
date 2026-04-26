@@ -103,6 +103,7 @@ export function CandidateGroupCard({
 
   const isCollapsed = forceExpanded ? false : Boolean(group.is_collapsed);
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
+  const hasIssue = !isResolved;
   const activeSpellings = Array.isArray(group.active_spellings) ? group.active_spellings : [];
   const hasConflict = !isResolved && activeSpellings.length > 1;
   const acceptedSummary = group.accepted_name_summary ?? group.accepted_name ?? null;

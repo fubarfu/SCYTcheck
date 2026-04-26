@@ -3,6 +3,7 @@ import { CandidateRow, type Candidate } from "../components/CandidateRow";
 import { CandidateGroupCard, type CandidateGroup } from "../components/CandidateGroupCard";
 import { GroupListItem } from "../components/GroupListItem";
 import { FrameThumbnailModal } from "../components/FrameThumbnailModal";
+import { GroupingSettingsPanel } from "../components/GroupingSettingsPanel";
 import { ReviewFilterBar } from "../components/ReviewFilterBar";
 import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
 import {
@@ -45,6 +46,8 @@ interface ReviewSessionPayload {
   thresholds?: {
     similarity_threshold?: number;
     recommendation_threshold?: number;
+    spelling_influence?: number;
+    temporal_influence?: number;
   };
   groups?: CandidateGroup[];
 }
@@ -94,6 +97,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
   const [csvPathInput, setCsvPathInput] = useState("");
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [isRecalculatingGroups, setIsRecalculatingGroups] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [undoCount, setUndoCount] = useState(0);
   const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
@@ -140,6 +144,8 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   }, [selectedSession, selectedSession?.candidates, groupToggles, filter]);
   const similarityThreshold = selectedSession?.thresholds?.similarity_threshold ?? 80;
   const recommendationThreshold = selectedSession?.thresholds?.recommendation_threshold ?? 70;
+  const spellingInfluence = selectedSession?.thresholds?.spelling_influence ?? 100;
+  const temporalInfluence = selectedSession?.thresholds?.temporal_influence ?? 60;
   const totalCandidates = selectedSession?.candidates?.length ?? 0;
   const reviewedCandidates = useMemo(
     () => (selectedSession?.candidates ?? []).filter((candidate) => (candidate.status ?? "pending") !== "pending").length,
@@ -338,11 +344,15 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     await fetchSession(selectedSessionId);
   };
 
-  const patchThresholds = async (next: { similarity?: number; recommendation?: number }) => {
+  const patchThresholds = async (
+    next: { similarity?: number; recommendation?: number; spellingInfluence?: number; temporalInfluence?: number },
+  ) => {
     if (!selectedSessionId) return;
     const payload = {
       similarity_threshold: next.similarity ?? similarityThreshold,
       recommendation_threshold: next.recommendation ?? recommendationThreshold,
+      spelling_influence: next.spellingInfluence ?? spellingInfluence,
+      temporal_influence: next.temporalInfluence ?? temporalInfluence,
     };
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/thresholds`, {
       method: "PATCH",
@@ -350,11 +360,40 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       body: JSON.stringify(payload),
     });
     if (!resp.ok) {
-      setLoadingError("Unable to update group thresholds");
+      setLoadingError("Unable to update grouping settings");
       return;
     }
     const session = await resp.json() as ReviewSessionPayload;
     setSelectedSession(reconcileGroupMutationState(session));
+  };
+
+  const recalculateGroups = async () => {
+    if (!selectedSessionId || isRecalculatingGroups) return;
+    const shouldContinue = window.confirm(
+      "Recalculate groups with current settings? This will reset your current review decisions (resolved/unresolved state, accepted/rejected selections, and manual grouping changes).",
+    );
+    if (!shouldContinue) {
+      return;
+    }
+
+    setIsRecalculatingGroups(true);
+    setExportMessage(null);
+    setGroupValidationFeedback({});
+    setLoadingError(null);
+    try {
+      const resp = await fetch(`/api/review/sessions/${selectedSessionId}/recalculate`, {
+        method: "POST",
+      });
+      if (!resp.ok) {
+        setLoadingError("Unable to recalculate groups");
+        return;
+      }
+      const session = await resp.json() as ReviewSessionPayload;
+      setSelectedSession(reconcileGroupMutationState(session));
+      setUndoCount(0);
+    } finally {
+      setIsRecalculatingGroups(false);
+    }
   };
 
   const handleUndo = async () => {
@@ -491,12 +530,8 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
             <ReviewFilterBar
               searchText={filter.searchText}
               status={filter.status}
-              similarityThreshold={similarityThreshold}
-              recommendationThreshold={recommendationThreshold}
               onSearchTextChange={(value) => setFilter((prev) => ({ ...prev, searchText: value }))}
               onStatusChange={(value) => setFilter((prev) => ({ ...prev, status: value }))}
-              onSimilarityThresholdChange={(value) => { void patchThresholds({ similarity: value }); }}
-              onRecommendationThresholdChange={(value) => { void patchThresholds({ recommendation: value }); }}
             />
           </div>
         </div>
@@ -559,6 +594,15 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                 ))
               )}
             </div>
+            <GroupingSettingsPanel
+              spellingInfluence={spellingInfluence}
+              temporalInfluence={temporalInfluence}
+              isRecalculating={isRecalculatingGroups}
+              disabled={!selectedSessionId}
+              onSpellingInfluenceChange={(value) => { void patchThresholds({ spellingInfluence: value }); }}
+              onTemporalInfluenceChange={(value) => { void patchThresholds({ temporalInfluence: value }); }}
+              onRecalculate={() => { void recalculateGroups(); }}
+            />
           </aside>
 
           <div className="review-workspace-pane">

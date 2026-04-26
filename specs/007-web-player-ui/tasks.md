@@ -7,12 +7,12 @@
 
 **Purpose**: Establish project scaffolding for local web runtime and Stitch-aligned frontend source layout.
 
-- [X] T001 Create frontend source scaffold (components, pages, styles, state) in src/web/frontend/src/
-- [X] T002 Create frontend package scripts and dependencies for build/test in src/web/frontend/package.json
-- [X] T003 [P] Create shared frontend TypeScript config in src/web/frontend/tsconfig.json
-- [X] T004 [P] Create frontend build config and entry wiring in src/web/frontend/vite.config.ts
-- [X] T005 Create backend web app bootstrap module for localhost serving in src/web/app/server.py
-- [X] T006 [P] Add web app startup configuration defaults in src/web/app/config.py
+- [ ] T001 Create frontend source scaffold (components, pages, styles, state) in src/web/frontend/src/
+- [ ] T002 Create frontend package scripts and dependencies for build/test in src/web/frontend/package.json
+- [ ] T003 [P] Create shared frontend TypeScript config in src/web/frontend/tsconfig.json
+- [ ] T004 [P] Create frontend build config and entry wiring in src/web/frontend/vite.config.ts
+- [ ] T005 Create backend web app bootstrap module for localhost serving in src/web/app/server.py
+- [ ] T006 [P] Add web app startup configuration defaults in src/web/app/config.py
 
 ---
 
@@ -22,14 +22,14 @@
 
 **CRITICAL**: No user story work starts before this phase is done.
 
-- [X] T007 Implement API DTOs and validation schemas from contracts in src/web/api/schemas.py
-- [X] T008 [P] Implement settings repository for scytcheck_settings.json read/write in src/web/app/settings_store.py
-- [X] T009 [P] Implement review sidecar JSON repository with atomic writes in src/web/app/review_sidecar_store.py
-- [X] T010 [P] Implement result CSV schema/version validator in src/web/app/result_schema_validator.py
-- [X] T011 Implement in-memory session manager and lifecycle registry in src/web/app/session_manager.py
-- [X] T012 [P] Implement thumbnail/frame asset resolver and cache path rules in src/web/app/frame_asset_store.py
-- [X] T013 Implement API route registration and shared error mapping in src/web/api/router.py
-- [X] T014 Add cross-cutting backend tests for schema validator and sidecar atomicity in tests/unit/test_review_foundation_007.py
+- [ ] T007 Implement API DTOs and validation schemas from contracts in src/web/api/schemas.py
+- [ ] T008 [P] Implement settings repository for scytcheck_settings.json read/write in src/web/app/settings_store.py
+- [ ] T009 [P] Implement review sidecar JSON repository with atomic writes in src/web/app/review_sidecar_store.py
+- [ ] T010 [P] Implement result CSV schema/version validator in src/web/app/result_schema_validator.py
+- [ ] T011 Implement in-memory session manager and lifecycle registry in src/web/app/session_manager.py
+- [ ] T012 [P] Implement thumbnail/frame asset resolver and cache path rules in src/web/app/frame_asset_store.py
+- [ ] T013 Implement API route registration and shared error mapping in src/web/api/router.py
+- [ ] T014 Add cross-cutting backend tests for schema validator and sidecar atomicity in tests/unit/test_review_foundation_007.py
 
 **Checkpoint**: Core infrastructure complete; story phases can begin.
 
@@ -43,15 +43,15 @@
 
 ### Tests for User Story 0
 
-- [X] T015 [P] [US0] Add integration test for launcher opening localhost Analysis view in tests/integration/test_web_launch_007.py
-- [X] T016 [P] [US0] Add integration test for rerun behavior when server already running in tests/integration/test_web_launch_rerun_007.py
+- [ ] T015 [P] [US0] Add integration test for launcher opening localhost Analysis view in tests/integration/test_web_launch_007.py
+- [ ] T016 [P] [US0] Add integration test for rerun behavior when server already running in tests/integration/test_web_launch_rerun_007.py
 
 ### Implementation for User Story 0
 
-- [X] T017 [US0] Implement single-instance startup and browser-open flow in src/web/app/launcher.py
-- [X] T018 [US0] Implement fallback port-detection and tab-open behavior in src/web/app/server.py
-- [X] T019 [US0] Implement top-level Analysis/Review navigation shell in src/web/frontend/src/App.tsx (Stitch: 860c4f4ace1a440f871b8de136d04b33)
-- [X] T020 [US0] Add route-level smoke checks for navigation without reload in tests/integration/test_web_navigation_007.py
+- [ ] T017 [US0] Implement single-instance startup and browser-open flow in src/web/app/launcher.py
+- [ ] T018 [US0] Implement fallback port-detection and tab-open behavior in src/web/app/server.py
+- [ ] T019 [US0] Implement top-level Analysis/Review navigation shell in src/web/frontend/src/App.tsx
+- [ ] T020 [US0] Add route-level smoke checks for navigation without reload in tests/integration/test_web_navigation_007.py
 
 **Checkpoint**: App launch path and view navigation independently functional.
 
@@ -65,21 +65,19 @@
 
 ### Tests for User Story 1
 
-- [X] T021 [P] [US1] Add contract tests for settings and analysis endpoints in tests/contract/test_analysis_api_007.py
-- [X] T022 [P] [US1] Add integration test for full Analysis view parity controls in tests/integration/test_analysis_parity_controls_007.py
-- [X] T023 [P] [US1] Add integration test for start/progress/stop flow in tests/integration/test_analysis_run_stop_007.py
+- [ ] T021 [P] [US1] Add contract tests for settings and analysis endpoints in tests/contract/test_analysis_api_007.py
+- [ ] T022 [P] [US1] Add integration test for full Analysis view parity controls in tests/integration/test_analysis_parity_controls_007.py
+- [ ] T023 [P] [US1] Add integration test for start/progress/stop flow in tests/integration/test_analysis_run_stop_007.py
 
 ### Implementation for User Story 1
 
-- [X] T024 [US1] Implement GET/PUT settings endpoints from analysis contract in src/web/api/routes/settings.py
-- [X] T075 [US1] Implement analysis adapter bridge: async wrapper around existing src/services/analysis_service.py that runs analysis in a background thread, exposes run_id state model with progress/cancel signals, and bridges service callbacks to the FastAPI polling contract in src/web/app/analysis_adapter.py
-- [X] T025 [US1] Implement preview-frame and region selector backend endpoints in src/web/api/routes/analysis.py
-- [X] T026 [US1] Implement analysis start/progress/stop/result endpoints using T075 adapter in src/web/api/routes/analysis.py
-- [X] T027 [US1] Implement Analysis view form state and validation for source/output/settings including auto-generated output filename preview derived from video source identity (LP-003) in src/web/frontend/src/pages/AnalysisPage.tsx (Stitch: 860c4f4ace1a440f871b8de136d04b33)
-- [X] T028 [US1] Implement interactive scan-region selector modal UI in src/web/frontend/src/components/RegionSelectorModal.tsx (Stitch: b28f75f678a54812994bedd7291de13c)
-- [X] T029 [US1] Implement live progress panel and stop control wiring in src/web/frontend/src/components/AnalysisProgressPanel.tsx (Stitch: be5b3692817f4a81b652870f75c6c2ca)
-- [X] T072 [US1] Implement LP-005 export-failed retry action and error-state banner in src/web/frontend/src/components/AnalysisProgressPanel.tsx
-- [X] T030 [US1] Implement parity controls section (context patterns, gating, tolerance, OCR, logging, quality) in src/web/frontend/src/components/AnalysisSettingsPanel.tsx (Stitch: 860c4f4ace1a440f871b8de136d04b33)
+- [ ] T024 [US1] Implement GET/PUT settings endpoints from analysis contract in src/web/api/routes/settings.py
+- [ ] T025 [US1] Implement preview-frame and region selector backend endpoints in src/web/api/routes/analysis.py
+- [ ] T026 [US1] Implement analysis start/progress/stop/result endpoints in src/web/api/routes/analysis.py
+- [ ] T027 [US1] Implement Analysis view form state and validation for source/output/settings in src/web/frontend/src/pages/AnalysisPage.tsx
+- [ ] T028 [US1] Implement interactive scan-region selector modal UI in src/web/frontend/src/components/RegionSelectorModal.tsx
+- [ ] T029 [US1] Implement live progress panel and stop control wiring in src/web/frontend/src/components/AnalysisProgressPanel.tsx
+- [ ] T030 [US1] Implement parity controls section (context patterns, gating, tolerance, OCR, logging, quality) in src/web/frontend/src/components/AnalysisSettingsPanel.tsx
 
 **Checkpoint**: Analysis configuration/run workflow independently functional.
 
@@ -93,23 +91,21 @@
 
 ### Tests for User Story 2
 
-- [X] T031 [P] [US2] Add contract tests for review session/action/export endpoints in tests/contract/test_review_api_007.py
-- [X] T032 [P] [US2] Add integration test for candidate review lifecycle and persistence in tests/integration/test_review_lifecycle_007.py
-- [X] T033 [P] [US2] Add integration test for thumbnail modal and YouTube deep link behavior in tests/integration/test_review_thumbnail_link_007.py
-- [X] T034 [P] [US2] Add integration test for export outputs (dedupe + occurrences) in tests/integration/test_review_export_007.py
+- [ ] T031 [P] [US2] Add contract tests for review session/action/export endpoints in tests/contract/test_review_api_007.py
+- [ ] T032 [P] [US2] Add integration test for candidate review lifecycle and persistence in tests/integration/test_review_lifecycle_007.py
+- [ ] T033 [P] [US2] Add integration test for thumbnail modal and YouTube deep link behavior in tests/integration/test_review_thumbnail_link_007.py
+- [ ] T034 [P] [US2] Add integration test for export outputs (dedupe + occurrences) in tests/integration/test_review_export_007.py
 
 ### Implementation for User Story 2
 
-- [X] T035 [US2] Implement session load/list/get endpoints with schema gate in src/web/api/routes/review_sessions.py
-	> Note: `review_sessions.py` is shared by T035 (load/list/get), T059 (directory scan), and T071 (PATCH thresholds). Coordinate to avoid conflicts; consider splitting T071 to `review_thresholds.py` if parallel implementation is needed.
-- [X] T036 [US2] Implement mutating action endpoint with immediate sidecar persistence in src/web/api/routes/review_actions.py; MUST handle all action_types defined in contracts/review-api.md: confirm, reject, edit, remove, move_candidate, merge_groups, reorder_group
-- [X] T037 [US2] Implement undo endpoint with full action history rollback in src/web/api/routes/review_actions.py
-- [X] T038 [US2] Implement thumbnail endpoint with local fallback extraction/cache in src/web/api/routes/review_assets.py
-- [X] T039 [US2] Implement export endpoint for deduplicated and occurrences CSV outputs in src/web/api/routes/review_export.py
-- [X] T040 [US2] Implement Review page candidate list and status actions UI in src/web/frontend/src/pages/ReviewPage.tsx (Stitch: 27b2ad687bd547429e2066b8447378cb)
-- [X] T041 [US2] Implement candidate inline edit/remove/undo interactions including conditional YouTube deep link display (shown only when source_type is youtube_url, omitted for local file sources) in src/web/frontend/src/components/CandidateRow.tsx (Stitch: 27b2ad687bd547429e2066b8447378cb)
-- [X] T042 [US2] Implement frame thumbnail modal and contextual metadata UI in src/web/frontend/src/components/FrameThumbnailModal.tsx (Stitch: 86073009f5014d538492307fd9be599e)
-- [X] T074 [US2] Modify src/services/analysis_service.py to write each detected frame image to <result_frames>/<candidate_id>.png alongside the result CSV at the moment of detection (FR-024); add unit tests for frame write path in tests/unit/test_analysis_thumbnail_capture.py
+- [ ] T035 [US2] Implement session load/list/get endpoints with schema gate in src/web/api/routes/review_sessions.py
+- [ ] T036 [US2] Implement mutating action endpoint with immediate sidecar persistence in src/web/api/routes/review_actions.py
+- [ ] T037 [US2] Implement undo endpoint with full action history rollback in src/web/api/routes/review_actions.py
+- [ ] T038 [US2] Implement thumbnail endpoint with local fallback extraction/cache in src/web/api/routes/review_assets.py
+- [ ] T039 [US2] Implement export endpoint for deduplicated and occurrences CSV outputs in src/web/api/routes/review_export.py
+- [ ] T040 [US2] Implement Review page candidate list and status actions UI in src/web/frontend/src/pages/ReviewPage.tsx
+- [ ] T041 [US2] Implement candidate inline edit/remove/undo interactions in src/web/frontend/src/components/CandidateRow.tsx
+- [ ] T042 [US2] Implement frame thumbnail modal and contextual metadata UI in src/web/frontend/src/components/FrameThumbnailModal.tsx
 
 **Checkpoint**: Candidate review and persistence/export workflow independently functional.
 
@@ -123,15 +119,15 @@
 
 ### Tests for User Story 3
 
-- [X] T043 [P] [US3] Add integration test for live search filtering behavior in tests/integration/test_review_search_filter_007.py
-- [X] T044 [P] [US3] Add integration test ensuring actions on visible candidates do not affect hidden candidates in tests/integration/test_review_filter_action_scope_007.py
+- [ ] T043 [P] [US3] Add integration test for live search filtering behavior in tests/integration/test_review_search_filter_007.py
+- [ ] T044 [P] [US3] Add integration test ensuring actions on visible candidates do not affect hidden candidates in tests/integration/test_review_filter_action_scope_007.py
 
 ### Implementation for User Story 3
 
-- [X] T045 [US3] Implement backend filter/query support for review snapshots in src/web/app/session_query_service.py
-- [X] T046 [US3] Implement Review search box and status filter controls in src/web/frontend/src/components/ReviewFilterBar.tsx (Stitch: 27b2ad687bd547429e2066b8447378cb)
-- [X] T047 [US3] Implement client-side filtered rendering and selection scoping in src/web/frontend/src/state/reviewSelectors.ts
-- [X] T048 [US3] Add search/filter performance assertions for 500 candidates in tests/integration/test_review_filter_performance_007.py
+- [ ] T045 [US3] Implement backend filter/query support for review snapshots in src/web/app/session_query_service.py
+- [ ] T046 [US3] Implement Review search box and status filter controls in src/web/frontend/src/components/ReviewFilterBar.tsx
+- [ ] T047 [US3] Implement client-side filtered rendering and selection scoping in src/web/frontend/src/state/reviewSelectors.ts
+- [ ] T048 [US3] Add search/filter performance assertions for 500 candidates in tests/integration/test_review_filter_performance_007.py
 
 **Checkpoint**: Search and filtering independently functional and performant.
 
@@ -145,18 +141,17 @@
 
 ### Tests for User Story 4
 
-- [X] T049 [P] [US4] Add unit tests for grouping algorithm and threshold recomputation in tests/unit/test_review_grouping_007.py
-- [X] T050 [P] [US4] Add unit tests for recommendation scoring and threshold behavior in tests/unit/test_review_recommendations_007.py
-- [X] T051 [P] [US4] Add integration test for bulk confirm/reject and selective candidate confirmation in tests/integration/test_review_bulk_actions_007.py
-- [X] T052 [P] [US4] Add integration test for regroup on edit and user notice behavior in tests/integration/test_review_regroup_on_edit_007.py
+- [ ] T049 [P] [US4] Add unit tests for grouping algorithm and threshold recomputation in tests/unit/test_review_grouping_007.py
+- [ ] T050 [P] [US4] Add unit tests for recommendation scoring and threshold behavior in tests/unit/test_review_recommendations_007.py
+- [ ] T051 [P] [US4] Add integration test for bulk confirm/reject and selective candidate confirmation in tests/integration/test_review_bulk_actions_007.py
+- [ ] T052 [P] [US4] Add integration test for regroup on edit and user notice behavior in tests/integration/test_review_regroup_on_edit_007.py
 
 ### Implementation for User Story 4
 
-- [X] T053 [US4] Implement similarity+temporal grouping service in src/web/app/grouping_service.py; temporal proximity score MUST be exposed on each CandidateOccurrence as a distinct field for use as the FR-026 temporal proximity badge (separate from FR-031 recommendation badges)
-- [X] T054 [US4] Implement recommendation scoring service (group + candidate) in src/web/app/recommendation_service.py
-- [X] T055 [US4] Implement move/merge/reorder group mutation handlers in src/web/app/group_mutation_service.py
-- [X] T071 [US4] Implement PATCH /api/review/sessions/{session_id}/thresholds route with immediate grouping recompute in src/web/api/routes/review_sessions.py
-- [X] T056 [US4] Implement group card UI with: (1) bulk confirm/reject actions, (2) per-group similarity threshold slider, (3) FR-026 temporal proximity badge per occurrence (distinct chip from recommendation badge), (4) FR-031 candidate-level recommendation confidence badge, (5) drag reorder; also implement global recommendation threshold control (FR-031, range 0–100, default 70) in a Review view toolbar/panel component in src/web/frontend/src/components/CandidateGroupCard.tsx and src/web/frontend/src/components/ReviewThresholdPanel.tsx (Stitch: 27b2ad687bd547429e2066b8447378cb)
+- [ ] T053 [US4] Implement similarity+temporal grouping service in src/web/app/grouping_service.py
+- [ ] T054 [US4] Implement recommendation scoring service (group + candidate) in src/web/app/recommendation_service.py
+- [ ] T055 [US4] Implement move/merge/reorder group mutation handlers in src/web/app/group_mutation_service.py
+- [ ] T056 [US4] Implement group card UI with bulk actions, threshold sliders, badges, and drag reorder in src/web/frontend/src/components/CandidateGroupCard.tsx
 
 **Checkpoint**: Group-level review operations independently functional.
 
@@ -170,16 +165,16 @@
 
 ### Tests for User Story 5
 
-- [X] T057 [P] [US5] Add integration test for multi-session switching and state isolation in tests/integration/test_review_multi_session_007.py
-- [X] T058 [P] [US5] Add integration test for session picker directory scan and load behavior in tests/integration/test_review_session_picker_007.py
+- [ ] T057 [P] [US5] Add integration test for multi-session switching and state isolation in tests/integration/test_review_multi_session_007.py
+- [ ] T058 [P] [US5] Add integration test for session picker directory scan and load behavior in tests/integration/test_review_session_picker_007.py
 
 ### Implementation for User Story 5
 
-- [X] T059 [US5] Implement CSV directory scan endpoint for session picker in src/web/api/routes/review_sessions.py
-- [X] T060 [US5] Implement session switch orchestration and cache policy in src/web/app/session_manager.py
-- [X] T061 [US5] Implement Review session picker UI with load/switch controls in src/web/frontend/src/components/SessionPicker.tsx (Stitch: 27b2ad687bd547429e2066b8447378cb)
-- [X] T062 [US5] Implement session-aware state container and hydration flow in src/web/frontend/src/state/reviewStore.ts
-- [X] T063 [US5] Add regression test for sidecar restore after browser reopen in tests/integration/test_review_sidecar_restore_007.py
+- [ ] T059 [US5] Implement CSV directory scan endpoint for session picker in src/web/api/routes/review_sessions.py
+- [ ] T060 [US5] Implement session switch orchestration and cache policy in src/web/app/session_manager.py
+- [ ] T061 [US5] Implement Review session picker UI with load/switch controls in src/web/frontend/src/components/SessionPicker.tsx
+- [ ] T062 [US5] Implement session-aware state container and hydration flow in src/web/frontend/src/state/reviewStore.ts
+- [ ] T063 [US5] Add regression test for sidecar restore after browser reopen in tests/integration/test_review_sidecar_restore_007.py
 
 **Checkpoint**: Multi-session navigation independently functional.
 
@@ -189,14 +184,13 @@
 
 **Purpose**: Complete global quality bars across stories and align implementation with approved Stitch artifacts.
 
-- [X] T064 [P] Implement global dark/light theme toggle, persistence, and first-run dark default behavior in src/web/frontend/src/components/ThemeToggle.tsx (Stitch: all screens — applies globally)
-- [X] T065 [P] Implement WCAG AA contrast tokens and theme variables in src/web/frontend/src/styles/theme.css
-- [X] T066 Implement backend startup timing instrumentation and SC-007 assertion coverage in tests/integration/test_web_startup_timing_007.py
-- [X] T067 Implement malformed/incompatible CSV error-state UX and API mapping in src/web/frontend/src/components/SessionLoadErrorState.tsx
-- [X] T068 [P] Add contract/integration regression for malformed CSV rejection in tests/contract/test_review_schema_gate_007.py
-- [X] T069 Reconcile frontend implementation with Stitch screens and document justified deviations in specs/007-web-player-ui/quickstart.md
-- [X] T070 Run end-to-end validation and update feature test manifest in tests/integration/test_full_workflow_007.py
-- [X] T073 Implement SC-005 lazy thumbnail loading via IntersectionObserver on candidate list images and add perf benchmark asserting <=200ms render for 500-candidate dataset in src/web/frontend/src/components/CandidateRow.tsx; benchmark fixture in src/web/frontend/tests/review/perfBenchmark.test.tsx (Depends on T041)
+- [ ] T064 [P] Implement global dark/light theme toggle, persistence, and first-run dark default behavior in src/web/frontend/src/components/ThemeToggle.tsx
+- [ ] T065 [P] Implement WCAG AA contrast tokens and theme variables in src/web/frontend/src/styles/theme.css
+- [ ] T066 Implement backend startup timing instrumentation and SC-007 assertion coverage in tests/integration/test_web_startup_timing_007.py
+- [ ] T067 Implement malformed/incompatible CSV error-state UX and API mapping in src/web/frontend/src/components/SessionLoadErrorState.tsx
+- [ ] T068 [P] Add contract/integration regression for malformed CSV rejection in tests/contract/test_review_schema_gate_007.py
+- [ ] T069 Reconcile frontend implementation with Stitch screens and document justified deviations in specs/007-web-player-ui/quickstart.md
+- [ ] T070 Run end-to-end validation and update feature test manifest in tests/integration/test_full_workflow_007.py
 
 ---
 
@@ -294,3 +288,294 @@
 - All tasks follow strict checklist format: checkbox, task ID, optional [P], optional [USx], clear file path.
 - [P] markers indicate tasks that can execute concurrently in different files without incomplete dependencies.
 - Google Stitch artifacts are authoritative for UI layout and component structure; implementation deviations must be documented.
+# Tasks: Web-Based Player Name Verification UI
+
+**Input**: Design documents from `specs/007-web-player-ui/`  
+**Prerequisites**: `plan.md` (required), `spec.md` (required), `research.md`, `data-model.md`, `contracts/web-api-contract.md`, `quickstart.md`
+
+**Tests**: Included because `spec.md` explicitly defines mandatory user scenarios and independent tests.
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Can run in parallel (different files, no unmet dependencies)
+- **[Story]**: User story label (`[US0]` ... `[US5]`) for story-phase tasks only
+- Every task includes an explicit file path
+
+> Visual fidelity remediation reopened on 2026-04-20. Behavioral implementation remains in place, but Stitch shell/layout/token work below is still active.
+
+## Phase 1: Setup (Shared Infrastructure)
+
+**Purpose**: Initialize backend/frontend scaffolding and core tooling.
+
+- [X] T001 Create web package scaffolding in `src/web/__init__.py`, `src/web/app/__init__.py`, and `src/web/api/__init__.py`
+- [X] T002 Initialize frontend workspace configuration in `src/web/frontend/package.json`, `src/web/frontend/tsconfig.json`, and `src/web/frontend/vite.config.ts`
+- [X] T003 [P] Add frontend test/lint configuration in `src/web/frontend/vitest.config.ts`, `src/web/frontend/eslint.config.js`, and `src/web/frontend/tests/setup.ts`
+- [X] T004 [P] Add backend web dependencies and optional extras in `pyproject.toml` and `requirements.txt`
+- [X] T005 Create FastAPI server bootstrap with static mounting placeholder in `src/web/app/server.py`
+- [X] T006 Create frontend app bootstrap in `src/web/frontend/src/main.tsx` and `src/web/frontend/src/App.tsx`
+
+---
+
+## Phase 2: Foundational (Blocking Prerequisites)
+
+**Purpose**: Implement shared infrastructure that blocks all user stories.
+
+**⚠️ CRITICAL**: No user story implementation should begin before this phase is complete.
+
+- [X] T007 Implement API schema contracts in `src/web/api/schemas.py`
+- [X] T008 Implement API router and error envelope handlers in `src/web/api/router.py` and `src/web/api/error_handlers.py`
+- [X] T009 [P] Implement settings persistence adapter (`scytcheck_settings.json`) in `src/web/app/settings_store.py`
+- [X] T010 [P] Implement review sidecar persistence (`*.review.json`) in `src/web/app/review_store.py`
+- [X] T011 Implement session registry and lifecycle state model in `src/web/app/session_manager.py` and `src/web/app/state.py`
+- [X] T012 [P] Implement analysis bridge to existing pipeline in `src/web/app/analysis_adapter.py`
+- [X] T013 [P] Implement thumbnail persistence/extraction service in `src/web/app/thumbnail_service.py`
+- [X] T014 [P] Implement grouping and recommendation base services in `src/web/app/grouping_service.py` and `src/web/app/recommendation_service.py`
+- [X] T015 Add foundational API contract smoke tests in `tests/contract/test_web_api_core.py`
+
+**Checkpoint**: Foundation complete. User story phases can now proceed.
+
+---
+
+## Phase 3: User Story 0 - Launch to Web UI (Priority: P0)
+
+**Goal**: Portable app launches local web server and opens browser to Analysis view.
+
+**Independent Test**: Running the portable app opens browser to Analysis view within 5 seconds, and Review is reachable via top nav without reload.
+
+### Tests for User Story 0
+
+- [X] T016 [P] [US0] Add integration launch test (including single-instance/port-reuse scenario: if server already running, no port conflict; browser focuses existing tab or opens new tab) and assert end-to-end launch-to-functional-UI time <=5s in `tests/integration/test_web_launch_entrypoint.py`
+- [X] T017 [P] [US0] Add navigation shell integration test in `tests/integration/test_web_navigation_shell.py`
+
+### Implementation for User Story 0
+
+- [X] T018 [US0] Implement launch orchestration (start server + open browser) with single-instance guard (port check: if already bound, open browser to running instance instead of restarting) in `src/main.py`
+- [X] T019 [US0] Update portable launch scripts for web startup in `run_app.ps1` and `run_app.bat`
+- [X] T020 [US0] Implement top-level navigation shell in `src/web/frontend/src/components/TopNav.tsx` (Stitch: `bc3dd84c4b11426db5983a60eb2dcbf3`)
+- [X] T021 [US0] Implement route pages for Analysis and Review in `src/web/frontend/src/pages/AnalysisPage.tsx` (Stitch: `bc3dd84c4b11426db5983a60eb2dcbf3`) and `src/web/frontend/src/pages/ReviewPage.tsx` (Stitch: `6d16e85501654ed58fb2dc38e4c00f69`)
+- [X] T022 [US0] Add server health/version endpoint for startup verification in `src/web/api/routes/settings.py`
+
+**Checkpoint**: Web app launches correctly and basic navigation works end-to-end.
+
+---
+
+## Phase 4: User Story 1 - Configure and Run Video Analysis (Priority: P1)
+
+**Goal**: Configure analysis source/settings, run and stop analysis, and display live progress.
+
+**Independent Test**: User can start analysis from YouTube/local source, observe progress, stop run, and obtain reviewable partial or complete results.
+
+### Tests for User Story 1
+
+- [X] T023 [P] [US1] Add contract tests for analysis start/stop/progress in `tests/contract/test_web_api_analysis.py`
+- [X] T024 [P] [US1] Add integration analysis flow test in `tests/integration/test_web_analysis_flow.py`
+
+### Implementation for User Story 1
+
+- [X] T025 [US1] Implement analysis start/stop/progress API routes in `src/web/api/routes/analysis.py`
+- [X] T026 [US1] Implement Analysis source input UI in `src/web/frontend/src/features/analysis/SourceInput.tsx` (Stitch: `bc3dd84c4b11426db5983a60eb2dcbf3`)
+- [X] T027 [US1] Enumerate all `src/config.py` / `scytcheck_settings.json` keys into `specs/007-web-player-ui/fr018-settings-parity.md` as the FR-018 parity checklist artifact, then implement full settings parity panel covering every enumerated key in `src/web/frontend/src/features/analysis/SettingsPanel.tsx` (Stitch: `bc3dd84c4b11426db5983a60eb2dcbf3`)
+- [X] T028 [US1] Implement interactive scan region selector in `src/web/frontend/src/features/analysis/ScanRegionSelector.tsx` (Stitch: `bc3dd84c4b11426db5983a60eb2dcbf3`)
+- [X] T029 [US1] Implement analysis controls and progress widgets in `src/web/frontend/src/features/analysis/AnalysisControls.tsx` and `src/web/frontend/src/features/analysis/ProgressWidgets.tsx` (Stitch: `bc3dd84c4b11426db5983a60eb2dcbf3`)
+- [X] T030 [US1] Implement settings read/write routes using existing settings file in `src/web/api/routes/settings.py`
+- [X] T031 [US1] Wire Analysis page state/actions via store and API client in `src/web/frontend/src/state/appStore.ts` and `src/web/frontend/src/services/apiClient.ts`
+
+**Checkpoint**: Analysis can be fully configured and run from the web UI.
+
+---
+
+## Phase 5: User Story 2 - Review Detected Player Name Candidates (Priority: P2)
+
+**Goal**: Review candidates with confirm/reject/edit actions, thumbnail preview, timestamp links, and dual CSV export.
+
+**Independent Test**: Load a result session, review candidates, edit text, confirm/reject/remove entries, and export both required CSV outputs.
+
+### Tests for User Story 2
+
+- [X] T032 [P] [US2] Add contract tests for review candidate operations in `tests/contract/test_web_api_review_candidates.py`
+- [X] T033 [P] [US2] Add integration review/export flow test in `tests/integration/test_web_review_candidates.py`
+
+### Implementation for User Story 2
+
+- [X] T034 [US2] Implement review session retrieval and candidate patch routes in `src/web/api/routes/review.py`
+- [X] T035 [US2] Implement thumbnail endpoint and fallback extraction behavior in `src/web/api/routes/thumbnails.py`
+- [X] T036 [US2] Implement dual export endpoint (names + occurrences CSV) in `src/web/api/routes/export.py`
+- [X] T037 [US2] Implement frame capture write-path during analysis in `src/services/analysis_service.py`
+- [X] T038 [US2] Add unit tests for frame capture thumbnail writes in `tests/unit/test_analysis_thumbnail_capture.py`
+- [X] T039 [US2] Implement candidate/group rendering UI including temporal proximity chip/badge sourced from `temporalCohesionScore` on each `CandidateCard` in `src/web/frontend/src/features/review/CandidateGroupList.tsx` and `src/web/frontend/src/features/review/CandidateCard.tsx` (Stitch: `ca5cd390184a4002953178d25c920a67`)
+- [X] T040 [US2] Implement candidate action controls (confirm/reject/edit/remove) in `src/web/frontend/src/features/review/CandidateActions.tsx` (Stitch: `ca5cd390184a4002953178d25c920a67`)
+- [X] T041 [US2] Implement thumbnail modal and YouTube deep-link viewer in `src/web/frontend/src/features/review/ThumbnailViewer.tsx` (Stitch: `ca5cd390184a4002953178d25c920a67`)
+- [X] T042 [US2] Implement review progress display in `src/web/frontend/src/features/review/ReviewProgressBar.tsx` (Stitch: `6d16e85501654ed58fb2dc38e4c00f69`)
+- [X] T043 [US2] Implement dual export action bar in `src/web/frontend/src/features/review/ExportBar.tsx` (Stitch: `ca5cd390184a4002953178d25c920a67`)
+
+**Checkpoint**: Core review loop and exports are functional.
+
+---
+
+## Phase 6: User Story 3 - Search and Filter Candidates (Priority: P3)
+
+**Goal**: Real-time candidate filtering with action correctness under active filters.
+
+**Independent Test**: Typing a query filters visible candidates immediately; clearing query restores all results; actions affect only targeted candidates.
+
+### Tests for User Story 3
+
+- [X] T044 [P] [US3] Add frontend filter unit tests in `src/web/frontend/tests/review/searchFilter.test.tsx`
+- [X] T045 [P] [US3] Add integration filtering action test in `tests/integration/test_web_review_filtering.py`
+
+### Implementation for User Story 3
+
+- [X] T046 [US3] Implement filtering hook/state selectors in `src/web/frontend/src/features/review/useReviewFilter.ts`
+- [X] T047 [US3] Implement filter/search bar UI in `src/web/frontend/src/features/review/ReviewSearchBar.tsx` (Stitch: `0d725633a5c04755a3edf78f2c0726c4`)
+- [X] T048 [US3] Integrate filtered rendering pipeline in `src/web/frontend/src/features/review/CandidateGroupList.tsx` (Stitch: `0d725633a5c04755a3edf78f2c0726c4`)
+
+**Checkpoint**: Search/filter behavior is fast and deterministic.
+
+---
+
+## Phase 7: User Story 4 - Bulk Confirmation of Similar Names (Priority: P4)
+
+**Goal**: Group-level review operations, regrouping, reorder, unlimited undo, and recommendation guidance.
+
+**Independent Test**: User performs group confirm/reject, move/merge, reorder, hard delete + undo, and threshold updates with immediate visual feedback.
+
+### Tests for User Story 4
+
+- [X] T049 [P] [US4] Add advanced review contract tests in `tests/contract/test_web_api_review_advanced.py`
+- [X] T050 [P] [US4] Add advanced review integration test in `tests/integration/test_web_review_advanced_actions.py`
+
+### Implementation for User Story 4
+
+- [X] T051 [US4] Implement bulk group action routes in `src/web/api/routes/review_groups.py`
+- [X] T052 [US4] Implement regroup move/merge and group reorder routes in `src/web/api/routes/review_reorder.py`
+- [X] T053 [US4] Implement unlimited undo action log and undo endpoint in `src/web/app/action_log.py` and `src/web/api/routes/review_undo.py`
+- [X] T054 [US4] Implement recommendation scoring and threshold recalculation routes in `src/web/app/recommendation_service.py` and `src/web/api/routes/recommendations.py`
+- [X] T055 [US4] Implement grouping-threshold route and recompute flow in `src/web/app/grouping_service.py` and `src/web/api/routes/review_groups.py`
+- [X] T056 [US4] Implement group action toolbar (bulk, merge, move, reorder) in `src/web/frontend/src/features/review/GroupActionToolbar.tsx` (Stitch: `ca5cd390184a4002953178d25c920a67`)
+- [X] T057 [US4] Implement undo history panel in `src/web/frontend/src/features/review/UndoHistoryPanel.tsx` (Stitch: `6d16e85501654ed58fb2dc38e4c00f69`)
+- [X] T058 [US4] Implement recommendation and threshold UI panels in `src/web/frontend/src/features/review/RecommendationPanel.tsx` and `src/web/frontend/src/features/review/GroupingThresholdControl.tsx` (Stitch: `ca5cd390184a4002953178d25c920a67`)
+
+**Checkpoint**: Advanced group operations and recommendation guidance are complete.
+
+---
+
+## Phase 8: User Story 5 - Load and Navigate Multiple Analysis Sessions (Priority: P5)
+
+**Goal**: Load sessions from selected folders and preserve independent review state per session.
+
+**Independent Test**: User loads two CSV sessions, switches back and forth, and sees each session state restored accurately.
+
+### Tests for User Story 5
+
+- [X] T059 [P] [US5] Add session route contract tests in `tests/contract/test_web_api_sessions.py`
+- [X] T060 [P] [US5] Add multi-session integration test in `tests/integration/test_web_multi_session_state.py`
+
+### Implementation for User Story 5
+
+- [X] T061 [US5] Implement directory scan/session list routes in `src/web/api/routes/sessions.py`
+- [X] T062 [US5] Implement session switch/load restore behavior in `src/web/app/session_manager.py`
+- [X] T063 [US5] Implement folder/session picker UI in `src/web/frontend/src/features/sessions/SessionPicker.tsx` (Stitch: `0d725633a5c04755a3edf78f2c0726c4`)
+
+**Checkpoint**: Multi-session workflow is stable and independently persisted.
+
+---
+
+## Phase 9: Polish & Cross-Cutting Concerns
+
+**Purpose**: Accessibility, performance, packaging, documentation, and final validation.
+
+- [X] T064 [P] Implement global theme toggle + dark-default persistence in `src/web/frontend/src/components/ThemeToggle.tsx` (Stitch: `ddea17d197634e119c84858e46c61bf7`) and `src/web/api/routes/settings.py`
+- [X] T065 [P] Add theme accessibility and WCAG contrast tests in `src/web/frontend/tests/theme/accessibility.test.ts`
+- [X] T066 Implement SC-005 performance for candidate list: (a) apply `IntersectionObserver` / `loading="lazy"` to all thumbnail images in `src/web/frontend/src/features/review/CandidateGroupList.tsx` (Stitch: `ca5cd390184a4002953178d25c920a67`); (b) add perf benchmark fixture with a 500-candidate dataset in `src/web/frontend/tests/review/perfBenchmark.test.tsx`; (c) assert <=200ms render response - task is not complete until the benchmark assertion passes
+- [X] T067 Update packaging to bundle frontend assets and web launch path in `scripts/release/build.ps1` and `build-config.spec`
+- [X] T068 Update user documentation for web workflow in `README.md`
+- [X] T069 Validate quickstart workflows and update run instructions in `specs/007-web-player-ui/quickstart.md`
+- [X] T070 Run complete pytest and vitest suites; for any failures fix production code (never edit test assertions to force green); rerun until all suites pass green; store final clean run logs in `artifacts/test-runs/web-final-pytest.log` and `artifacts/test-runs/web-final-vitest.log`
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Phase 1 (Setup)**: Start immediately.
+- **Phase 2 (Foundational)**: Depends on Phase 1; blocks all user stories.
+- **Phases 3-8 (User Stories)**: Depend on Phase 2 completion.
+- **Phase 9 (Polish)**: Depends on selected user stories being complete.
+
+### User Story Dependencies
+
+- **US0 (P0)**: Starts after foundational phase; no dependency on other stories.
+- **US1 (P1)**: Starts after foundational phase; independent from US2-US5.
+- **US2 (P2)**: Starts after foundational phase and benefits from US0 shell completion.
+- **US3 (P3)**: Depends on US2 candidate rendering baseline.
+- **US4 (P4)**: Depends on US2 core review data/actions.
+- **US5 (P5)**: Depends on foundational session/review persistence and can run parallel to US3/US4 after US2 endpoints exist.
+
+### Story Completion Order
+
+US0 → US1 → US2 → US3 → US4 → US5
+
+---
+
+## Parallel Execution Examples
+
+### US0 Parallel Example
+
+- T016 and T017 can run in parallel (separate integration test files).
+
+### US1 Parallel Example
+
+- T023 and T024 can run in parallel (contract vs integration tests).
+- T026 and T027 can run in parallel after T025 (independent UI files).
+
+### US2 Parallel Example
+
+- T032 and T033 can run in parallel.
+- T041 and T043 can run in parallel after T039/T040 (independent review UI components).
+
+### US3 Parallel Example
+
+- T044 and T045 can run in parallel.
+
+### US4 Parallel Example
+
+- T049 and T050 can run in parallel.
+- T057 and T058 can run in parallel after T053/T054 (independent frontend panels).
+
+### US5 Parallel Example
+
+- T059 and T060 can run in parallel.
+
+---
+
+## Implementation Strategy
+
+### MVP First
+
+1. Complete Phase 1 and Phase 2.
+2. Complete US0 and US1.
+3. Validate launch + analysis flow as first deliverable.
+
+### Incremental Delivery
+
+1. Add US2 review flow.
+2. Add US3 filtering.
+3. Add US4 advanced review operations.
+4. Add US5 multi-session management.
+5. Finish Phase 9 polish and validation.
+
+### Parallel Team Strategy
+
+1. Team A: Backend routes/services (`src/web/api/`, `src/web/app/`).
+2. Team B: Frontend views/components (`src/web/frontend/src/`).
+3. Team C: Contract/integration/frontend tests (`tests/`, `src/web/frontend/tests/`).
+
+---
+
+## Notes
+
+- `[P]` tasks target independent files and can be parallelized safely.
+- Each user story phase is independently testable.
+- Any frontend implementation task must follow the Stitch coverage/fidelity rules defined in `plan.md`.
+

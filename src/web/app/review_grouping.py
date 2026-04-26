@@ -9,6 +9,8 @@ from src.web.app.review_sidecar_store import ReviewSidecarStore
 DEFAULT_SIMILARITY_THRESHOLD = 80
 DEFAULT_RECOMMENDATION_THRESHOLD = 70
 DEFAULT_TEMPORAL_WINDOW_SECONDS = 2.0
+DEFAULT_SPELLING_INFLUENCE = 100
+DEFAULT_TEMPORAL_INFLUENCE = 60
 
 
 def recompute_groups(session_payload: dict[str, Any]) -> dict[str, Any]:
@@ -22,6 +24,8 @@ def recompute_groups(session_payload: dict[str, Any]) -> dict[str, Any]:
         GroupingThresholds(
             similarity_threshold=thresholds["similarity_threshold"],
             temporal_window_seconds=thresholds["temporal_window_seconds"],
+            spelling_influence=thresholds["spelling_influence"],
+            temporal_influence=thresholds["temporal_influence"],
         ),
     )
     scored_groups = RecommendationService.score_groups(
@@ -248,6 +252,18 @@ def _normalize_thresholds(raw_thresholds: Any) -> dict[str, Any]:
         maximum=100,
         fallback=DEFAULT_RECOMMENDATION_THRESHOLD,
     )
+    spelling_influence = _clamp_int(
+        thresholds.get("spelling_influence", DEFAULT_SPELLING_INFLUENCE),
+        minimum=0,
+        maximum=100,
+        fallback=DEFAULT_SPELLING_INFLUENCE,
+    )
+    temporal_influence = _clamp_int(
+        thresholds.get("temporal_influence", DEFAULT_TEMPORAL_INFLUENCE),
+        minimum=0,
+        maximum=100,
+        fallback=DEFAULT_TEMPORAL_INFLUENCE,
+    )
 
     raw_temporal = thresholds.get("temporal_window_seconds", DEFAULT_TEMPORAL_WINDOW_SECONDS)
     try:
@@ -261,6 +277,8 @@ def _normalize_thresholds(raw_thresholds: Any) -> dict[str, Any]:
         "similarity_threshold": similarity,
         "recommendation_threshold": recommendation,
         "temporal_window_seconds": temporal_window_seconds,
+        "spelling_influence": spelling_influence,
+        "temporal_influence": temporal_influence,
     }
 
 
