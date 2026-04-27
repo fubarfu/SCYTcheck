@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SCYTcheck - Review (Read-Only)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#e5ceff",
+                        "surface-tint": "#adc6ff",
+                        "surface-container-low": "#111318",
+                        "tertiary-container": "#e5ceff",
+                        "surface-container-high": "#1c2026",
+                        "on-secondary-fixed-variant": "#535b6e",
+                        "on-primary": "#003d88",
+                        "on-primary-container": "#ffffff",
+                        "secondary": "#bec6dd",
+                        "surface-dim": "#0c0e12",
+                        "outline": "#72757f",
+                        "surface-variant": "#22262e",
+                        "surface-container-lowest": "#000000",
+                        "primary-fixed": "#4388fd",
+                        "on-tertiary-fixed-variant": "#5e4c75",
+                        "surface-container": "#171a20",
+                        "primary-fixed-dim": "#317bef",
+                        "primary-dim": "#699cff",
+                        "background": "#0c0e12",
+                        "surface": "#0c0e12",
+                        "outline-variant": "#444851",
+                        "on-surface": "#e2e5f0",
+                        "inverse-on-surface": "#53555a",
+                        "error-container": "#871f21",
+                        "secondary-fixed-dim": "#ccd4eb",
+                        "primary-container": "#0e69dc",
+                        "on-primary-fixed": "#000000",
+                        "on-tertiary": "#5d4c74",
+                        "error-dim": "#c54d4a",
+                        "tertiary-dim": "#d6c0f0",
+                        "secondary-fixed": "#dae2f9",
+                        "on-secondary": "#384052",
+                        "on-secondary-container": "#b7bfd5",
+                        "on-background": "#e2e5f0",
+                        "on-error": "#490006",
+                        "error": "#fa746f",
+                        "primary": "#adc6ff",
+                        "tertiary": "#f0dfff",
+                        "on-tertiary-fixed": "#413057",
+                        "on-error-container": "#ff9993",
+                        "secondary-container": "#333b4d",
+                        "on-surface-variant": "#a8abb5",
+                        "on-secondary-fixed": "#373f51",
+                        "inverse-surface": "#f9f9fe",
+                        "on-primary-fixed-variant": "#001435",
+                        "secondary-dim": "#b1b9ce",
+                        "tertiary-fixed-dim": "#d6c0f0",
+                        "on-tertiary-container": "#54436b",
+                        "inverse-primary": "#005bc4",
+                        "surface-container-highest": "#22262e",
+                        "surface-bright": "#282c34"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .read-only-overlay {
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333b4d; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary/30 min-h-screen flex flex-col overflow-hidden">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 border-b border-zinc-800 bg-zinc-950 flex justify-between items-center px-8 h-16 w-full font-['Plus_Jakarta_Sans'] font-medium antialiased">
+<div class="text-lg font-bold tracking-tighter text-blue-500">SCYTcheck</div>
+<div class="flex gap-8 h-full items-center">
+<a class="text-zinc-400 hover:text-zinc-200 pb-4 transition-all mt-4" href="#">Analysis</a>
+<a class="text-blue-500 border-b-2 border-blue-500 pb-4 transition-all mt-4" href="#">Review</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-zinc-900/50 rounded-lg transition-colors active:scale-95 duration-150 text-zinc-400">
+<span class="material-symbols-outlined">lock</span>
+</button>
+<button class="p-2 hover:bg-zinc-900/50 rounded-lg transition-colors active:scale-95 duration-150 text-zinc-400">
+<span class="material-symbols-outlined">history</span>
+</button>
+<button class="p-2 hover:bg-zinc-900/50 rounded-lg transition-colors active:scale-95 duration-150 text-zinc-400">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+</div>
+</nav>
+<!-- Warning Banner -->
+<div class="mt-16 bg-error-container/20 border-b border-error-container/40 px-6 py-2.5 flex items-center justify-center gap-3 text-sm font-medium text-error-dim">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span>Read-only: another editor is actively writing this video</span>
+<span class="bg-error-container/40 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">Locked</span>
+</div>
+<!-- Main Workspace Layout -->
+<main class="flex flex-1 overflow-hidden">
+<!-- Left Column: Candidate List -->
+<aside class="w-80 border-r border-outline-variant bg-surface-container-low flex flex-col">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center">
+<span class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Candidates (24)</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">filter_list</span>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<!-- Active Item -->
+<div class="p-4 bg-primary-container/10 border-l-2 border-primary border-b border-outline-variant/30 cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="font-headline font-bold text-primary">PlayerAlpha</span>
+<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/20 text-primary-dim">98% Match</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1">Detected at 04:22, 12:45, 18:01</p>
+</div>
+<!-- Other Items -->
+<div class="p-4 border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-1">
+<span class="font-headline font-semibold text-on-surface group-hover:text-primary-dim transition-colors">GAMERTAG99</span>
+<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-on-surface-variant">84% Match</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1">Detected at 01:15, 05:40</p>
+</div>
+<div class="p-4 border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-1">
+<span class="font-headline font-semibold text-on-surface">ShadowStep</span>
+<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-on-surface-variant">72% Match</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1">Detected at 22:10</p>
+</div>
+<!-- More items... -->
+<div class="p-4 border-b border-outline-variant/30 opacity-60">
+<div class="flex justify-between items-start mb-1">
+<span class="font-headline font-semibold text-on-surface">x_Sniper_x</span>
+<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-on-surface-variant">45% Match</span>
+</div>
+<p class="text-xs text-on-surface-variant line-clamp-1">Detected at 09:33</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<div class="flex-1 flex flex-col bg-background relative">
+<!-- Details Header -->
+<div class="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container/30">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl">person</span>
+</div>
+<div>
+<h2 class="text-2xl font-bold font-headline tracking-tight">PlayerAlpha</h2>
+<div class="flex items-center gap-3 mt-1">
+<span class="flex items-center gap-1 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">schedule</span> 3 detections
+                            </span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">database</span> Global Database ID: 88219-A
+                            </span>
+</div>
+</div>
+</div>
+<!-- DISABLED MUTATION CONTROLS -->
+<div class="flex items-center gap-2">
+<div class="group relative">
+<button class="flex items-center gap-2 px-4 py-2 bg-secondary-container/30 text-on-secondary-container/40 rounded border border-outline-variant/50 cursor-not-allowed opacity-50 grayscale" disabled="">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+<span class="text-sm font-semibold uppercase tracking-wider">Confirm</span>
+<span class="material-symbols-outlined text-xs">lock</span>
+</button>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface-container-highest text-on-surface text-[10px] py-1 px-2 rounded whitespace-nowrap border border-outline-variant shadow-xl z-50">
+                            Workspace locked by another session
+                        </div>
+</div>
+<div class="group relative">
+<button class="flex items-center gap-2 px-4 py-2 bg-error-container/10 text-error-dim/40 rounded border border-error-container/20 cursor-not-allowed opacity-50 grayscale" disabled="">
+<span class="material-symbols-outlined text-sm">cancel</span>
+<span class="text-sm font-semibold uppercase tracking-wider">Reject</span>
+<span class="material-symbols-outlined text-xs">lock</span>
+</button>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface-container-highest text-on-surface text-[10px] py-1 px-2 rounded whitespace-nowrap border border-outline-variant shadow-xl z-50">
+                            Workspace locked by another session
+                        </div>
+</div>
+<div class="group relative">
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-variant text-on-surface-variant/40 rounded border border-outline-variant cursor-not-allowed opacity-50" disabled="">
+<span class="material-symbols-outlined text-sm">edit</span>
+<span class="text-sm font-semibold uppercase tracking-wider">Manual Edit</span>
+<span class="material-symbols-outlined text-xs">lock</span>
+</button>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface-container-highest text-on-surface text-[10px] py-1 px-2 rounded whitespace-nowrap border border-outline-variant shadow-xl z-50">
+                            Workspace locked by another session
+                        </div>
+</div>
+</div>
+</div>
+<!-- Bento Content Area -->
+<div class="flex-1 p-6 grid grid-cols-12 grid-rows-6 gap-6 overflow-y-auto custom-scrollbar">
+<!-- Video/OCR Capture Frame -->
+<div class="col-span-8 row-span-4 bg-surface-container rounded-xl overflow-hidden relative group border border-outline-variant/30">
+<img class="w-full h-full object-cover opacity-80 mix-blend-luminosity" data-alt="high-resolution screenshot of a competitive first-person shooter game showing a player nameplate in the center with technical overlays" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpue_KZoc_tBUQRJcF5FJxEkJTZwYb37hN1i9vBUed2sqv6vIENeBp2Wg9FENODXzJ05kYNaPOw7OyKKt9FSoWbFnyp82LZZ5Nk9BVmEume7n7y159YIJ0PZ4uj4Ddze9C78-gp79n6ewWiPFvxmGIxpEThaVKWA2HOFC4RQ5kt-er53FiorMyapdwkXbNiwwbItPYBQ8n9mCcuBVtK7ln7E7sxDD5Uv8iUfqdbxh1OBrCw9ky8uaDGANf19l124JILpnx_V52e0s"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+<div class="absolute top-4 left-4 bg-zinc-950/80 backdrop-blur-md px-3 py-1.5 rounded border border-outline-variant flex items-center gap-3">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="font-mono text-xs font-bold text-on-surface uppercase tracking-widest">Live Preview (Locked)</span>
+</div>
+<!-- Detection Crop Overlays -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-primary w-64 h-16 pointer-events-none">
+<div class="absolute -top-6 left-0 bg-primary text-on-primary text-[10px] px-1 font-bold">OCR_ENTITY: PlayerAlpha</div>
+</div>
+</div>
+<!-- Match Analysis Metrics -->
+<div class="col-span-4 row-span-3 bg-surface-container-high rounded-xl p-6 border border-outline-variant/50">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">analytics</span> Similarity Metrics
+                    </h3>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-on-surface-variant">OCR Confidence</span>
+<span class="text-primary-dim font-mono">99.2%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 99.2%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-on-surface-variant">Linguistic Match</span>
+<span class="text-primary-dim font-mono">97.8%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 97.8%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-on-surface-variant">Visual Context</span>
+<span class="text-primary-dim font-mono">92.4%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 92.4%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Detection Timeline -->
+<div class="col-span-4 row-span-1 bg-surface-container rounded-xl p-4 border border-outline-variant/30 flex flex-col justify-center">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Timeline Occurrences</span>
+<div class="flex gap-1 h-2">
+<div class="h-full bg-primary flex-1 rounded-sm"></div>
+<div class="h-full bg-surface-variant flex-1 rounded-sm"></div>
+<div class="h-full bg-surface-variant flex-1 rounded-sm"></div>
+<div class="h-full bg-primary flex-1 rounded-sm"></div>
+<div class="h-full bg-surface-variant flex-1 rounded-sm"></div>
+<div class="h-full bg-surface-variant flex-1 rounded-sm"></div>
+<div class="h-full bg-primary flex-1 rounded-sm"></div>
+<div class="h-full bg-surface-variant flex-1 rounded-sm"></div>
+</div>
+</div>
+<!-- Verification Panel (Disabled State) -->
+<div class="col-span-12 row-span-2 bg-surface-container-low rounded-xl p-6 border border-outline-variant/30 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Manual Review Field</h3>
+<span class="text-[10px] text-error-dim flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">lock</span> Input disabled
+                        </span>
+</div>
+<div class="flex-1 bg-surface-dim border border-outline-variant/20 rounded-lg p-4 flex items-center justify-between opacity-50 cursor-not-allowed">
+<span class="text-on-surface-variant font-mono">PlayerAlpha_Verified_Final</span>
+<span class="material-symbols-outlined text-on-surface-variant">lock</span>
+</div>
+</div>
+</div>
+<!-- Footer: Edit History Panel -->
+<footer class="h-64 border-t border-outline-variant bg-surface-container-lowest flex flex-col overflow-hidden">
+<div class="px-6 py-3 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-dim">history</span>
+<h3 class="text-sm font-bold font-headline">Edit History</h3>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-medium text-on-surface-variant">
+<span>Total actions: 1,248</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span>Session active: 04h 12m</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+<!-- History Item -->
+<div class="flex items-start gap-4 pb-4 border-b border-outline-variant/30">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary-dim shrink-0">
+<span class="material-symbols-outlined text-sm">checklist</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<p class="text-sm font-semibold text-on-surface">Bulk confirmed 12 candidates in Sector 4</p>
+<span class="text-[10px] font-mono text-on-surface-variant">09:42:12</span>
+</div>
+<p class="text-xs text-on-surface-variant">Action by <span class="text-primary-dim">editor_main_01</span> (Authoritative Session)</p>
+</div>
+</div>
+<!-- History Item -->
+<div class="flex items-start gap-4 pb-4 border-b border-outline-variant/30">
+<div class="w-8 h-8 rounded-full bg-error-container/10 flex items-center justify-center text-error-dim shrink-0">
+<span class="material-symbols-outlined text-sm">flag</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<p class="text-sm font-semibold text-on-surface">Flagged items for manual review in "Night_Map_V3.mp4"</p>
+<span class="text-[10px] font-mono text-on-surface-variant">09:38:05</span>
+</div>
+<p class="text-xs text-on-surface-variant">Action by <span class="text-primary-dim">editor_main_01</span> (Authoritative Session)</p>
+</div>
+</div>
+<!-- History Item -->
+<div class="flex items-start gap-4 pb-4 border-b border-outline-variant/30">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-sm">undo</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-baseline mb-1">
+<p class="text-sm font-semibold text-on-surface">Restored previous match threshold (85%)</p>
+<span class="text-[10px] font-mono text-on-surface-variant">09:15:22</span>
+</div>
+<p class="text-xs text-on-surface-variant">Action by <span class="text-primary-dim">system_audit</span></p>
+</div>
+</div>
+<!-- More history... -->
+</div>
+</footer>
+</div>
+</main>
+<!-- Global Read-Only Indicator Overlay (Subtle) -->
+<div class="fixed inset-0 pointer-events-none border-[12px] border-error-container/5 z-40"></div>
+</body></html>
