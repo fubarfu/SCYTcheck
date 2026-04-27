@@ -7,7 +7,6 @@ import { GroupingSettingsPanel } from "../components/GroupingSettingsPanel";
 import { ReviewFilterBar } from "../components/ReviewFilterBar";
 import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
 import { EditHistoryPanel } from "../components/EditHistoryPanel";
-import { ReviewLockBanner } from "../components/ReviewLockBanner";
 import {
   applyGroupToggleState,
   deriveGroupToggleState,
@@ -15,7 +14,6 @@ import {
   markRestoredHistoryEntry,
   reconcileGroupMutationState,
   selectEditHistoryEntry,
-  setLockState,
   updateGroupToggleState,
   initialReviewStoreState,
   type EditHistoryEntry,
@@ -68,12 +66,6 @@ interface ReviewSessionPayload {
 
 interface HistoryListResponse {
   entries: EditHistoryEntry[];
-}
-
-interface LockResponse {
-  mode: "writer" | "unlocked";
-  owner_session_id: string | null;
-  is_current_session_owner: boolean;
 }
 
 interface GroupValidationFeedbackState {
@@ -153,7 +145,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const sourceType = selectedSession?.source_type ?? "local_file";
   const sourceValue = selectedSession?.source_value ?? "";
   const videoId = selectedSession?.workspace?.video_id?.trim() ?? "";
-  const isReadonly = Boolean(storeState.lock?.readonly);
   const selectedHistoryEntryId = storeState.editHistory.selectedEntryId;
 
   const selectedCandidate = useMemo(
@@ -266,7 +257,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
           loading: false,
           error: null,
         },
-        lock: null,
       }));
       return;
     }
@@ -279,7 +269,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       },
     }));
     void fetchEditHistory(videoId, selectedSessionId);
-    void fetchLockState(videoId, selectedSessionId);
   }, [selectedSessionId, videoId]);
 
   // Keep selectedGroupId valid: prefer an unresolved group (with validation error first),
@@ -352,21 +341,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setLoadingError(null);
   };
 
-  const fetchLockState = async (workspaceVideoId: string, sessionId: string) => {
-    const resp = await fetch(
-      `/api/review/workspaces/${encodeURIComponent(workspaceVideoId)}/lock?session_id=${encodeURIComponent(sessionId)}`,
-    );
-    if (!resp.ok) {
-      setStoreState((prev) => setLockState(prev, null));
-      return;
-    }
-    const body = await resp.json() as LockResponse;
-    setStoreState((prev) => setLockState(prev, {
-      ...body,
-      readonly: body.mode === "writer" && !body.is_current_session_owner,
-    }));
-  };
-
   const fetchEditHistory = async (workspaceVideoId: string, sessionId: string) => {
     const resp = await fetch(
       `/api/review/workspaces/${encodeURIComponent(workspaceVideoId)}/history?session_id=${encodeURIComponent(sessionId)}`,
@@ -389,7 +363,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   const restoreHistoryEntry = async (entryId: string) => {
-    if (!selectedSessionId || !videoId || isReadonly) {
+    if (!selectedSessionId || !videoId) {
       return;
     }
     const resp = await fetch(
@@ -410,15 +384,10 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setExportMessage("Snapshot restored. Review state has been reloaded.");
     await fetchSession(selectedSessionId, { syncGroupingSettingsDraft: true });
     await fetchEditHistory(videoId, selectedSessionId);
-    await fetchLockState(videoId, selectedSessionId);
   };
 
   const postAction = async (action: { action_type: string; target_ids: string[]; payload?: Record<string, unknown> }) => {
     if (!selectedSessionId) return;
-    if (isReadonly) {
-      setLoadingError("This workspace is read-only in the current session.");
-      return;
-    }
     setExportMessage(null);
     const actionGroupId = String(action.payload?.group_id ?? "").trim();
     const actionCandidateId = action.target_ids[0] ?? null;
@@ -494,12 +463,11 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     await fetchSession(selectedSessionId);
     if (videoId) {
       await fetchEditHistory(videoId, selectedSessionId);
-      await fetchLockState(videoId, selectedSessionId);
     }
   };
 
   const recalculateGroups = async () => {
-    if (!selectedSessionId || isRecalculatingGroups || isReadonly) return;
+    if (!selectedSessionId || isRecalculatingGroups) return;
     const shouldContinue = window.confirm(
       "Recalculate groups with current settings? This will reset your current review decisions (resolved/unresolved state, accepted/rejected selections, and manual grouping changes).",
     );
@@ -554,7 +522,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   const handleUndo = async () => {
-    if (!selectedSessionId || isReadonly) return;
+    if (!selectedSessionId) return;
     setExportMessage(null);
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/undo`, { method: "POST" });
     if (!resp.ok) {
@@ -566,7 +534,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     await fetchSession(selectedSessionId);
     if (videoId) {
       await fetchEditHistory(videoId, selectedSessionId);
-      await fetchLockState(videoId, selectedSessionId);
     }
   };
 
@@ -628,11 +595,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       {loadingError && <SessionLoadErrorState message={loadingError} onRetry={() => setLoadingError(null)} />}
       {exportMessage && <div className="export-banner">{exportMessage}</div>}
       {reopenWarning && <div className="export-banner">{reopenWarning}</div>}
-      <ReviewLockBanner
-        readonly={isReadonly}
-        ownerSessionId={storeState.lock?.owner_session_id ?? null}
-        currentSessionId={selectedSessionId}
-      />
       {hasPendingGroupingSettings && (
         <div className="export-banner">
           Grouping settings changed. Click Recalculate in Grouping settings to apply them to existing groups.
@@ -689,7 +651,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                   type="button"
                   className="ghost-action"
                   onClick={() => { void handleUndo(); }}
-                  disabled={undoCount <= 0 || isReadonly}
+                  disabled={undoCount <= 0}
                 >
                   Undo
                 </button>
@@ -785,7 +747,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
               spellingRelaxation={spellingRelaxation}
               temporalInfluence={temporalInfluence}
               isRecalculating={isRecalculatingGroups}
-              disabled={!selectedSessionId || isReadonly}
+              disabled={!selectedSessionId}
               onSpellingRelaxationChange={(value) => {
                 setGroupingSettingsDraft((previous) => ({ ...previous, spellingRelaxation: value }));
                 setHasPendingGroupingSettings(value !== appliedSpellingRelaxation || temporalInfluence !== appliedTemporalInfluence);
@@ -859,7 +821,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
           entries={storeState.editHistory.entries}
           selectedEntryId={selectedHistoryEntryId}
           restoredEntryId={storeState.editHistory.restoredEntryId}
-          busy={storeState.editHistory.loading || isReadonly}
+          busy={storeState.editHistory.loading}
           error={storeState.editHistory.error}
           onSelectEntry={(entryId) => {
             setStoreState((prev) => selectEditHistoryEntry(prev, entryId));

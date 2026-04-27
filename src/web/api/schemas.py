@@ -421,21 +421,3 @@ class ReviewHistoryRestoreRequestDTO:
             session_id=session_id,
             create_restore_snapshot=create_restore_snapshot,
         )
-
-
-@dataclass(frozen=True)
-class ReviewWorkspaceLockDTO:
-    video_id: str
-    mode: str
-    owner_session_id: str | None
-    is_current_session_owner: bool
-    readonly: bool
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "video_id": self.video_id,
-            "mode": self.mode,
-            "owner_session_id": self.owner_session_id,
-            "is_current_session_owner": self.is_current_session_owner,
-            "readonly": self.readonly,
-        }

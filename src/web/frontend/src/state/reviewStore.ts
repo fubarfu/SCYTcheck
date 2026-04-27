@@ -16,13 +16,6 @@ export interface EditHistoryState {
   error: string | null;
 }
 
-export interface WorkspaceLockState {
-  mode: "writer" | "unlocked";
-  owner_session_id: string | null;
-  is_current_session_owner: boolean;
-  readonly: boolean;
-}
-
 export type ReviewStoreState = {
   selectedSessionId: string | null;
   sessions: Record<string, { csvPath: string; hydratedAt: string; data: unknown }>;
@@ -32,7 +25,6 @@ export type ReviewStoreState = {
     hydratedAt: string;
   } | null;
   editHistory: EditHistoryState;
-  lock: WorkspaceLockState | null;
 };
 
 export const initialReviewStoreState: ReviewStoreState = {
@@ -46,7 +38,6 @@ export const initialReviewStoreState: ReviewStoreState = {
     loading: false,
     error: null,
   },
-  lock: null,
 };
 
 export function hydrateSession(
@@ -119,14 +110,6 @@ export function markRestoredHistoryEntry(state: ReviewStoreState, entryId: strin
     },
   };
 }
-
-export function setLockState(state: ReviewStoreState, lock: WorkspaceLockState | null): ReviewStoreState {
-  return {
-    ...state,
-    lock,
-  };
-}
-
 export interface ReopenHydrationPayload {
   history_id: string;
   derived_results?: {

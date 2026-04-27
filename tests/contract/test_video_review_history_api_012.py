@@ -6,7 +6,6 @@ from src.web.api.routes.review_actions import ReviewActionsHandler
 from src.web.api.routes.review_history import ReviewHistoryHandler
 from src.web.api.routes.review_sessions import ReviewSessionHandler
 from src.web.app.review_history_store import ReviewHistoryStore
-from src.web.app.review_lock_service import ReviewLockService
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
 
@@ -38,11 +37,9 @@ def _bootstrap(tmp_path: Path) -> tuple[ReviewSessionHandler, ReviewActionsHandl
     manager = SessionManager()
     sidecar = ReviewSidecarStore()
     history_store = ReviewHistoryStore(sidecar)
-    locks = ReviewLockService()
-
-    sessions = ReviewSessionHandler(manager, lock_service=locks, history_store=history_store)
-    actions = ReviewActionsHandler(manager, lock_service=locks, history_store=history_store)
-    history = ReviewHistoryHandler(manager, history_store=history_store, lock_service=locks)
+    sessions = ReviewSessionHandler(manager, history_store=history_store)
+    actions = ReviewActionsHandler(manager, history_store=history_store)
+    history = ReviewHistoryHandler(manager, history_store=history_store)
 
     load_status, load_body = sessions.post_load({"csv_path": str(_make_csv(tmp_path))})
     assert load_status == 200
@@ -118,17 +115,13 @@ def test_contract_restore_creates_provenance_snapshot_after_video_switch(tmp_pat
     assert history_status == 200
     assert len(history_body["entries"]) >= 2
 
-    lock_status, lock_body = history.get_lock(video_id, session_id=session_id)
-    assert lock_status == 200
-    assert lock_body["readonly"] is False
-
     refreshed_status, refreshed_body = sessions.get_session(session_id)
     assert refreshed_status == 200
     assert isinstance(refreshed_body.get("groups", []), list)
 
 
-def test_contract_second_session_mutation_returns_workspace_locked(tmp_path: Path) -> None:
-    sessions, actions, history, owner_session_id, video_id, _ = _bootstrap(tmp_path)
+def test_contract_second_session_mutation_is_allowed(tmp_path: Path) -> None:
+    sessions, actions, _, owner_session_id, _, _ = _bootstrap(tmp_path)
 
     load_status, load_body = sessions.post_load({"csv_path": str(_make_csv(tmp_path))})
     assert load_status == 200
@@ -148,12 +141,8 @@ def test_contract_second_session_mutation_returns_workspace_locked(tmp_path: Pat
             "payload": {"group_id": first_group["group_id"]},
         },
     )
-    assert action_status == 409
-    assert action_body["error"] == "workspace_locked"
-
-    lock_status, lock_body = history.get_lock(video_id, session_id=viewer_session_id)
-    assert lock_status == 200
-    assert lock_body["readonly"] is True
+    assert action_status == 200
+    assert action_body["persisted"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -190,9 +179,8 @@ def test_contract_fresh_workspace_history_is_empty_before_first_action(tmp_path:
     manager = SessionManager()
     sidecar = ReviewSidecarStore()
     history_store = ReviewHistoryStore(sidecar)
-    locks = ReviewLockService()
-    sessions = ReviewSessionHandler(manager, lock_service=locks, history_store=history_store)
-    hist = ReviewHistoryHandler(manager, history_store=history_store, lock_service=locks)
+    sessions = ReviewSessionHandler(manager, history_store=history_store)
+    hist = ReviewHistoryHandler(manager, history_store=history_store)
 
     csv_path = tmp_path / "bootstrap_contract.csv"
     csv_path.write_text(

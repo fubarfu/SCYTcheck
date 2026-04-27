@@ -6,7 +6,6 @@ from src.web.api.routes.review_actions import ReviewActionsHandler
 from src.web.api.routes.review_history import ReviewHistoryHandler
 from src.web.api.routes.review_sessions import ReviewSessionHandler
 from src.web.app.review_history_store import ReviewHistoryStore
-from src.web.app.review_lock_service import ReviewLockService
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
 
@@ -37,11 +36,10 @@ def _services() -> tuple[ReviewSessionHandler, ReviewActionsHandler, ReviewHisto
     manager = SessionManager()
     sidecar = ReviewSidecarStore()
     history_store = ReviewHistoryStore(sidecar)
-    locks = ReviewLockService()
     return (
-        ReviewSessionHandler(manager, lock_service=locks, history_store=history_store),
-        ReviewActionsHandler(manager, lock_service=locks, history_store=history_store),
-        ReviewHistoryHandler(manager, history_store=history_store, lock_service=locks),
+        ReviewSessionHandler(manager, history_store=history_store),
+        ReviewActionsHandler(manager, history_store=history_store),
+        ReviewHistoryHandler(manager, history_store=history_store),
     )
 
 

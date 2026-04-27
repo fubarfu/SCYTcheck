@@ -37,13 +37,3 @@ def build_history_entry(entry_id: str, group_count: int = 2) -> dict[str, Any]:
             "reviewed_names": ["Alice"],
         },
     }
-
-
-def build_lock_state(video_id: str, owner_session_id: str) -> dict[str, Any]:
-    return {
-        "video_id": video_id,
-        "mode": "writer",
-        "owner_session_id": owner_session_id,
-        "is_current_session_owner": True,
-        "readonly": False,
-    }

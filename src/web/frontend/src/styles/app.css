@@ -418,24 +418,6 @@ select,
   width: auto;
 }
 
-.review-lock-banner {
-  margin: 8px 0;
-  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border) 55%);
-  background: color-mix(in srgb, var(--danger) 12%, var(--panel) 88%);
-  border-radius: 14px;
-  padding: 12px 14px;
-}
-
-.review-lock-banner h3 {
-  margin: 0;
-  font-size: var(--text-md);
-}
-
-.review-lock-banner p {
-  margin: 6px 0 0;
-  color: var(--text);
-}
-
 .edit-history-panel {
   margin-top: 8px;
 }

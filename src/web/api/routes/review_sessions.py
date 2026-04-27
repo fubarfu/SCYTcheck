@@ -8,7 +8,6 @@ from typing import Any
 from src.web.app.review_grouping import recompute_groups
 from src.web.app.result_schema_validator import ResultSchemaValidator
 from src.web.app.review_history_store import ReviewHistoryStore
-from src.web.app.review_lock_service import ReviewLockService
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
 from src.web.api.schemas import ReviewGroupResponseDTO, ReviewLoadRequestDTO, SchemaValidationError
@@ -21,13 +20,11 @@ class ReviewSessionHandler:
         self,
         session_manager: SessionManager | None = None,
         validator: ResultSchemaValidator | None = None,
-        lock_service: ReviewLockService | None = None,
         history_store: ReviewHistoryStore | None = None,
     ) -> None:
         self.sessions = session_manager or SessionManager()
         self.validator = validator or ResultSchemaValidator()
         self._sidecar = ReviewSidecarStore()
-        self._locks = lock_service or ReviewLockService()
         self._history = history_store or ReviewHistoryStore(self._sidecar)
 
     def _flush_session_history(self, state, trigger_type: str) -> str | None:
@@ -118,7 +115,6 @@ class ReviewSessionHandler:
         session_payload = recompute_groups(session_payload)
         session_payload = self._sidecar.ensure_workspace_metadata(csv_path, session_payload)
         self._flush_active_session_history_if_switching(session_payload["workspace"]["video_id"])
-        lock = self._locks.acquire(session_payload["workspace"]["video_id"], session_id)
         self.sessions.upsert(session_id, str(csv_path), session_payload)
         self._sidecar.save(csv_path, session_payload)
 
@@ -129,7 +125,6 @@ class ReviewSessionHandler:
             "source_type": source_type,
             "source_value": source_value,
             "workspace": dict(session_payload["workspace"]),
-            "readonly": bool(lock["readonly"]),
         }
 
     def get_sessions(self) -> tuple[int, dict]:

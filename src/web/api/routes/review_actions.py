@@ -14,7 +14,6 @@ from src.web.api.schemas import (
 )
 from src.web.app.group_mutation_service import GroupMutationService
 from src.web.app.review_history_store import ReviewHistoryStore
-from src.web.app.review_lock_service import ReviewLockService
 from src.web.app.review_mutation_service import should_create_snapshot_for_action
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
@@ -27,12 +26,10 @@ class ReviewActionsHandler:
     def __init__(
         self,
         session_manager: SessionManager | None = None,
-        lock_service: ReviewLockService | None = None,
         history_store: ReviewHistoryStore | None = None,
     ) -> None:
         self.sessions = session_manager or SessionManager()
         self._sidecar = ReviewSidecarStore()
-        self._locks = lock_service or ReviewLockService()
         self._history = history_store or ReviewHistoryStore(self._sidecar)
 
     def post_action(self, session_id: str, payload: dict[str, Any]) -> tuple[int, dict]:
@@ -47,10 +44,6 @@ class ReviewActionsHandler:
 
         session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), dict(state.payload or {}))
         video_id = session_payload["workspace"]["video_id"]
-        can_write, lock_error = self._locks.ensure_writable(video_id, session_id)
-        if not can_write:
-            return 409, lock_error or {"error": "workspace_locked", "message": "workspace is readonly"}
-
         action_type = action_request.action_type
         target_ids = action_request.target_ids
         action_payload = dict(action_request.payload)

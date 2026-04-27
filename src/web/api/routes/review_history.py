@@ -5,7 +5,6 @@ from typing import Any
 
 from src.web.api.schemas import ReviewHistoryRestoreRequestDTO, SchemaValidationError
 from src.web.app.review_history_store import ReviewHistoryStore
-from src.web.app.review_lock_service import ReviewLockService
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager, SessionState
 
@@ -17,12 +16,10 @@ class ReviewHistoryHandler:
         self,
         session_manager: SessionManager | None = None,
         history_store: ReviewHistoryStore | None = None,
-        lock_service: ReviewLockService | None = None,
     ) -> None:
         self.sessions = session_manager or SessionManager()
         self.sidecar = ReviewSidecarStore()
         self.history_store = history_store or ReviewHistoryStore(self.sidecar)
-        self.lock_service = lock_service or ReviewLockService()
 
     def _find_session_for_video(self, video_id: str, preferred_session_id: str | None = None) -> SessionState | None:
         if preferred_session_id:
@@ -44,18 +41,12 @@ class ReviewHistoryHandler:
             return 404, {"error": "not_found", "message": f"workspace {video_id} not found"}
 
         payload = self.sidecar.ensure_workspace_metadata(state.csv_path, dict(state.payload or {}))
-        lock = self.lock_service.get(video_id, session_id=session_id)
         workspace = payload["workspace"]
         return 200, {
             "video_id": workspace["video_id"],
             "display_title": workspace["display_title"],
             "workspace_path": workspace["workspace_path"],
             "history_container_path": workspace["history_container_path"],
-            "lock": {
-                "mode": lock["mode"],
-                "owner_session_id": lock["owner_session_id"],
-                "is_current_session_owner": lock["is_current_session_owner"],
-            },
             "reviewed_names": sorted(
                 {
                     str(name).strip()
@@ -121,10 +112,6 @@ class ReviewHistoryHandler:
         if state is None:
             return 404, {"error": "not_found", "message": f"workspace {video_id} not found"}
 
-        can_write, lock_error = self.lock_service.ensure_writable(video_id, dto.session_id)
-        if not can_write:
-            return 409, lock_error or {"error": "workspace_locked", "message": "workspace is readonly"}
-
         payload = self.sidecar.ensure_workspace_metadata(state.csv_path, dict(state.payload or {}))
         try:
             restored_payload, restore_entry_id = self.history_store.restore_snapshot(
@@ -145,7 +132,3 @@ class ReviewHistoryHandler:
             "created_restore_entry_id": None,
             "status": "restored",
         }
-
-    def get_lock(self, video_id: str, session_id: str | None = None) -> tuple[int, dict[str, Any]]:
-        lock = self.lock_service.get(video_id, session_id=session_id)
-        return 200, lock
