@@ -43,7 +43,7 @@ def _services() -> tuple[ReviewSessionHandler, ReviewActionsHandler, ReviewHisto
     )
 
 
-def test_restore_flow_creates_provenance_snapshot_after_video_switch(tmp_path: Path) -> None:
+def test_restore_flow_deletes_newer_snapshots_after_video_switch(tmp_path: Path) -> None:
     sessions, actions, history = _services()
 
     load_status, load_body = sessions.post_load({"csv_path": str(_csv(tmp_path))})
@@ -87,7 +87,8 @@ def test_restore_flow_creates_provenance_snapshot_after_video_switch(tmp_path: P
 
     list_status, list_body = history.get_history(video_id, session_id=session_id)
     assert list_status == 200
-    assert len(list_body["entries"]) >= 2
+    assert len(list_body["entries"]) == 1
+    assert list_body["entries"][0]["entry_id"] == entry_id
 
 
 def test_non_state_mutation_does_not_create_snapshot(tmp_path: Path) -> None:

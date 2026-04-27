@@ -96,7 +96,7 @@ def test_contract_session_refresh_keeps_workspace_metadata(tmp_path: Path) -> No
     assert session_body["workspace"]["history_container_path"]
 
 
-def test_contract_restore_creates_provenance_snapshot_after_video_switch(tmp_path: Path) -> None:
+def test_contract_restore_deletes_newer_snapshots_after_video_switch(tmp_path: Path) -> None:
     sessions, _, history, session_id, video_id, entry_id = _bootstrap(tmp_path)
 
     restore_status, restore_body = history.post_restore(
@@ -113,7 +113,8 @@ def test_contract_restore_creates_provenance_snapshot_after_video_switch(tmp_pat
 
     history_status, history_body = history.get_history(video_id, session_id=session_id)
     assert history_status == 200
-    assert len(history_body["entries"]) >= 2
+    assert len(history_body["entries"]) == 1
+    assert history_body["entries"][0]["entry_id"] == entry_id
 
     refreshed_status, refreshed_body = sessions.get_session(session_id)
     assert refreshed_status == 200

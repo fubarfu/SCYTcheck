@@ -615,7 +615,21 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       </div>
 
       {loadingError && <SessionLoadErrorState message={loadingError} onRetry={() => setLoadingError(null)} />}
-      {exportMessage && <div className="export-banner">{exportMessage}</div>}
+      {exportMessage && (
+        <div className="export-banner" role="status">
+          <div className="export-banner-row">
+            <span>{exportMessage}</span>
+            <button
+              type="button"
+              className="export-banner-close"
+              aria-label="Dismiss message"
+              onClick={() => setExportMessage(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       {reopenWarning && <div className="export-banner">{reopenWarning}</div>}
       {hasPendingGroupingSettings && (
         <div className="export-banner">

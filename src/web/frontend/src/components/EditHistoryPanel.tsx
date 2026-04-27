@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { EditHistoryEntry } from "../state/reviewStore";
 
 interface EditHistoryPanelProps {
@@ -18,6 +19,8 @@ function formatTimestamp(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
+const RESTORE_WARNING_MESSAGE = "Restore this snapshot? All changes made after this point and all newer snapshots will be deleted.";
+
 export function EditHistoryPanel({
   entries,
   selectedEntryId,
@@ -27,12 +30,22 @@ export function EditHistoryPanel({
   onSelectEntry,
   onRestoreEntry,
 }: EditHistoryPanelProps) {
+  const [pendingRestoreEntryId, setPendingRestoreEntryId] = useState<string | null>(null);
+
+  const confirmRestore = () => {
+    if (!pendingRestoreEntryId) {
+      return;
+    }
+    onRestoreEntry(pendingRestoreEntryId);
+    setPendingRestoreEntryId(null);
+  };
+
   return (
     <div className="panel-card edit-history-panel">
       <div className="panel-card-header edit-history-header">
         <div>
           <h3>Edit History</h3>
-          <p className="edit-history-subtitle">Snapshots are append-only and restorable.</p>
+          <p className="edit-history-subtitle">Restoring a snapshot deletes newer history entries after confirmation.</p>
         </div>
       </div>
       <div className="panel-card-body edit-history-body">
@@ -76,7 +89,7 @@ export function EditHistoryPanel({
                       type="button"
                       className="ghost-action"
                       disabled={busy}
-                      onClick={() => onRestoreEntry(entry.entry_id)}
+                      onClick={() => setPendingRestoreEntryId(entry.entry_id)}
                     >
                       Restore snapshot
                     </button>
@@ -87,6 +100,22 @@ export function EditHistoryPanel({
           </ul>
         )}
       </div>
+      {pendingRestoreEntryId && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Restore snapshot warning">
+          <div className="modal-panel restore-confirmation-modal">
+            <h3>Restore snapshot</h3>
+            <p>{RESTORE_WARNING_MESSAGE}</p>
+            <div className="modal-actions">
+              <button type="button" className="ghost-action" onClick={() => setPendingRestoreEntryId(null)}>
+                Cancel
+              </button>
+              <button type="button" className="primary-action" onClick={confirmRestore}>
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

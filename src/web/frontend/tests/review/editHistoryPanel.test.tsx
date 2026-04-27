@@ -98,7 +98,7 @@ describe("EditHistoryPanel (feature 012)", () => {
     expect(onSelectEntry).toHaveBeenCalledWith("e1");
   });
 
-  it("calls onRestoreEntry when the Restore snapshot button is clicked", () => {
+  it("opens a restore warning modal and confirms restore on OK", () => {
     const onRestoreEntry = vi.fn();
     render(
       <EditHistoryPanel
@@ -113,7 +113,31 @@ describe("EditHistoryPanel (feature 012)", () => {
     );
     const restoreButtons = screen.getAllByRole("button", { name: /Restore snapshot/i });
     fireEvent.click(restoreButtons[0]);
+    expect(screen.getByRole("dialog", { name: /Restore snapshot warning/i })).toBeTruthy();
+    expect(screen.getByText(/All changes made after this point and all newer snapshots will be deleted/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "OK" }));
     expect(onRestoreEntry).toHaveBeenCalledWith("e1");
+  });
+
+  it("does not call onRestoreEntry when restore confirmation is cancelled", () => {
+    const onRestoreEntry = vi.fn();
+    render(
+      <EditHistoryPanel
+        entries={entries}
+        selectedEntryId={null}
+        restoredEntryId={null}
+        busy={false}
+        error={null}
+        onSelectEntry={() => {}}
+        onRestoreEntry={onRestoreEntry}
+      />,
+    );
+    const restoreButtons = screen.getAllByRole("button", { name: /Restore snapshot/i });
+    fireEvent.click(restoreButtons[0]);
+    expect(screen.getByRole("dialog", { name: /Restore snapshot warning/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onRestoreEntry).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: /Restore snapshot warning/i })).toBeNull();
   });
 
   it("marks the restored entry with is-restored class", () => {

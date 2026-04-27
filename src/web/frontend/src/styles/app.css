@@ -912,6 +912,27 @@ select,
   background: color-mix(in srgb, var(--accent) 12%, transparent 88%);
 }
 
+.export-banner-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.export-banner-close {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.export-banner-close:hover {
+  color: var(--accent);
+}
+
 .review-filter-bar {
   grid-template-columns: minmax(0, 1fr) 180px;
   align-items: center;
@@ -1607,6 +1628,10 @@ select,
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
+}
+
+.restore-confirmation-modal {
+  width: min(520px, 92vw);
 }
 
 .thumbnail-image {

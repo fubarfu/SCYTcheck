@@ -35,7 +35,9 @@ def test_restore_from_compressed_entry_is_deterministic(tmp_path: Path) -> None:
     )
 
     assert restored_payload["accepted_names"]["g1"] == "Alice"
-    assert restore_entry_id is not None
+    assert restore_entry_id is None
+    remaining_entries = store.list_entries(csv_path, _payload("Alice"))
+    assert [entry["entry_id"] for entry in remaining_entries] == [first["entry_id"]]
 
 
 def test_restore_without_provenance_snapshot_keeps_state_only(tmp_path: Path) -> None:
@@ -54,6 +56,30 @@ def test_restore_without_provenance_snapshot_keeps_state_only(tmp_path: Path) ->
 
     assert restored_payload["accepted_names"]["g1"] == "Alice"
     assert restore_entry_id is None
+
+
+def test_restore_snapshot_deletes_newer_entries(tmp_path: Path) -> None:
+    csv_path = tmp_path / "results.csv"
+    csv_path.write_text("PlayerName,StartTimestamp\nAlice,00:00:01.000\n", encoding="utf-8")
+
+    store = ReviewHistoryStore(max_uncompressed=5)
+    first = store.append_snapshot(csv_path, _payload("Alice"), "confirm")
+    second = store.append_snapshot(csv_path, _payload("Alicia"), "confirm")
+    third = store.append_snapshot(csv_path, _payload("Alise"), "confirm")
+
+    restored_payload, restore_entry_id = store.restore_snapshot(
+        csv_path,
+        _payload("Alise"),
+        first["entry_id"],
+        create_restore_snapshot=False,
+    )
+
+    assert restored_payload["accepted_names"]["g1"] == "Alice"
+    assert restore_entry_id is None
+    remaining_entries = store.list_entries(csv_path, _payload("Alice"))
+    assert [entry["entry_id"] for entry in remaining_entries] == [first["entry_id"]]
+    assert second["entry_id"] not in {entry["entry_id"] for entry in remaining_entries}
+    assert third["entry_id"] not in {entry["entry_id"] for entry in remaining_entries}
 
 
 def test_restore_snapshot_rebuilds_candidate_statuses_from_snapshot(tmp_path: Path) -> None:

@@ -178,16 +178,20 @@ class ReviewHistoryStore:
 
     def _mark_compaction(self, container: dict[str, Any]) -> None:
         entries = [entry for entry in container["entries"] if isinstance(entry, dict)]
-        if len(entries) <= self._max_uncompressed:
-            return
-        compress_until = len(entries) - self._max_uncompressed
-        compression_index: dict[str, str] = dict(container.get("compression_index", {}))
-        for entry in entries[:compress_until]:
-            entry_id = str(entry.get("entry_id", "")).strip()
-            if not entry_id:
-                continue
-            entry["compressed"] = True
-            compression_index[entry_id] = "summary_only_marker"
+        compression_index: dict[str, str] = {}
+        for entry in entries:
+            entry["compressed"] = False
+
+        if len(entries) > self._max_uncompressed:
+            compress_until = len(entries) - self._max_uncompressed
+            for entry in entries[:compress_until]:
+                entry_id = str(entry.get("entry_id", "")).strip()
+                if not entry_id:
+                    continue
+                entry["compressed"] = True
+                compression_index[entry_id] = "summary_only_marker"
+
+        container["entries"] = entries
         container["compression_index"] = compression_index
 
     def restore_snapshot(
@@ -197,9 +201,22 @@ class ReviewHistoryStore:
         entry_id: str,
         create_restore_snapshot: bool,
     ) -> tuple[dict[str, Any], str | None]:
-        target = self.get_entry(csv_path, session_payload, entry_id)
-        if target is None:
+        payload = self._sidecar.ensure_workspace_metadata(csv_path, session_payload)
+        video_id = payload["workspace"]["video_id"]
+        container_path = self._container_path(csv_path, payload)
+        container = self._load_container(container_path, video_id)
+        entries = [entry for entry in container["entries"] if isinstance(entry, dict)]
+        target_index = next(
+            (index for index, entry in enumerate(entries) if str(entry.get("entry_id", "")).strip() == entry_id),
+            -1,
+        )
+        if target_index < 0:
             raise FileNotFoundError(f"history entry {entry_id} not found")
+
+        target = entries[target_index]
+        container["entries"] = entries[: target_index + 1]
+        self._mark_compaction(container)
+        self._write_container(container_path, container)
 
         snapshot = dict(target.get("snapshot", {}))
         groups = [dict(group) for group in snapshot.get("groups", []) if isinstance(group, dict)]
@@ -244,9 +261,6 @@ class ReviewHistoryStore:
         restored["resolution_status"] = resolution_status
         restored["reviewed_names"] = list(snapshot.get("reviewed_names", []))
 
-        created_restore_entry_id: str | None = None
-        if create_restore_snapshot:
-            entry = self.append_snapshot(csv_path, restored, "restore")
-            created_restore_entry_id = str(entry.get("entry_id"))
+        del create_restore_snapshot
 
-        return restored, created_restore_entry_id
+        return restored, None

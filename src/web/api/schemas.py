@@ -409,14 +409,14 @@ class ReviewGroupResponseDTO:
 @dataclass(frozen=True)
 class ReviewHistoryRestoreRequestDTO:
     session_id: str
-    create_restore_snapshot: bool = True
+    create_restore_snapshot: bool = False
 
     @staticmethod
     def from_payload(payload: dict[str, Any]) -> ReviewHistoryRestoreRequestDTO:
         session_id = str(payload.get("session_id", "")).strip()
         if not session_id:
             raise SchemaValidationError("session_id is required")
-        create_restore_snapshot = bool(payload.get("create_restore_snapshot", True))
+        create_restore_snapshot = bool(payload.get("create_restore_snapshot", False))
         return ReviewHistoryRestoreRequestDTO(
             session_id=session_id,
             create_restore_snapshot=create_restore_snapshot,
