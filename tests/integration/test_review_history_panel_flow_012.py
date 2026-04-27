@@ -251,6 +251,28 @@ def test_browser_close_flush_creates_entry_only_when_different_from_latest(tmp_p
     assert len(list_body["entries"]) == 1
 
 
+def test_browser_close_flush_without_edits_does_not_create_snapshot(tmp_path: Path) -> None:
+    sessions, _, history = _services()
+
+    load_status, load_body = sessions.post_load({"csv_path": str(_csv(tmp_path))})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+    video_id = load_body["workspace"]["video_id"]
+
+    before_status, before_body = history.get_history(video_id, session_id=session_id)
+    assert before_status == 200
+    assert len(before_body["entries"]) == 0
+
+    close_status, close_body = sessions.post_flush_on_close(session_id)
+    assert close_status == 200
+    assert close_body["flushed"] is False
+    assert close_body["reason"] == "no_diff_from_last_entry"
+
+    after_status, after_body = history.get_history(video_id, session_id=session_id)
+    assert after_status == 200
+    assert len(after_body["entries"]) == 0
+
+
 def test_browser_close_flush_skips_when_state_matches_latest_entry(tmp_path: Path) -> None:
     sessions, actions, history = _services()
 
@@ -288,6 +310,48 @@ def test_browser_close_flush_skips_when_state_matches_latest_entry(tmp_path: Pat
     list_status, list_body = history.get_history(video_id, session_id=session_id)
     assert list_status == 200
     assert len(list_body["entries"]) == 1
+
+
+def test_video_switch_flush_skips_when_state_matches_latest_entry(tmp_path: Path) -> None:
+    sessions, actions, history = _services()
+
+    base_csv = _csv(tmp_path)
+    load_status, load_body = sessions.post_load({"csv_path": str(base_csv)})
+    assert load_status == 200
+    session_id = load_body["session_id"]
+    video_id = load_body["workspace"]["video_id"]
+
+    session_status, session = sessions.get_session(session_id)
+    assert session_status == 200
+    first_group = session["groups"][0]
+    candidate_id = first_group["candidates"][0]["candidate_id"]
+
+    confirm_status, _ = actions.post_action(
+        session_id,
+        {
+            "action_type": "confirm",
+            "target_ids": [candidate_id],
+            "payload": {"group_id": first_group["group_id"]},
+        },
+    )
+    assert confirm_status == 200
+
+    switch_status, _ = sessions.post_load({"csv_path": str(_other_csv(tmp_path, "switch_seed.csv"))})
+    assert switch_status == 200
+
+    seed_status, seed_history = history.get_history(video_id, session_id=session_id)
+    assert seed_status == 200
+    assert len(seed_history["entries"]) == 1
+
+    switch_back_status, _ = sessions.post_load({"csv_path": str(base_csv)})
+    assert switch_back_status == 200
+
+    second_switch_status, _ = sessions.post_load({"csv_path": str(_other_csv(tmp_path, "switch_again.csv", player_name="Carol"))})
+    assert second_switch_status == 200
+
+    final_status, final_history = history.get_history(video_id, session_id=session_id)
+    assert final_status == 200
+    assert len(final_history["entries"]) == 1
 
 
 # ---------------------------------------------------------------------------
