@@ -54,6 +54,25 @@ class ReviewSessionHandler:
                 flushed += 1
         return flushed
 
+    def post_flush_on_close(self, session_id: str) -> tuple[int, dict]:
+        state = self.sessions.get(session_id)
+        if state is None:
+            return 200, {
+                "session_id": session_id,
+                "flushed": False,
+                "history_entry_id": None,
+                "reason": "session_not_found",
+            }
+        payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), dict(state.payload or {}))
+        entry = self._history.append_snapshot_if_changed(Path(state.csv_path), payload, "browser-close")
+        self.sessions.clear_history_pending(state.session_id)
+        return 200, {
+            "session_id": session_id,
+            "flushed": entry is not None,
+            "history_entry_id": (str(entry.get("entry_id", "")) if entry is not None else None),
+            "reason": ("flushed" if entry is not None else "no_diff_from_last_entry"),
+        }
+
     def post_load(self, payload: dict[str, Any]) -> tuple[int, dict]:
         try:
             request_dto = ReviewLoadRequestDTO.from_payload(payload)

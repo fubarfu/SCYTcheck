@@ -44,6 +44,41 @@ def test_compaction_marks_older_entries_without_deleting(tmp_path: Path) -> None
     assert compressed_count >= 2
 
 
+def test_append_snapshot_if_changed_skips_when_snapshot_matches_latest(tmp_path: Path) -> None:
+    csv_path = tmp_path / "results.csv"
+    csv_path.write_text("PlayerName,StartTimestamp\nAlice,00:00:01.000\n", encoding="utf-8")
+
+    store = ReviewHistoryStore(max_uncompressed=50)
+    first = store.append_snapshot(csv_path, _payload(), "video-switch")
+    second = store.append_snapshot_if_changed(csv_path, _payload(), "browser-close")
+
+    entries = store.list_entries(csv_path, _payload())
+    assert first is not None
+    assert second is None
+    assert len(entries) == 1
+
+
+def test_append_snapshot_if_changed_appends_when_snapshot_differs(tmp_path: Path) -> None:
+    csv_path = tmp_path / "results.csv"
+    csv_path.write_text("PlayerName,StartTimestamp\nAlice,00:00:01.000\n", encoding="utf-8")
+
+    store = ReviewHistoryStore(max_uncompressed=50)
+    store.append_snapshot(csv_path, _payload(), "video-switch")
+
+    changed_payload = _payload()
+    changed_payload["accepted_names"] = {"g1": "Alice", "g2": "Alicia"}
+    changed_payload["groups"] = [
+        {"group_id": "g1", "resolution_status": "RESOLVED", "accepted_name": "Alice"},
+        {"group_id": "g2", "resolution_status": "RESOLVED", "accepted_name": "Alicia"},
+    ]
+    second = store.append_snapshot_if_changed(csv_path, changed_payload, "browser-close")
+
+    entries = store.list_entries(csv_path, changed_payload)
+    assert second is not None
+    assert len(entries) == 2
+    assert entries[0]["trigger_type"] == "browser-close"
+
+
 def test_snapshot_trigger_matrix_allows_only_state_changes() -> None:
     assert should_create_snapshot_for_action("confirm") is True
     assert should_create_snapshot_for_action("merge_groups") is True

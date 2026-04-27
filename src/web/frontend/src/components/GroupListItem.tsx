@@ -1,8 +1,15 @@
 import { DragEvent, useState } from "react";
 import type { CandidateGroup } from "./CandidateGroupCard";
-import { getDraggedGroupId, setDropCommitted, setHoveredGroupId } from "../state/dragPayload";
+import {
+  clearDraggedCandidate,
+  getDraggedCandidate,
+  getDraggedGroupId,
+  setDropCommitted,
+  setHoveredGroupId,
+} from "../state/dragPayload";
 
 const GROUP_DRAG_MIME = "application/x-scyt-group-id";
+const CANDIDATE_DRAG_MIME = "application/x-scyt-candidate";
 const FALLBACK_DRAG_MIME = "text/plain";
 
 function parseGroupFallbackPayload(raw: string): { group_id?: string } | null {
@@ -21,12 +28,36 @@ function parseGroupFallbackPayload(raw: string): { group_id?: string } | null {
   }
 }
 
+function parseCandidateFallbackPayload(raw: string): { candidate_id?: string; source_group_id?: string | null } | null {
+  const text = raw.trim();
+  if (!text.startsWith("{")) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(text) as {
+      kind?: string;
+      candidate_id?: string;
+      source_group_id?: string | null;
+    };
+    if (payload.kind !== "candidate") {
+      return null;
+    }
+    return {
+      candidate_id: payload.candidate_id,
+      source_group_id: payload.source_group_id ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 interface Props {
   group: CandidateGroup;
   isSelected: boolean;
   hasValidationError?: boolean;
   onSelect: (groupId: string) => void;
   onMergeGroups: (sourceGroupId: string, targetGroupId: string) => void;
+  onMoveCandidate: (candidateId: string, sourceGroupId: string | null, targetGroupId: string) => void;
 }
 
 /**
@@ -34,7 +65,14 @@ interface Props {
  * Mirrors the Stitch designs: status pill (Resolved / Unresolved / Conflict) plus
  * a count of matched candidates.
  */
-export function GroupListItem({ group, isSelected, hasValidationError = false, onSelect, onMergeGroups }: Props) {
+export function GroupListItem({
+  group,
+  isSelected,
+  hasValidationError = false,
+  onSelect,
+  onMergeGroups,
+  onMoveCandidate,
+}: Props) {
   const [isDropTarget, setIsDropTarget] = useState(false);
   const isResolved = (group.resolution_status ?? "UNRESOLVED") === "RESOLVED";
   const hasIssue = !isResolved;
@@ -62,9 +100,13 @@ export function GroupListItem({ group, isSelected, hasValidationError = false, o
   const handleDragOver = (event: DragEvent<HTMLButtonElement>) => {
     const types = Array.from(event.dataTransfer.types);
     const hasGroupMime = types.includes(GROUP_DRAG_MIME);
-    const fallbackPayload = parseGroupFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+    const hasCandidateMime = types.includes(CANDIDATE_DRAG_MIME);
+    const groupFallbackPayload = parseGroupFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+    const candidateFallbackPayload = parseCandidateFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
     const activeGroupId = getDraggedGroupId();
-    if (!hasGroupMime && !fallbackPayload && !activeGroupId) {
+    const activeCandidate = getDraggedCandidate();
+    
+    if (!hasGroupMime && !hasCandidateMime && !groupFallbackPayload && !candidateFallbackPayload && !activeGroupId && !activeCandidate) {
       return;
     }
     event.preventDefault();
@@ -82,22 +124,42 @@ export function GroupListItem({ group, isSelected, hasValidationError = false, o
     event.preventDefault();
     setIsDropTarget(false);
 
-    const fallbackPayload = parseGroupFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+    const groupFallbackPayload = parseGroupFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
     const draggedGroupId = (
       event.dataTransfer.getData(GROUP_DRAG_MIME).trim()
-      || String(fallbackPayload?.group_id ?? "").trim()
+      || String(groupFallbackPayload?.group_id ?? "").trim()
       || String(getDraggedGroupId() ?? "").trim()
     );
-    if (!draggedGroupId || draggedGroupId === group.group_id) {
+
+    if (draggedGroupId && draggedGroupId !== group.group_id) {
+      setDropCommitted(true);
       setHoveredGroupId(null);
+      onMergeGroups(draggedGroupId, group.group_id);
       return;
     }
 
-    setDropCommitted(true);
-    setHoveredGroupId(null);
-    onMergeGroups(draggedGroupId, group.group_id);
-  };
+    const candidateMimePayload = parseCandidateFallbackPayload(event.dataTransfer.getData(CANDIDATE_DRAG_MIME));
+    const candidateFallbackPayload = parseCandidateFallbackPayload(event.dataTransfer.getData(FALLBACK_DRAG_MIME));
+    const activeCandidate = getDraggedCandidate();
+    const draggedCandidateId = String(
+      candidateMimePayload?.candidate_id
+      || candidateFallbackPayload?.candidate_id
+      || activeCandidate?.candidate_id
+      || "",
+    ).trim();
+    const sourceGroupId = candidateMimePayload?.source_group_id
+      ?? candidateFallbackPayload?.source_group_id
+      ?? activeCandidate?.source_group_id
+      ?? null;
 
+    setHoveredGroupId(null);
+    if (!draggedCandidateId || sourceGroupId === group.group_id) {
+      return;
+    }
+    setDropCommitted(true);
+    clearDraggedCandidate();
+    onMoveCandidate(draggedCandidateId, sourceGroupId, group.group_id);
+  };
   return (
     <button
       type="button"

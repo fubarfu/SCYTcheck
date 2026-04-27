@@ -247,6 +247,12 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
+        flush_on_close_match = re.fullmatch(r"/api/review/sessions/([^/]+)/flush-on-close", path)
+        if flush_on_close_match and method == "POST":
+            status, body = self._services.review_sessions.post_flush_on_close(flush_on_close_match.group(1))
+            self._send_json(status, body)
+            return True
+
         undo_match = re.fullmatch(r"/api/review/sessions/([^/]+)/undo", path)
         if undo_match and method == "POST":
             status, body = self._services.review_actions.post_undo(undo_match.group(1))

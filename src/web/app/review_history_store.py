@@ -128,6 +128,54 @@ class ReviewHistoryStore:
         self._write_container(container_path, container)
         return entry
 
+    def append_snapshot_if_changed(
+        self,
+        csv_path: Path | str,
+        session_payload: dict[str, Any],
+        trigger_type: str,
+    ) -> dict[str, Any] | None:
+        payload = self._sidecar.ensure_workspace_metadata(csv_path, session_payload)
+        video_id = payload["workspace"]["video_id"]
+        container_path = self._container_path(csv_path, payload)
+        container = self._load_container(container_path, video_id)
+
+        snapshot = self._build_snapshot(payload)
+        latest_entry = next(
+            (
+                entry
+                for entry in sorted(
+                    [entry for entry in container["entries"] if isinstance(entry, dict)],
+                    key=self._entry_sort_key,
+                    reverse=True,
+                )
+            ),
+            None,
+        )
+        latest_snapshot = dict(latest_entry.get("snapshot", {})) if isinstance(latest_entry, dict) else {}
+        if latest_snapshot == snapshot:
+            return None
+
+        entry_id = f"h_{uuid4().hex[:12]}"
+        entry = {
+            "entry_id": entry_id,
+            "created_at": self._utc_now(),
+            "trigger_type": trigger_type,
+            "compressed": False,
+            "summary": {
+                "group_count": snapshot["group_count"],
+                "resolved_count": snapshot["resolved_count"],
+                "unresolved_count": snapshot["unresolved_count"],
+            },
+            "snapshot": snapshot,
+        }
+        entries = list(container["entries"])
+        entries.append(entry)
+        container["entries"] = entries
+
+        self._mark_compaction(container)
+        self._write_container(container_path, container)
+        return entry
+
     def _mark_compaction(self, container: dict[str, Any]) -> None:
         entries = [entry for entry in container["entries"] if isinstance(entry, dict)]
         if len(entries) <= self._max_uncompressed:

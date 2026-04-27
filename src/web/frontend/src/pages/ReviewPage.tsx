@@ -246,6 +246,28 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   }, [reopenContext]);
 
   useEffect(() => {
+    const sessionId = selectedSessionId?.trim() ?? "";
+    if (!sessionId) {
+      return;
+    }
+    const endpoint = `/api/review/sessions/${encodeURIComponent(sessionId)}/flush-on-close`;
+    const flushOnClose = () => {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(endpoint);
+        return;
+      }
+      void fetch(endpoint, { method: "POST", keepalive: true });
+    };
+
+    window.addEventListener("pagehide", flushOnClose);
+    window.addEventListener("beforeunload", flushOnClose);
+    return () => {
+      window.removeEventListener("pagehide", flushOnClose);
+      window.removeEventListener("beforeunload", flushOnClose);
+    };
+  }, [selectedSessionId]);
+
+  useEffect(() => {
     if (!selectedSessionId || !videoId) {
       setStoreState((prev) => ({
         ...prev,
@@ -735,6 +757,18 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                         payload: {
                           source_group_id: sourceGroupId,
                           target_group_id: targetGroupId,
+                          group_id: targetGroupId,
+                        },
+                      });
+                    }}
+                    onMoveCandidate={(candidateId, sourceGroupId, targetGroupId) => {
+                      void postAction({
+                        action_type: "move_candidate",
+                        target_ids: [candidateId],
+                        payload: {
+                          candidate_id: candidateId,
+                          source_group_id: sourceGroupId,
+                          to_group_id: targetGroupId,
                           group_id: targetGroupId,
                         },
                       });
