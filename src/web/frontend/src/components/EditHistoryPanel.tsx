@@ -41,13 +41,13 @@ export function EditHistoryPanel({
   };
 
   return (
-    <div className="panel-card edit-history-panel">
-      <div className="panel-card-header edit-history-header">
+    <details className="panel-card edit-history-panel">
+      <summary className="panel-card-header edit-history-header" data-testid="edit-history-summary">
         <div>
           <h3>Edit History</h3>
           <p className="edit-history-subtitle">Restoring a snapshot deletes newer history entries after confirmation.</p>
         </div>
-      </div>
+      </summary>
       <div className="panel-card-body edit-history-body">
         {error && <p className="edit-history-error">{error}</p>}
         {entries.length === 0 ? (
@@ -116,6 +116,6 @@ export function EditHistoryPanel({
           </div>
         </div>
       )}
-    </div>
+    </details>
   );
 }

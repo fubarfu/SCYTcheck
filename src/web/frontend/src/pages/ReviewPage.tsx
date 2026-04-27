@@ -121,6 +121,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [isRecalculatingGroups, setIsRecalculatingGroups] = useState(false);
   const [hasPendingGroupingSettings, setHasPendingGroupingSettings] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [showRecalculateConfirm, setShowRecalculateConfirm] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
   const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
   const [groupValidationFeedback, setGroupValidationFeedback] = useState<Record<string, GroupValidationFeedbackState>>({});
@@ -489,11 +490,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   const recalculateGroups = async () => {
-    if (!selectedSessionId || isRecalculatingGroups) return;
-    const shouldContinue = window.confirm(
-      "Recalculate groups with current settings? This will reset your current review decisions (resolved/unresolved state, accepted/rejected selections, and manual grouping changes).",
-    );
-    if (!shouldContinue) {
+    if (!selectedSessionId || isRecalculatingGroups) {
       return;
     }
 
@@ -541,6 +538,13 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     } finally {
       setIsRecalculatingGroups(false);
     }
+  };
+
+  const requestRecalculateGroups = () => {
+    if (!selectedSessionId || isRecalculatingGroups) {
+      return;
+    }
+    setShowRecalculateConfirm(true);
   };
 
   const handleUndo = async () => {
@@ -625,7 +629,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
               aria-label="Dismiss message"
               onClick={() => setExportMessage(null)}
             >
-              Close
+              <span className="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>
         </div>
@@ -804,7 +808,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                 setGroupingSettingsDraft((previous) => ({ ...previous, temporalInfluence: value }));
                 setHasPendingGroupingSettings(spellingRelaxation !== appliedSpellingRelaxation || value !== appliedTemporalInfluence);
               }}
-              onRecalculate={() => { void recalculateGroups(); }}
+              onRecalculate={requestRecalculateGroups}
             />
           </aside>
 
@@ -893,6 +897,39 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
             setThumbnailUrl(null);
           }}
         />
+      )}
+
+      {showRecalculateConfirm && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Recalculate groups warning">
+          <div className="modal-panel restore-confirmation-modal">
+            <h3>Recalculate groups</h3>
+            <p>
+              Recalculate groups with current settings? This will reset your current review decisions
+              (resolved/unresolved state, accepted/rejected selections, and manual grouping changes).
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="ghost-action"
+                onClick={() => setShowRecalculateConfirm(false)}
+                disabled={isRecalculatingGroups}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                onClick={() => {
+                  setShowRecalculateConfirm(false);
+                  void recalculateGroups();
+                }}
+                disabled={isRecalculatingGroups}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

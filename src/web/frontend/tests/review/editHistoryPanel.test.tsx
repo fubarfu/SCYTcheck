@@ -8,6 +8,10 @@ afterEach(() => {
   cleanup();
 });
 
+function expandEditHistoryPanel(): void {
+  fireEvent.click(screen.getByTestId("edit-history-summary"));
+}
+
 const entries: EditHistoryEntry[] = [
   {
     entry_id: "e1",
@@ -30,6 +34,24 @@ const entries: EditHistoryEntry[] = [
 ];
 
 describe("EditHistoryPanel (feature 012)", () => {
+  it("is collapsible and collapsed by default", () => {
+    render(
+      <EditHistoryPanel
+        entries={entries}
+        selectedEntryId={null}
+        restoredEntryId={null}
+        busy={false}
+        error={null}
+        onSelectEntry={() => {}}
+        onRestoreEntry={() => {}}
+      />,
+    );
+    const summary = screen.getByTestId("edit-history-summary");
+    expect(summary).toBeTruthy();
+    const details = summary.closest("details");
+    expect(details?.hasAttribute("open")).toBe(false);
+  });
+
   it("shows empty-state message when there are no entries", () => {
     render(
       <EditHistoryPanel
@@ -42,6 +64,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={() => {}}
       />,
     );
+    expandEditHistoryPanel();
     expect(screen.getByText(/No history entries yet/i)).toBeTruthy();
   });
 
@@ -57,6 +80,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={() => {}}
       />,
     );
+    expandEditHistoryPanel();
     const list = screen.getByRole("list", { name: /Edit history entries/i });
     expect(list.querySelectorAll("li").length).toBe(2);
   });
@@ -73,6 +97,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={() => {}}
       />,
     );
+    expandEditHistoryPanel();
     const list = screen.getByRole("list", { name: /Edit history entries/i });
     const rows = list.querySelectorAll("button.edit-history-row");
     expect(rows[0].classList.contains("is-selected")).toBe(true);
@@ -92,6 +117,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={() => {}}
       />,
     );
+    expandEditHistoryPanel();
     const list = screen.getByRole("list", { name: /Edit history entries/i });
     const rows = list.querySelectorAll("button.edit-history-row");
     fireEvent.click(rows[0]);
@@ -111,6 +137,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={onRestoreEntry}
       />,
     );
+    expandEditHistoryPanel();
     const restoreButtons = screen.getAllByRole("button", { name: /Restore snapshot/i });
     fireEvent.click(restoreButtons[0]);
     expect(screen.getByRole("dialog", { name: /Restore snapshot warning/i })).toBeTruthy();
@@ -132,6 +159,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={onRestoreEntry}
       />,
     );
+    expandEditHistoryPanel();
     const restoreButtons = screen.getAllByRole("button", { name: /Restore snapshot/i });
     fireEvent.click(restoreButtons[0]);
     expect(screen.getByRole("dialog", { name: /Restore snapshot warning/i })).toBeTruthy();
@@ -152,6 +180,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={() => {}}
       />,
     );
+    expandEditHistoryPanel();
     const list = screen.getByRole("list", { name: /Edit history entries/i });
     const firstRow = list.querySelectorAll("button.edit-history-row")[0];
     expect(firstRow.classList.contains("is-restored")).toBe(true);
@@ -169,6 +198,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={() => {}}
       />,
     );
+    expandEditHistoryPanel();
     expect(screen.getByText("Compressed")).toBeTruthy();
   });
 
@@ -199,6 +229,7 @@ describe("EditHistoryPanel (feature 012)", () => {
         onRestoreEntry={() => {}}
       />,
     );
+    expandEditHistoryPanel();
     const allButtons = screen.getAllByRole("button");
     for (const button of allButtons) {
       expect((button as HTMLButtonElement).disabled).toBe(true);

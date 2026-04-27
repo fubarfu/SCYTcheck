@@ -78,8 +78,6 @@
   border: none;
   background: none;
   color: var(--muted);
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
   min-height: unset;
   line-height: 1;
 }
@@ -423,7 +421,10 @@ select,
 }
 
 .edit-history-header {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .edit-history-subtitle {
@@ -920,17 +921,31 @@ select,
 }
 
 .export-banner-close {
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--text);
-  font: inherit;
+  color: var(--muted);
   cursor: pointer;
+  min-height: 28px;
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
-  text-decoration: underline;
+  line-height: 1;
 }
 
 .export-banner-close:hover {
   color: var(--accent);
+  background: color-mix(in srgb, var(--panel) 72%, transparent 28%);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border) 65%);
+}
+
+.export-banner-close .material-symbols-outlined {
+  font-size: 17px;
+  font-variation-settings: 'FILL' 0, 'wght' 400;
 }
 
 .review-filter-bar {
@@ -1039,7 +1054,7 @@ select,
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   padding: 8px 10px;
   -webkit-user-select: none;
@@ -1048,6 +1063,22 @@ select,
 
 .grouping-settings-summary::-webkit-details-marker {
   display: none;
+}
+
+.grouping-settings-summary::after,
+.edit-history-header::after {
+  content: 'expand_more';
+  font-family: 'Material Symbols Outlined';
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.grouping-settings-panel[open] > .grouping-settings-summary::after,
+.edit-history-panel[open] > .edit-history-header::after {
+  transform: rotate(180deg);
 }
 
 .grouping-settings-title {
@@ -1062,6 +1093,7 @@ select,
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
 }
 
 .grouping-settings-chip {
