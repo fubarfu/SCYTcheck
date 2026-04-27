@@ -13,6 +13,9 @@ from src.web.api.schemas import (
     SchemaValidationError,
 )
 from src.web.app.group_mutation_service import GroupMutationService
+from src.web.app.review_history_store import ReviewHistoryStore
+from src.web.app.review_lock_service import ReviewLockService
+from src.web.app.review_mutation_service import should_create_snapshot_for_action
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
 from src.web.app.review_grouping import recompute_groups
@@ -21,9 +24,16 @@ VALID_ACTION_TYPES = REVIEW_ACTION_TYPES
 
 
 class ReviewActionsHandler:
-    def __init__(self, session_manager: SessionManager | None = None) -> None:
+    def __init__(
+        self,
+        session_manager: SessionManager | None = None,
+        lock_service: ReviewLockService | None = None,
+        history_store: ReviewHistoryStore | None = None,
+    ) -> None:
         self.sessions = session_manager or SessionManager()
         self._sidecar = ReviewSidecarStore()
+        self._locks = lock_service or ReviewLockService()
+        self._history = history_store or ReviewHistoryStore(self._sidecar)
 
     def post_action(self, session_id: str, payload: dict[str, Any]) -> tuple[int, dict]:
         state = self.sessions.get(session_id)
@@ -34,6 +44,12 @@ class ReviewActionsHandler:
             action_request = ReviewActionRequestDTO.from_payload(payload)
         except SchemaValidationError as exc:
             return 400, {"error": "validation_error", "message": str(exc)}
+
+        session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), dict(state.payload or {}))
+        video_id = session_payload["workspace"]["video_id"]
+        can_write, lock_error = self._locks.ensure_writable(video_id, session_id)
+        if not can_write:
+            return 409, lock_error or {"error": "workspace_locked", "message": "workspace is readonly"}
 
         action_type = action_request.action_type
         target_ids = action_request.target_ids
@@ -47,7 +63,7 @@ class ReviewActionsHandler:
             "applied_at": datetime.now(UTC).isoformat(),
         }
 
-        session_payload = recompute_groups(dict(state.payload or {}))
+        session_payload = recompute_groups(session_payload)
         if action_type == "toggle_collapse":
             group_id = str(action_payload.get("group_id", "")).strip()
             if group_id:
@@ -117,13 +133,20 @@ class ReviewActionsHandler:
             updated_payload["candidate_group_overrides_original"] = dict(updated_payload.get("candidate_group_overrides", {}))
 
         updated_payload = recompute_groups(updated_payload)
+        updated_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
         self._sidecar.save(Path(state.csv_path), updated_payload)
+
+        history_entry_id: str | None = None
+        if should_create_snapshot_for_action(action_type):
+            history_entry = self._history.append_snapshot(Path(state.csv_path), updated_payload, action_type)
+            history_entry_id = str(history_entry.get("entry_id", "")) or None
 
         return 200, {
             "session_id": session_id,
             "action_id": action_id,
             "persisted": True,
+            "history_entry_id": history_entry_id,
             "updated_at": datetime.now(UTC).isoformat(),
         }
 
@@ -176,6 +199,7 @@ class ReviewActionsHandler:
         updated_payload: dict[str, Any] = dict(replay_payload)
         updated_payload["action_history"] = history
         updated_payload = recompute_groups(updated_payload)
+        updated_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
         self._sidecar.save(Path(state.csv_path), updated_payload)
 

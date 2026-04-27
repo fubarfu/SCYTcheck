@@ -46,6 +46,12 @@ def build_router() -> RouteRegistry:
     router.add("POST", "/api/review/sessions/{session_id}/undo", lambda session_id: session_id)
     router.add("POST", "/api/review/sessions/{session_id}/recalculate", lambda session_id: session_id)
 
+    router.add("GET", "/api/review/workspaces/{video_id}", lambda video_id: video_id)
+    router.add("GET", "/api/review/workspaces/{video_id}/history", lambda video_id: video_id)
+    router.add("GET", "/api/review/workspaces/{video_id}/history/{entry_id}", lambda video_id, entry_id: entry_id)
+    router.add("POST", "/api/review/workspaces/{video_id}/history/{entry_id}/restore", lambda video_id, entry_id, payload=None: payload)
+    router.add("GET", "/api/review/workspaces/{video_id}/lock", lambda video_id: video_id)
+
     router.add("GET", "/api/history/videos", lambda: {})
     router.add("GET", "/api/history/videos/{history_id}", lambda history_id: history_id)
     router.add("POST", "/api/history/merge-run", lambda payload=None: payload)

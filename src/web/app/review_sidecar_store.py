@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from hashlib import sha1
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -23,6 +25,38 @@ class ReviewSidecarStore:
             payload = json.load(handle)
         if not isinstance(payload, dict):
             return None
+        return payload
+
+    @staticmethod
+    def make_video_id(source_hint: str) -> str:
+        """Build a stable, filesystem-safe video identity from a source hint."""
+        normalized = re.sub(r"\s+", " ", str(source_hint or "").strip().lower())
+        digest = sha1(normalized.encode("utf-8")).hexdigest()[:16]
+        return f"vid_{digest}"
+
+    def ensure_workspace_metadata(
+        self,
+        csv_path: Path | str,
+        session_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        payload = dict(session_payload or {})
+        csv_file = Path(csv_path)
+        source_hint = str(payload.get("source_value") or csv_file.resolve(strict=False))
+        workspace = payload.get("workspace")
+        if not isinstance(workspace, dict):
+            workspace = {}
+
+        video_id = str(workspace.get("video_id", "")).strip() or self.make_video_id(source_hint)
+        display_title = str(workspace.get("display_title", "")).strip() or csv_file.stem
+        workspace_root = csv_file.parent / ".scyt_review_workspaces" / video_id
+        history_container = workspace_root / "history.json"
+
+        payload["workspace"] = {
+            "video_id": video_id,
+            "display_title": display_title,
+            "workspace_path": str(workspace_root),
+            "history_container_path": str(history_container),
+        }
         return payload
 
     def save(self, csv_path: Path | str, session_payload: dict[str, Any]) -> Path:

@@ -6,12 +6,21 @@ import { FrameThumbnailModal } from "../components/FrameThumbnailModal";
 import { GroupingSettingsPanel } from "../components/GroupingSettingsPanel";
 import { ReviewFilterBar } from "../components/ReviewFilterBar";
 import { SessionLoadErrorState } from "../components/SessionLoadErrorState";
+import { EditHistoryPanel } from "../components/EditHistoryPanel";
+import { ReviewLockBanner } from "../components/ReviewLockBanner";
 import {
   applyGroupToggleState,
   deriveGroupToggleState,
+  hydrateEditHistoryEntries,
+  markRestoredHistoryEntry,
   reconcileGroupMutationState,
+  selectEditHistoryEntry,
+  setLockState,
   updateGroupToggleState,
+  initialReviewStoreState,
+  type EditHistoryEntry,
   type GroupToggleState,
+  type ReviewStoreState,
 } from "../state/reviewStore";
 import {
   selectFilteredCandidates,
@@ -42,6 +51,11 @@ interface ReviewSessionPayload {
   csv_path: string;
   source_type?: "local_file" | "youtube_url";
   source_value?: string;
+  workspace?: {
+    video_id?: string;
+    display_title?: string;
+    reviewed_names?: string[];
+  };
   candidates?: Candidate[];
   thresholds?: {
     similarity_threshold?: number;
@@ -50,6 +64,16 @@ interface ReviewSessionPayload {
     temporal_influence?: number;
   };
   groups?: CandidateGroup[];
+}
+
+interface HistoryListResponse {
+  entries: EditHistoryEntry[];
+}
+
+interface LockResponse {
+  mode: "writer" | "unlocked";
+  owner_session_id: string | null;
+  is_current_session_owner: boolean;
 }
 
 interface GroupValidationFeedbackState {
@@ -117,6 +141,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     searchText: "",
     status: "all",
   });
+  const [storeState, setStoreState] = useState<ReviewStoreState>(initialReviewStoreState);
 
   const [thumbnailCandidateId, setThumbnailCandidateId] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -127,6 +152,9 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
 
   const sourceType = selectedSession?.source_type ?? "local_file";
   const sourceValue = selectedSession?.source_value ?? "";
+  const videoId = selectedSession?.workspace?.video_id?.trim() ?? "";
+  const isReadonly = Boolean(storeState.lock?.readonly);
+  const selectedHistoryEntryId = storeState.editHistory.selectedEntryId;
 
   const selectedCandidate = useMemo(
     () => (thumbnailCandidateId
@@ -226,6 +254,34 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setReopenWarning(null);
   }, [reopenContext]);
 
+  useEffect(() => {
+    if (!selectedSessionId || !videoId) {
+      setStoreState((prev) => ({
+        ...prev,
+        editHistory: {
+          ...prev.editHistory,
+          entries: [],
+          selectedEntryId: null,
+          restoredEntryId: null,
+          loading: false,
+          error: null,
+        },
+        lock: null,
+      }));
+      return;
+    }
+    setStoreState((prev) => ({
+      ...prev,
+      editHistory: {
+        ...prev.editHistory,
+        loading: true,
+        error: null,
+      },
+    }));
+    void fetchEditHistory(videoId, selectedSessionId);
+    void fetchLockState(videoId, selectedSessionId);
+  }, [selectedSessionId, videoId]);
+
   // Keep selectedGroupId valid: prefer an unresolved group (with validation error first),
   // then any visible group. Reset to null when no groups remain.
   useEffect(() => {
@@ -296,8 +352,73 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setLoadingError(null);
   };
 
+  const fetchLockState = async (workspaceVideoId: string, sessionId: string) => {
+    const resp = await fetch(
+      `/api/review/workspaces/${encodeURIComponent(workspaceVideoId)}/lock?session_id=${encodeURIComponent(sessionId)}`,
+    );
+    if (!resp.ok) {
+      setStoreState((prev) => setLockState(prev, null));
+      return;
+    }
+    const body = await resp.json() as LockResponse;
+    setStoreState((prev) => setLockState(prev, {
+      ...body,
+      readonly: body.mode === "writer" && !body.is_current_session_owner,
+    }));
+  };
+
+  const fetchEditHistory = async (workspaceVideoId: string, sessionId: string) => {
+    const resp = await fetch(
+      `/api/review/workspaces/${encodeURIComponent(workspaceVideoId)}/history?session_id=${encodeURIComponent(sessionId)}`,
+    );
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({ message: "Unable to load edit history" })) as { message?: string };
+      setStoreState((prev) => ({
+        ...prev,
+        editHistory: {
+          ...prev.editHistory,
+          entries: [],
+          loading: false,
+          error: body.message ?? "Unable to load edit history",
+        },
+      }));
+      return;
+    }
+    const body = await resp.json() as HistoryListResponse;
+    setStoreState((prev) => hydrateEditHistoryEntries(prev, body.entries ?? []));
+  };
+
+  const restoreHistoryEntry = async (entryId: string) => {
+    if (!selectedSessionId || !videoId || isReadonly) {
+      return;
+    }
+    const resp = await fetch(
+      `/api/review/workspaces/${encodeURIComponent(videoId)}/history/${encodeURIComponent(entryId)}/restore`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: selectedSessionId }),
+      },
+    );
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({ message: "Restore failed" })) as { message?: string };
+      setLoadingError(body.message ?? "Restore failed");
+      return;
+    }
+    setStoreState((prev) => markRestoredHistoryEntry(prev, entryId));
+    setLoadingError(null);
+    setExportMessage("Snapshot restored. Review state has been reloaded.");
+    await fetchSession(selectedSessionId, { syncGroupingSettingsDraft: true });
+    await fetchEditHistory(videoId, selectedSessionId);
+    await fetchLockState(videoId, selectedSessionId);
+  };
+
   const postAction = async (action: { action_type: string; target_ids: string[]; payload?: Record<string, unknown> }) => {
     if (!selectedSessionId) return;
+    if (isReadonly) {
+      setLoadingError("This workspace is read-only in the current session.");
+      return;
+    }
     setExportMessage(null);
     const actionGroupId = String(action.payload?.group_id ?? "").trim();
     const actionCandidateId = action.target_ids[0] ?? null;
@@ -371,10 +492,14 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setLoadingError(null);
     setUndoCount((v) => v + 1);
     await fetchSession(selectedSessionId);
+    if (videoId) {
+      await fetchEditHistory(videoId, selectedSessionId);
+      await fetchLockState(videoId, selectedSessionId);
+    }
   };
 
   const recalculateGroups = async () => {
-    if (!selectedSessionId || isRecalculatingGroups) return;
+    if (!selectedSessionId || isRecalculatingGroups || isReadonly) return;
     const shouldContinue = window.confirm(
       "Recalculate groups with current settings? This will reset your current review decisions (resolved/unresolved state, accepted/rejected selections, and manual grouping changes).",
     );
@@ -429,7 +554,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   };
 
   const handleUndo = async () => {
-    if (!selectedSessionId) return;
+    if (!selectedSessionId || isReadonly) return;
     setExportMessage(null);
     const resp = await fetch(`/api/review/sessions/${selectedSessionId}/undo`, { method: "POST" });
     if (!resp.ok) {
@@ -439,6 +564,10 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     const body = await resp.json() as { remaining_undo_count: number };
     setUndoCount(body.remaining_undo_count);
     await fetchSession(selectedSessionId);
+    if (videoId) {
+      await fetchEditHistory(videoId, selectedSessionId);
+      await fetchLockState(videoId, selectedSessionId);
+    }
   };
 
   const openThumbnail = async (candidateId: string) => {
@@ -499,6 +628,11 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       {loadingError && <SessionLoadErrorState message={loadingError} onRetry={() => setLoadingError(null)} />}
       {exportMessage && <div className="export-banner">{exportMessage}</div>}
       {reopenWarning && <div className="export-banner">{reopenWarning}</div>}
+      <ReviewLockBanner
+        readonly={isReadonly}
+        ownerSessionId={storeState.lock?.owner_session_id ?? null}
+        currentSessionId={selectedSessionId}
+      />
       {hasPendingGroupingSettings && (
         <div className="export-banner">
           Grouping settings changed. Click Recalculate in Grouping settings to apply them to existing groups.
@@ -551,7 +685,12 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                 max={Math.max(totalGroups, 1)}
               />
               <div className="candidate-list-actions">
-                <button type="button" className="ghost-action" onClick={() => { void handleUndo(); }} disabled={undoCount <= 0}>
+                <button
+                  type="button"
+                  className="ghost-action"
+                  onClick={() => { void handleUndo(); }}
+                  disabled={undoCount <= 0 || isReadonly}
+                >
                   Undo
                 </button>
                 <button type="button" className="primary-action" onClick={() => { void exportSession(); }} disabled={!selectedSessionId}>
@@ -646,7 +785,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
               spellingRelaxation={spellingRelaxation}
               temporalInfluence={temporalInfluence}
               isRecalculating={isRecalculatingGroups}
-              disabled={!selectedSessionId}
+              disabled={!selectedSessionId || isReadonly}
               onSpellingRelaxationChange={(value) => {
                 setGroupingSettingsDraft((previous) => ({ ...previous, spellingRelaxation: value }));
                 setHasPendingGroupingSettings(value !== appliedSpellingRelaxation || temporalInfluence !== appliedTemporalInfluence);
@@ -715,6 +854,20 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
             )}
           </div>
         </div>
+
+        <EditHistoryPanel
+          entries={storeState.editHistory.entries}
+          selectedEntryId={selectedHistoryEntryId}
+          restoredEntryId={storeState.editHistory.restoredEntryId}
+          busy={storeState.editHistory.loading || isReadonly}
+          error={storeState.editHistory.error}
+          onSelectEntry={(entryId) => {
+            setStoreState((prev) => selectEditHistoryEntry(prev, entryId));
+          }}
+          onRestoreEntry={(entryId) => {
+            void restoreHistoryEntry(entryId);
+          }}
+        />
       </div>
 
       {thumbnailCandidateId && (

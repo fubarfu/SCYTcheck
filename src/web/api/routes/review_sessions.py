@@ -7,6 +7,8 @@ from typing import Any
 
 from src.web.app.review_grouping import recompute_groups
 from src.web.app.result_schema_validator import ResultSchemaValidator
+from src.web.app.review_history_store import ReviewHistoryStore
+from src.web.app.review_lock_service import ReviewLockService
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
 from src.web.api.schemas import ReviewGroupResponseDTO, ReviewLoadRequestDTO, SchemaValidationError
@@ -19,10 +21,14 @@ class ReviewSessionHandler:
         self,
         session_manager: SessionManager | None = None,
         validator: ResultSchemaValidator | None = None,
+        lock_service: ReviewLockService | None = None,
+        history_store: ReviewHistoryStore | None = None,
     ) -> None:
         self.sessions = session_manager or SessionManager()
         self.validator = validator or ResultSchemaValidator()
         self._sidecar = ReviewSidecarStore()
+        self._locks = lock_service or ReviewLockService()
+        self._history = history_store or ReviewHistoryStore(self._sidecar)
 
     def post_load(self, payload: dict[str, Any]) -> tuple[int, dict]:
         try:
@@ -83,6 +89,8 @@ class ReviewSessionHandler:
             ),
         }
         session_payload = recompute_groups(session_payload)
+        session_payload = self._sidecar.ensure_workspace_metadata(csv_path, session_payload)
+        lock = self._locks.acquire(session_payload["workspace"]["video_id"], session_id)
         self.sessions.upsert(session_id, str(csv_path), session_payload)
         self._sidecar.save(csv_path, session_payload)
 
@@ -92,6 +100,8 @@ class ReviewSessionHandler:
             "schema_version": validation.schema_version,
             "source_type": source_type,
             "source_value": source_value,
+            "workspace": dict(session_payload["workspace"]),
+            "readonly": bool(lock["readonly"]),
         }
 
     def get_sessions(self) -> tuple[int, dict]:
@@ -113,6 +123,7 @@ class ReviewSessionHandler:
         if state is None:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
         refreshed_payload = recompute_groups(dict(state.payload or {}))
+        refreshed_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), refreshed_payload)
         response_payload = dict(refreshed_payload)
         response_payload["groups"] = _serialize_groups_for_session(list(refreshed_payload.get("groups", [])))
         self.sessions.upsert(state.session_id, state.csv_path, refreshed_payload)
@@ -145,8 +156,10 @@ class ReviewSessionHandler:
             "temporal_influence": temporal_influence,
         }
         session_payload = recompute_groups(session_payload)
+        session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), session_payload)
         self.sessions.upsert(state.session_id, state.csv_path, session_payload)
         self._sidecar.save(Path(state.csv_path), session_payload)
+        self._history.append_snapshot(Path(state.csv_path), session_payload, "settings-change")
 
         return 200, {
             "session_id": state.session_id,
@@ -185,8 +198,10 @@ class ReviewSessionHandler:
         session_payload["candidate_group_overrides_original"] = {}
 
         session_payload = recompute_groups(session_payload)
+        session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), session_payload)
         self.sessions.upsert(state.session_id, state.csv_path, session_payload)
         self._sidecar.save(Path(state.csv_path), session_payload)
+        self._history.append_snapshot(Path(state.csv_path), session_payload, "recalculate")
 
         return 200, {
             "session_id": state.session_id,

@@ -39,7 +39,13 @@
 - Lock banner + read-only control state: `src/web/frontend/src/components/ReviewLockBanner.tsx`
 - History API/state integration: `src/web/frontend/src/state/reviewStore.ts`
 
-## Deviation Log
+## Deviation Log (Post-Implementation — T040)
 
-- No approved deviations recorded at planning time.
-- If implementation requires deviation, document the rationale in this file and in `specs/012-video-review-history/quickstart.md`.
+| # | Stitch Screen Intent | Implementation | Rationale |
+|---|---------------------|----------------|-----------|
+| 1 | History entries show video title in panel header | Display title is the CSV file stem (e.g., `results`) unless overridden in sidecar `workspace.display_title` | Stable video_id is SHA-1 of resolved file path; YouTube title not available at review time in local workflow |
+| 2 | Compressed entries shown with a visual indicator | `compressed: true` entries render a "Compressed" badge in `EditHistoryPanel` | Snapshot data retained; only display-layer badge added — no functional difference from spec |
+| 3 | Lock banner shows session name or user label | Banner shows truncated `owner_session_id` (first 8 chars) and current session ID | Session IDs are UUIDs; no user-identity layer exists in current architecture |
+| 4 | History panel always visible in review stack | Panel renders even when `entries.length === 0` with an empty-state message | Ensures consistent panel footprint; avoids layout shift on first action |
+
+All deviations are non-breaking with respect to functional requirements FR-013 through FR-017 and do not affect data integrity or restore determinism.

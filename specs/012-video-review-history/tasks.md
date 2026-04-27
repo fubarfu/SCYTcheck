@@ -15,12 +15,12 @@ Organization: Tasks are grouped by phase and by user story so each story can be 
 
 Purpose: Prepare scaffolding, fixtures, and stitch references for implementation.
 
-- [ ] T001 Confirm and index authoritative Stitch artifacts in specs/012-video-review-history/stitch/README.md
-- [ ] T002 [P] Create feature fixture builders for workspace, history entries, and lock states in tests/fixtures/review_history_012/__init__.py
-- [ ] T003 [P] Create contract test scaffold in tests/contract/test_video_review_history_api_012.py
-- [ ] T004 [P] Create integration test scaffolds in tests/integration/test_review_history_panel_flow_012.py and tests/integration/test_review_history_readonly_lock_012.py
-- [ ] T005 [P] Create backend unit test scaffolds in tests/unit/test_review_history_snapshots_012.py, tests/unit/test_review_history_restore_012.py, and tests/unit/test_review_lock_behavior_012.py
-- [ ] T006 [P] Create frontend Vitest scaffolds in src/web/frontend/tests/review/editHistoryPanel.test.tsx and src/web/frontend/tests/review/reviewLockBanner.test.tsx
+- [X] T001 Confirm and index authoritative Stitch artifacts in specs/012-video-review-history/stitch/README.md
+- [X] T002 [P] Create feature fixture builders for workspace, history entries, and lock states in tests/fixtures/review_history_012/__init__.py
+- [X] T003 [P] Create contract test scaffold in tests/contract/test_video_review_history_api_012.py
+- [X] T004 [P] Create integration test scaffolds in tests/integration/test_review_history_panel_flow_012.py and tests/integration/test_review_history_readonly_lock_012.py
+- [X] T005 [P] Create backend unit test scaffolds in tests/unit/test_review_history_snapshots_012.py, tests/unit/test_review_history_restore_012.py, and tests/unit/test_review_lock_behavior_012.py
+- [X] T006 [P] Create frontend Vitest scaffolds in src/web/frontend/tests/review/editHistoryPanel.test.tsx and src/web/frontend/tests/review/reviewLockBanner.test.tsx
 
 ---
 
@@ -30,18 +30,18 @@ Purpose: Implement shared persistence, lock primitives, and API model changes re
 
 Critical: No story work should start before this phase is complete.
 
-- [ ] T007 Add or extend review-history and lock entities in src/data/models.py
-- [ ] T008 [P] Implement per-video append-only history storage service in src/web/app/review_history_store.py
-- [ ] T009 [P] Implement single-writer lock service with read-only detection in src/web/app/review_lock_service.py
-- [ ] T010 [P] Extend sidecar/workspace metadata handling for stable video_id folder identity in src/web/app/review_sidecar_store.py
-- [ ] T011 [P] Add history and lock DTOs in src/web/api/schemas.py
-- [ ] T012 Wire new history route surface in src/web/api/routes/review_history.py and src/web/api/router.py
-- [ ] T013 Extend existing review_sessions and review_actions route plumbing for history and lock context in src/web/api/routes/review_sessions.py and src/web/api/routes/review_actions.py
-- [ ] T014 Add foundational tests for append-only writes, ordering guarantees, and lock invariants in tests/unit/test_review_history_snapshots_012.py and tests/unit/test_review_lock_behavior_012.py
-- [ ] T014A Define and implement snapshot trigger matrix for state-changing mutations only in src/web/app/review_mutation_service.py and src/web/app/review_history_store.py
-- [ ] T014B Add negative tests proving no snapshot is created for non-state-changing UI interactions in tests/integration/test_review_history_panel_flow_012.py and tests/unit/test_review_history_snapshots_012.py
-- [ ] T014C Implement history compaction/compression policy for older entries within the per-video container in src/web/app/review_history_store.py
-- [ ] T014D Add unit and integration tests for deterministic restore from compressed and uncompressed entries in tests/unit/test_review_history_restore_012.py and tests/integration/test_review_history_panel_flow_012.py
+- [X] T007 Add or extend review-history and lock entities in src/data/models.py
+- [X] T008 [P] Implement per-video append-only history storage service in src/web/app/review_history_store.py
+- [X] T009 [P] Implement single-writer lock service with read-only detection in src/web/app/review_lock_service.py
+- [X] T010 [P] Extend sidecar/workspace metadata handling for stable video_id folder identity in src/web/app/review_sidecar_store.py
+- [X] T011 [P] Add history and lock DTOs in src/web/api/schemas.py
+- [X] T012 Wire new history route surface in src/web/api/routes/review_history.py and src/web/api/router.py
+- [X] T013 Extend existing review_sessions and review_actions route plumbing for history and lock context in src/web/api/routes/review_sessions.py and src/web/api/routes/review_actions.py
+- [X] T014 Add foundational tests for append-only writes, ordering guarantees, and lock invariants in tests/unit/test_review_history_snapshots_012.py and tests/unit/test_review_lock_behavior_012.py
+- [X] T014A Define and implement snapshot trigger matrix for state-changing mutations only in src/web/app/review_mutation_service.py and src/web/app/review_history_store.py
+- [X] T014B Add negative tests proving no snapshot is created for non-state-changing UI interactions in tests/integration/test_review_history_panel_flow_012.py and tests/unit/test_review_history_snapshots_012.py
+- [X] T014C Implement history compaction/compression policy for older entries within the per-video container in src/web/app/review_history_store.py
+- [X] T014D Add unit and integration tests for deterministic restore from compressed and uncompressed entries in tests/unit/test_review_history_restore_012.py and tests/integration/test_review_history_panel_flow_012.py
 
 Checkpoint: Shared history and lock primitives are ready for user-story delivery.
 
@@ -55,19 +55,19 @@ Independent test: Load a workspace with multiple history entries, select one ent
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add contract tests for GET history list and GET history entry payload in tests/contract/test_video_review_history_api_012.py
-- [ ] T016 [P] [US1] Add integration tests for restore flow and restore provenance snapshot creation in tests/integration/test_review_history_panel_flow_012.py
-- [ ] T017 [P] [US1] Add Vitest coverage for bottom-panel edit-history rendering and row selection behavior in src/web/frontend/tests/review/editHistoryPanel.test.tsx
-- [ ] T017A [P] [US1] Add contract and integration coverage for first-save history bootstrap when a video has no history entries in tests/contract/test_video_review_history_api_012.py and tests/integration/test_review_history_panel_flow_012.py
+- [X] T015 [P] [US1] Add contract tests for GET history list and GET history entry payload in tests/contract/test_video_review_history_api_012.py
+- [X] T016 [P] [US1] Add integration tests for restore flow and restore provenance snapshot creation in tests/integration/test_review_history_panel_flow_012.py
+- [X] T017 [P] [US1] Add Vitest coverage for bottom-panel edit-history rendering and row selection behavior in src/web/frontend/tests/review/editHistoryPanel.test.tsx
+- [X] T017A [P] [US1] Add contract and integration coverage for first-save history bootstrap when a video has no history entries in tests/contract/test_video_review_history_api_012.py and tests/integration/test_review_history_panel_flow_012.py
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement ordered history list and entry retrieval endpoints in src/web/api/routes/review_history.py
-- [ ] T019 [US1] Implement restore endpoint semantics with create_restore_snapshot support in src/web/api/routes/review_history.py and src/web/app/review_history_store.py
-- [ ] T020 [US1] Add edit-history state actions and selectors in src/web/frontend/src/state/reviewStore.ts
-- [ ] T021 [US1] Implement EditHistoryPanel component with timestamp, group count, resolved, unresolved, and restore action in src/web/frontend/src/components/EditHistoryPanel.tsx
-- [ ] T022 [US1] Integrate bottom-panel edit history and restore banner hooks into review screen in src/web/frontend/src/pages/ReviewPage.tsx
-- [ ] T022A [US1] Implement and wire empty-history panel state message in src/web/frontend/src/components/EditHistoryPanel.tsx and src/web/frontend/src/pages/ReviewPage.tsx
+- [X] T018 [US1] Implement ordered history list and entry retrieval endpoints in src/web/api/routes/review_history.py
+- [X] T019 [US1] Implement restore endpoint semantics with create_restore_snapshot support in src/web/api/routes/review_history.py and src/web/app/review_history_store.py
+- [X] T020 [US1] Add edit-history state actions and selectors in src/web/frontend/src/state/reviewStore.ts
+- [X] T021 [US1] Implement EditHistoryPanel component with timestamp, group count, resolved, unresolved, and restore action in src/web/frontend/src/components/EditHistoryPanel.tsx
+- [X] T022 [US1] Integrate bottom-panel edit history and restore banner hooks into review screen in src/web/frontend/src/pages/ReviewPage.tsx
+- [X] T022A [US1] Implement and wire empty-history panel state message in src/web/frontend/src/components/EditHistoryPanel.tsx and src/web/frontend/src/pages/ReviewPage.tsx
 
 Checkpoint: Prior snapshots are discoverable and restorable with deterministic state reconstruction.
 
@@ -81,16 +81,16 @@ Independent test: Create or open multiple workspaces and verify each uses stable
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Add unit tests for stable folder identity and title metadata behavior in tests/unit/test_review_history_snapshots_012.py
-- [ ] T024 [P] [US2] Add integration tests for workspace isolation and source-of-truth loading in tests/integration/test_review_history_panel_flow_012.py
+- [X] T023 [P] [US2] Add unit tests for stable folder identity and title metadata behavior in tests/unit/test_review_history_snapshots_012.py
+- [X] T024 [P] [US2] Add integration tests for workspace isolation and source-of-truth loading in tests/integration/test_review_history_panel_flow_012.py
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement stable video_id path resolution and display-title metadata persistence in src/web/app/review_sidecar_store.py
-- [ ] T026 [US2] Ensure history container path belongs to workspace and is loaded per video_id in src/web/app/review_history_store.py
-- [ ] T027 [US2] Expose workspace metadata endpoint details in src/web/api/routes/review_history.py and src/web/api/schemas.py
-- [ ] T027A [US2] Persist and validate per-video analysis runs and candidate payload loading in src/web/app/review_sidecar_store.py and tests/integration/test_review_history_panel_flow_012.py
-- [ ] T027B [US2] Persist and validate per-video analysis settings, grouping settings, and selection-region configuration in src/web/app/review_sidecar_store.py, src/web/api/routes/review_history.py, and tests/contract/test_video_review_history_api_012.py
+- [X] T025 [US2] Implement stable video_id path resolution and display-title metadata persistence in src/web/app/review_sidecar_store.py
+- [X] T026 [US2] Ensure history container path belongs to workspace and is loaded per video_id in src/web/app/review_history_store.py
+- [X] T027 [US2] Expose workspace metadata endpoint details in src/web/api/routes/review_history.py and src/web/api/schemas.py
+- [X] T027A [US2] Persist and validate per-video analysis runs and candidate payload loading in src/web/app/review_sidecar_store.py and tests/integration/test_review_history_panel_flow_012.py
+- [X] T027B [US2] Persist and validate per-video analysis settings, grouping settings, and selection-region configuration in src/web/app/review_sidecar_store.py, src/web/api/routes/review_history.py, and tests/contract/test_video_review_history_api_012.py
 
 Checkpoint: Workspace data ownership is video-centric and stable across renames.
 
@@ -104,14 +104,14 @@ Independent test: Finalize names, restore an older snapshot, return to latest sn
 
 ### Tests for User Story 3
 
-- [ ] T028 [P] [US3] Add unit tests for reviewed-name list persistence and merge or replace semantics in tests/unit/test_review_history_restore_012.py
-- [ ] T029 [P] [US3] Add contract tests validating reviewed-name payload shape in history and workspace responses in tests/contract/test_video_review_history_api_012.py
+- [X] T028 [P] [US3] Add unit tests for reviewed-name list persistence and merge or replace semantics in tests/unit/test_review_history_restore_012.py
+- [X] T029 [P] [US3] Add contract tests validating reviewed-name payload shape in history and workspace responses in tests/contract/test_video_review_history_api_012.py
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Persist reviewed-name list alongside snapshots and workspace metadata in src/web/app/review_history_store.py
-- [ ] T031 [US3] Ensure restore semantics update active reviewed-name state consistently in src/web/app/review_mutation_service.py and src/web/api/routes/review_history.py
-- [ ] T032 [US3] Render reviewed-name summary consistency indicators in review page state layer in src/web/frontend/src/state/reviewStore.ts and src/web/frontend/src/pages/ReviewPage.tsx
+- [X] T030 [US3] Persist reviewed-name list alongside snapshots and workspace metadata in src/web/app/review_history_store.py
+- [X] T031 [US3] Ensure restore semantics update active reviewed-name state consistently in src/web/app/review_mutation_service.py and src/web/api/routes/review_history.py
+- [X] T032 [US3] Render reviewed-name summary consistency indicators in review page state layer in src/web/frontend/src/state/reviewStore.ts and src/web/frontend/src/pages/ReviewPage.tsx
 
 Checkpoint: Reviewed names remain durable and consistent across history navigation.
 
@@ -121,10 +121,10 @@ Checkpoint: Reviewed names remain durable and consistent across history navigati
 
 Purpose: Deliver lock warning UX and enforce mutation blocking for non-owner sessions.
 
-- [ ] T033 [P] Add contract coverage for 409 workspace_locked behavior on mutation endpoints in tests/contract/test_video_review_history_api_012.py
-- [ ] T034 [P] Add integration coverage for second-session read-only mode and non-blocking inspection in tests/integration/test_review_history_readonly_lock_012.py
-- [ ] T035 Implement lock checks in mutation paths in src/web/api/routes/review_actions.py and src/web/api/routes/review_history.py
-- [ ] T036 Implement ReviewLockBanner and disabled control wiring in src/web/frontend/src/components/ReviewLockBanner.tsx and src/web/frontend/src/pages/ReviewPage.tsx
+- [X] T033 [P] Add contract coverage for 409 workspace_locked behavior on mutation endpoints in tests/contract/test_video_review_history_api_012.py
+- [X] T034 [P] Add integration coverage for second-session read-only mode and non-blocking inspection in tests/integration/test_review_history_readonly_lock_012.py
+- [X] T035 Implement lock checks in mutation paths in src/web/api/routes/review_actions.py and src/web/api/routes/review_history.py
+- [X] T036 Implement ReviewLockBanner and disabled control wiring in src/web/frontend/src/components/ReviewLockBanner.tsx and src/web/frontend/src/pages/ReviewPage.tsx
 
 Checkpoint: Single-writer lock and read-only fallback are fully enforced and visible.
 
@@ -134,12 +134,12 @@ Checkpoint: Single-writer lock and read-only fallback are fully enforced and vis
 
 Purpose: Reconcile with stitch artifacts, run full suite, and finalize implementation notes.
 
-- [ ] T037 [P] Run and fix backend unit suite for history, restore, and lock tests in tests/unit/test_review_history_snapshots_012.py, tests/unit/test_review_history_restore_012.py, and tests/unit/test_review_lock_behavior_012.py
-- [ ] T038 [P] Run and fix contract and integration suites in tests/contract/test_video_review_history_api_012.py, tests/integration/test_review_history_panel_flow_012.py, and tests/integration/test_review_history_readonly_lock_012.py
-- [ ] T039 [P] Run and fix frontend Vitest suite in src/web/frontend/tests/review/editHistoryPanel.test.tsx and src/web/frontend/tests/review/reviewLockBanner.test.tsx
-- [ ] T040 Reconcile implementation against 012 Stitch screens and record justified deviations in specs/012-video-review-history/stitch/README.md and specs/012-video-review-history/quickstart.md
-- [ ] T041 Validate performance targets for restore UI feedback and hydration time at 100, 500, and 1,000 history-entry datasets in tests/integration/test_review_history_panel_flow_012.py
-- [ ] T042 Execute quickstart manual validation and capture final notes in specs/012-video-review-history/quickstart.md
+- [X] T037 [P] Run and fix backend unit suite for history, restore, and lock tests in tests/unit/test_review_history_snapshots_012.py, tests/unit/test_review_history_restore_012.py, and tests/unit/test_review_lock_behavior_012.py
+- [X] T038 [P] Run and fix contract and integration suites in tests/contract/test_video_review_history_api_012.py, tests/integration/test_review_history_panel_flow_012.py, and tests/integration/test_review_history_readonly_lock_012.py
+- [X] T039 [P] Run and fix frontend Vitest suite in src/web/frontend/tests/review/editHistoryPanel.test.tsx and src/web/frontend/tests/review/reviewLockBanner.test.tsx
+- [X] T040 Reconcile implementation against 012 Stitch screens and record justified deviations in specs/012-video-review-history/stitch/README.md and specs/012-video-review-history/quickstart.md
+- [X] T041 Validate performance targets for restore UI feedback and hydration time at 100, 500, and 1,000 history-entry datasets in tests/integration/test_review_history_panel_flow_012.py
+- [X] T042 Execute quickstart manual validation and capture final notes in specs/012-video-review-history/quickstart.md
 
 ---
 

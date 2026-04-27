@@ -18,8 +18,12 @@ from src.web.api.routes.history import HistoryHandler
 from src.web.api.routes.review_actions import ReviewActionsHandler
 from src.web.api.routes.review_assets import ReviewAssetsHandler
 from src.web.api.routes.review_export import ReviewExportHandler
+from src.web.api.routes.review_history import ReviewHistoryHandler
 from src.web.api.routes.review_sessions import ReviewSessionHandler
 from src.web.api.routes.settings import SettingsHandler
+from src.web.app.review_history_store import ReviewHistoryStore
+from src.web.app.review_lock_service import ReviewLockService
+from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
 from src.web.app.config import WebAppConfig, load_web_config
 
@@ -27,11 +31,27 @@ from src.web.app.config import WebAppConfig, load_web_config
 class _AppServices:
     def __init__(self) -> None:
         session_manager = SessionManager()
+        sidecar_store = ReviewSidecarStore()
+        history_store = ReviewHistoryStore(sidecar_store)
+        lock_service = ReviewLockService()
         self.settings = SettingsHandler()
         self.analysis = AnalysisHandler()
         self.fs = FsHandler()
-        self.review_sessions = ReviewSessionHandler(session_manager=session_manager)
-        self.review_actions = ReviewActionsHandler(session_manager=session_manager)
+        self.review_sessions = ReviewSessionHandler(
+            session_manager=session_manager,
+            lock_service=lock_service,
+            history_store=history_store,
+        )
+        self.review_actions = ReviewActionsHandler(
+            session_manager=session_manager,
+            lock_service=lock_service,
+            history_store=history_store,
+        )
+        self.review_history = ReviewHistoryHandler(
+            session_manager=session_manager,
+            history_store=history_store,
+            lock_service=lock_service,
+        )
         self.review_assets = ReviewAssetsHandler(session_manager=session_manager)
         self.review_export = ReviewExportHandler(session_manager=session_manager)
         self.history = HistoryHandler()
@@ -153,6 +173,57 @@ class _RequestHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/review/sessions/load" and method == "POST":
             status, body = self._services.review_sessions.post_load(self._read_json_body())
+            self._send_json(status, body)
+            return True
+
+        review_workspace_match = re.fullmatch(r"/api/review/workspaces/([^/]+)", path)
+        if review_workspace_match and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            status, body = self._services.review_history.get_workspace(
+                review_workspace_match.group(1),
+                session_id=query.get("session_id", [None])[0],
+            )
+            self._send_json(status, body)
+            return True
+
+        review_lock_match = re.fullmatch(r"/api/review/workspaces/([^/]+)/lock", path)
+        if review_lock_match and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            status, body = self._services.review_history.get_lock(
+                review_lock_match.group(1),
+                session_id=query.get("session_id", [None])[0],
+            )
+            self._send_json(status, body)
+            return True
+
+        review_history_list_match = re.fullmatch(r"/api/review/workspaces/([^/]+)/history", path)
+        if review_history_list_match and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            status, body = self._services.review_history.get_history(
+                review_history_list_match.group(1),
+                session_id=query.get("session_id", [None])[0],
+            )
+            self._send_json(status, body)
+            return True
+
+        review_history_entry_match = re.fullmatch(r"/api/review/workspaces/([^/]+)/history/([^/]+)", path)
+        if review_history_entry_match and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            status, body = self._services.review_history.get_history_entry(
+                review_history_entry_match.group(1),
+                review_history_entry_match.group(2),
+                session_id=query.get("session_id", [None])[0],
+            )
+            self._send_json(status, body)
+            return True
+
+        review_restore_match = re.fullmatch(r"/api/review/workspaces/([^/]+)/history/([^/]+)/restore", path)
+        if review_restore_match and method == "POST":
+            status, body = self._services.review_history.post_restore(
+                review_restore_match.group(1),
+                review_restore_match.group(2),
+                self._read_json_body(),
+            )
             self._send_json(status, body)
             return True
 

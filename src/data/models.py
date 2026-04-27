@@ -312,3 +312,38 @@ class ReviewGroupPayload:
             if candidate.candidate_id not in rejected and candidate.display_name
         }
         return values
+
+
+@dataclass
+class ReviewStateSnapshot:
+    """Restorable full review state snapshot persisted in append-only history."""
+
+    groups: list[dict[str, object]] = field(default_factory=list)
+    resolved_count: int = 0
+    unresolved_count: int = 0
+    group_count: int = 0
+    reviewed_names: list[str] = field(default_factory=list)
+
+
+@dataclass
+class EditHistoryEntry:
+    """One append-only history entry for a video review workspace."""
+
+    entry_id: str
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    trigger_type: str = "mutation"
+    summary: dict[str, int] = field(default_factory=dict)
+    snapshot: ReviewStateSnapshot = field(default_factory=ReviewStateSnapshot)
+    compressed: bool = False
+
+
+@dataclass
+class WorkspaceLock:
+    """Single writer lock state for one workspace video_id."""
+
+    lock_id: str
+    video_id: str
+    owner_session_id: str
+    acquired_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    expires_at: datetime | None = None
+    mode: str = "writer"

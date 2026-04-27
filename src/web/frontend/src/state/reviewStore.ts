@@ -1,3 +1,28 @@
+export interface EditHistoryEntry {
+  entry_id: string;
+  created_at: string;
+  group_count: number;
+  resolved_count: number;
+  unresolved_count: number;
+  trigger_type: string;
+  compressed: boolean;
+}
+
+export interface EditHistoryState {
+  entries: EditHistoryEntry[];
+  selectedEntryId: string | null;
+  restoredEntryId: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export interface WorkspaceLockState {
+  mode: "writer" | "unlocked";
+  owner_session_id: string | null;
+  is_current_session_owner: boolean;
+  readonly: boolean;
+}
+
 export type ReviewStoreState = {
   selectedSessionId: string | null;
   sessions: Record<string, { csvPath: string; hydratedAt: string; data: unknown }>;
@@ -6,12 +31,22 @@ export type ReviewStoreState = {
     warningMessages: string[];
     hydratedAt: string;
   } | null;
+  editHistory: EditHistoryState;
+  lock: WorkspaceLockState | null;
 };
 
 export const initialReviewStoreState: ReviewStoreState = {
   selectedSessionId: null,
   sessions: {},
   reopenContext: null,
+  editHistory: {
+    entries: [],
+    selectedEntryId: null,
+    restoredEntryId: null,
+    loading: false,
+    error: null,
+  },
+  lock: null,
 };
 
 export function hydrateSession(
@@ -41,6 +76,54 @@ export function switchSession(state: ReviewStoreState, sessionId: string): Revie
   return {
     ...state,
     selectedSessionId: sessionId,
+  };
+}
+
+export function hydrateEditHistoryEntries(
+  state: ReviewStoreState,
+  entries: EditHistoryEntry[],
+): ReviewStoreState {
+  const nextSelected =
+    state.editHistory.selectedEntryId && entries.some((entry) => entry.entry_id === state.editHistory.selectedEntryId)
+      ? state.editHistory.selectedEntryId
+      : entries[0]?.entry_id ?? null;
+  return {
+    ...state,
+    editHistory: {
+      ...state.editHistory,
+      entries,
+      selectedEntryId: nextSelected,
+      loading: false,
+      error: null,
+    },
+  };
+}
+
+export function selectEditHistoryEntry(state: ReviewStoreState, entryId: string): ReviewStoreState {
+  return {
+    ...state,
+    editHistory: {
+      ...state.editHistory,
+      selectedEntryId: entryId,
+    },
+  };
+}
+
+export function markRestoredHistoryEntry(state: ReviewStoreState, entryId: string): ReviewStoreState {
+  return {
+    ...state,
+    editHistory: {
+      ...state.editHistory,
+      restoredEntryId: entryId,
+      selectedEntryId: entryId,
+    },
+  };
+}
+
+export function setLockState(state: ReviewStoreState, lock: WorkspaceLockState | null): ReviewStoreState {
+  return {
+    ...state,
+    lock,
   };
 }
 

@@ -25,6 +25,11 @@ Thumbs.db
 node_modules/
 build/
 
+# Generated local review workspace artifacts
+*.review.json
+.scyt_review_workspaces/
+artifacts/.scyt_review_workspaces/
+
 # Local release dependency bundles (used by build script, not tracked)
 third_party/
 !third_party/
