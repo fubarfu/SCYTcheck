@@ -30,6 +30,33 @@ class ReviewSessionHandler:
         self._locks = lock_service or ReviewLockService()
         self._history = history_store or ReviewHistoryStore(self._sidecar)
 
+    def _flush_session_history(self, state, trigger_type: str) -> str | None:
+        if not state.has_pending_history:
+            return None
+        payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), dict(state.payload or {}))
+        entry = self._history.append_snapshot(Path(state.csv_path), payload, trigger_type)
+        self.sessions.clear_history_pending(state.session_id)
+        return str(entry.get("entry_id", "")) or None
+
+    def _flush_active_session_history_if_switching(self, next_video_id: str, next_session_id: str | None = None) -> str | None:
+        active_state = self.sessions.get_active_session()
+        if active_state is None:
+            return None
+        if next_session_id and active_state.session_id == next_session_id:
+            return None
+        active_payload = self._sidecar.ensure_workspace_metadata(Path(active_state.csv_path), dict(active_state.payload or {}))
+        active_video_id = str(active_payload.get("workspace", {}).get("video_id", "")).strip()
+        if active_video_id == next_video_id:
+            return None
+        return self._flush_session_history(active_state, "video-switch")
+
+    def flush_all_pending_history(self, trigger_type: str = "app-close") -> int:
+        flushed = 0
+        for state in self.sessions.list_sessions():
+            if self._flush_session_history(state, trigger_type):
+                flushed += 1
+        return flushed
+
     def post_load(self, payload: dict[str, Any]) -> tuple[int, dict]:
         try:
             request_dto = ReviewLoadRequestDTO.from_payload(payload)
@@ -90,6 +117,7 @@ class ReviewSessionHandler:
         }
         session_payload = recompute_groups(session_payload)
         session_payload = self._sidecar.ensure_workspace_metadata(csv_path, session_payload)
+        self._flush_active_session_history_if_switching(session_payload["workspace"]["video_id"])
         lock = self._locks.acquire(session_payload["workspace"]["video_id"], session_id)
         self.sessions.upsert(session_id, str(csv_path), session_payload)
         self._sidecar.save(csv_path, session_payload)
@@ -122,7 +150,9 @@ class ReviewSessionHandler:
         state = self.sessions.get(session_id)
         if state is None:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
-        refreshed_payload = recompute_groups(dict(state.payload or {}))
+        current_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), dict(state.payload or {}))
+        self._flush_active_session_history_if_switching(current_payload["workspace"]["video_id"], next_session_id=session_id)
+        refreshed_payload = recompute_groups(current_payload)
         refreshed_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), refreshed_payload)
         response_payload = dict(refreshed_payload)
         response_payload["groups"] = _serialize_groups_for_session(list(refreshed_payload.get("groups", [])))
@@ -158,8 +188,8 @@ class ReviewSessionHandler:
         session_payload = recompute_groups(session_payload)
         session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), session_payload)
         self.sessions.upsert(state.session_id, state.csv_path, session_payload)
+        self.sessions.mark_history_pending(state.session_id)
         self._sidecar.save(Path(state.csv_path), session_payload)
-        self._history.append_snapshot(Path(state.csv_path), session_payload, "settings-change")
 
         return 200, {
             "session_id": state.session_id,
@@ -200,8 +230,8 @@ class ReviewSessionHandler:
         session_payload = recompute_groups(session_payload)
         session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), session_payload)
         self.sessions.upsert(state.session_id, state.csv_path, session_payload)
+        self.sessions.mark_history_pending(state.session_id)
         self._sidecar.save(Path(state.csv_path), session_payload)
-        self._history.append_snapshot(Path(state.csv_path), session_payload, "recalculate")
 
         return 200, {
             "session_id": state.session_id,

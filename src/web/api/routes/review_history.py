@@ -137,11 +137,12 @@ class ReviewHistoryHandler:
             return 404, {"error": "not_found", "message": str(exc)}
 
         self.sessions.upsert(state.session_id, state.csv_path, restored_payload)
+        self.sessions.mark_history_pending(state.session_id)
         self.sidecar.save(Path(state.csv_path), restored_payload)
         return 200, {
             "video_id": video_id,
             "restored_entry_id": entry_id,
-            "created_restore_entry_id": restore_entry_id,
+            "created_restore_entry_id": None,
             "status": "restored",
         }
 

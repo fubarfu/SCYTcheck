@@ -11,6 +11,7 @@ class SessionState:
     session_id: str
     csv_path: str
     payload: dict[str, Any] = field(default_factory=dict)
+    has_pending_history: bool = False
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -25,7 +26,13 @@ class SessionManager:
 
     def upsert(self, session_id: str, csv_path: str, payload: dict[str, Any]) -> SessionState:
         with self._lock:
-            state = SessionState(session_id=session_id, csv_path=csv_path, payload=payload)
+            existing = self._sessions.get(session_id)
+            state = SessionState(
+                session_id=session_id,
+                csv_path=csv_path,
+                payload=payload,
+                has_pending_history=(existing.has_pending_history if existing is not None else False),
+            )
             self._sessions[session_id] = state
             self._active_session_id = session_id
             if len(self._sessions) > self._max_cached_sessions:
@@ -55,6 +62,24 @@ class SessionManager:
                 return None
             self._active_session_id = session_id
             return state
+
+    def mark_history_pending(self, session_id: str) -> bool:
+        with self._lock:
+            state = self._sessions.get(session_id)
+            if state is None:
+                return False
+            state.has_pending_history = True
+            state.updated_at = datetime.now(UTC)
+            return True
+
+    def clear_history_pending(self, session_id: str) -> bool:
+        with self._lock:
+            state = self._sessions.get(session_id)
+            if state is None:
+                return False
+            state.has_pending_history = False
+            state.updated_at = datetime.now(UTC)
+            return True
 
     def get_active_session(self) -> SessionState | None:
         with self._lock:

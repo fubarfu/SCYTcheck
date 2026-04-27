@@ -23,6 +23,16 @@ def _csv(tmp_path: Path) -> Path:
     return path
 
 
+def _other_csv(tmp_path: Path, name: str, player_name: str = "Bob") -> Path:
+    path = tmp_path / name
+    path.write_text(
+        "#schema_version=1.0\n"
+        f"PlayerName,StartTimestamp\n{player_name},00:00:02.000\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _services() -> tuple[ReviewSessionHandler, ReviewActionsHandler, ReviewHistoryHandler]:
     manager = SessionManager()
     sidecar = ReviewSidecarStore()
@@ -35,7 +45,7 @@ def _services() -> tuple[ReviewSessionHandler, ReviewActionsHandler, ReviewHisto
     )
 
 
-def test_restore_flow_creates_provenance_snapshot_and_restores_counts(tmp_path: Path) -> None:
+def test_restore_flow_creates_provenance_snapshot_after_video_switch(tmp_path: Path) -> None:
     sessions, actions, history = _services()
 
     load_status, load_body = sessions.post_load({"csv_path": str(_csv(tmp_path))})
@@ -57,7 +67,14 @@ def test_restore_flow_creates_provenance_snapshot_and_restores_counts(tmp_path: 
         },
     )
     assert confirm_status == 200
-    entry_id = confirm_body["history_entry_id"]
+    assert confirm_body["history_entry_id"] is None
+
+    switch_status, _ = sessions.post_load({"csv_path": str(_other_csv(tmp_path, "switch.csv"))})
+    assert switch_status == 200
+
+    before_restore_status, before_restore_body = history.get_history(video_id, session_id=session_id)
+    assert before_restore_status == 200
+    entry_id = before_restore_body["entries"][0]["entry_id"]
 
     restore_status, restore_body = history.post_restore(
         video_id,
@@ -65,7 +82,10 @@ def test_restore_flow_creates_provenance_snapshot_and_restores_counts(tmp_path: 
         {"session_id": session_id, "create_restore_snapshot": True},
     )
     assert restore_status == 200
-    assert restore_body["created_restore_entry_id"] is not None
+    assert restore_body["created_restore_entry_id"] is None
+
+    flush_status, _ = sessions.post_load({"csv_path": str(_other_csv(tmp_path, "flush_after_restore.csv", player_name="Carol"))})
+    assert flush_status == 200
 
     list_status, list_body = history.get_history(video_id, session_id=session_id)
     assert list_status == 200
@@ -157,7 +177,7 @@ def test_same_csv_reopened_reuses_same_video_id(tmp_path: Path) -> None:
 # T017A - US1: first-save history bootstrap on empty workspace
 # ---------------------------------------------------------------------------
 
-def test_first_action_bootstraps_history_from_empty_state(tmp_path: Path) -> None:
+def test_first_action_bootstraps_history_after_switching_away_from_empty_workspace(tmp_path: Path) -> None:
     sessions, actions, history = _services()
 
     csv_path = tmp_path / "review_bootstrap.csv"
@@ -185,6 +205,9 @@ def test_first_action_bootstraps_history_from_empty_state(tmp_path: Path) -> Non
         {"action_type": "confirm", "target_ids": [candidate_id], "payload": {"group_id": first_group["group_id"]}},
     )
     assert confirm_status == 200
+
+    flush_status, _ = sessions.post_load({"csv_path": str(_other_csv(tmp_path, "bootstrap_flush.csv"))})
+    assert flush_status == 200
 
     after_status, after_body = history.get_history(video_id, session_id=session_id)
     assert after_status == 200

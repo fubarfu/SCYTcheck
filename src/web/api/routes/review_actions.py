@@ -137,16 +137,14 @@ class ReviewActionsHandler:
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
         self._sidecar.save(Path(state.csv_path), updated_payload)
 
-        history_entry_id: str | None = None
         if should_create_snapshot_for_action(action_type):
-            history_entry = self._history.append_snapshot(Path(state.csv_path), updated_payload, action_type)
-            history_entry_id = str(history_entry.get("entry_id", "")) or None
+            self.sessions.mark_history_pending(state.session_id)
 
         return 200, {
             "session_id": session_id,
             "action_id": action_id,
             "persisted": True,
-            "history_entry_id": history_entry_id,
+            "history_entry_id": None,
             "updated_at": datetime.now(UTC).isoformat(),
         }
 
@@ -201,6 +199,7 @@ class ReviewActionsHandler:
         updated_payload = recompute_groups(updated_payload)
         updated_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), updated_payload)
         self.sessions.upsert(state.session_id, state.csv_path, updated_payload)
+        self.sessions.mark_history_pending(state.session_id)
         self._sidecar.save(Path(state.csv_path), updated_payload)
 
         return 200, {

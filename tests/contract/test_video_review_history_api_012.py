@@ -23,6 +23,17 @@ def _make_csv(tmp_path: Path) -> Path:
     return csv_path
 
 
+def _make_other_csv(tmp_path: Path, name: str = "review_history_contract_other_012.csv") -> Path:
+    csv_path = tmp_path / name
+    csv_path.write_text(
+        "#schema_version=1.0\n"
+        "PlayerName,StartTimestamp\n"
+        "Bob,00:00:02.000\n",
+        encoding="utf-8",
+    )
+    return csv_path
+
+
 def _bootstrap(tmp_path: Path) -> tuple[ReviewSessionHandler, ReviewActionsHandler, ReviewHistoryHandler, str, str, str]:
     manager = SessionManager()
     sidecar = ReviewSidecarStore()
@@ -54,8 +65,14 @@ def _bootstrap(tmp_path: Path) -> tuple[ReviewSessionHandler, ReviewActionsHandl
         },
     )
     assert action_status == 200
-    history_entry_id = action_body["history_entry_id"]
-    assert history_entry_id
+    assert action_body["history_entry_id"] is None
+
+    other_load_status, _ = sessions.post_load({"csv_path": str(_make_other_csv(tmp_path))})
+    assert other_load_status == 200
+
+    history_status, history_body = history.get_history(video_id, session_id=session_id)
+    assert history_status == 200
+    history_entry_id = history_body["entries"][0]["entry_id"]
 
     return sessions, actions, history, session_id, video_id, history_entry_id
 
@@ -82,7 +99,7 @@ def test_contract_session_refresh_keeps_workspace_metadata(tmp_path: Path) -> No
     assert session_body["workspace"]["history_container_path"]
 
 
-def test_contract_restore_creates_restore_snapshot(tmp_path: Path) -> None:
+def test_contract_restore_creates_provenance_snapshot_after_video_switch(tmp_path: Path) -> None:
     sessions, _, history, session_id, video_id, entry_id = _bootstrap(tmp_path)
 
     restore_status, restore_body = history.post_restore(
@@ -92,7 +109,14 @@ def test_contract_restore_creates_restore_snapshot(tmp_path: Path) -> None:
     )
     assert restore_status == 200
     assert restore_body["status"] == "restored"
-    assert restore_body["created_restore_entry_id"] is not None
+    assert restore_body["created_restore_entry_id"] is None
+
+    other_load_status, _ = sessions.post_load({"csv_path": str(_make_other_csv(tmp_path, "restore_flush.csv"))})
+    assert other_load_status == 200
+
+    history_status, history_body = history.get_history(video_id, session_id=session_id)
+    assert history_status == 200
+    assert len(history_body["entries"]) >= 2
 
     lock_status, lock_body = history.get_lock(video_id, session_id=session_id)
     assert lock_status == 200

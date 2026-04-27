@@ -56,6 +56,9 @@ class _AppServices:
         self.review_export = ReviewExportHandler(session_manager=session_manager)
         self.history = HistoryHandler()
 
+    def flush_pending_review_history(self) -> int:
+        return self.review_sessions.flush_all_pending_history("app-close")
+
 
 class _RequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, directory: str, services: _AppServices, **kwargs: Any) -> None:
@@ -428,6 +431,7 @@ class LocalWebServer:
     def stop(self) -> None:
         if self._server is None:
             return
+        self._services.flush_pending_review_history()
         self._server.shutdown()
         self._server.server_close()
         self._server = None
