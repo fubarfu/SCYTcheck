@@ -117,7 +117,7 @@
 
 ### Backend Implementation for US2
 
-- [ ] T046 [US2] Implement `review_service.mark_new_candidates()` function in `/src/services/review_service.py` (spelling comparison: only new if unique to latest_run)
+- [ ] T046 [US2] Implement `review_service.mark_new_candidates()` function in `/src/services/review_service.py` (depends on T032 merge output; spelling comparison: only new if unique to latest_run)
 - [ ] T047 [P] [US2] Call `mark_new_candidates()` in `merge_review_context()` after deduplication step
 - [ ] T048 [P] [US2] Implement `/src/web/api/review.py::put_review_action()` endpoint to handle candidate action (confirmed, rejected, edited, clear_new) → clears marked_new flag
 - [ ] T049 [P] [US2] Persist candidate actions to `review_state.json` in PUT /api/review/action handler
@@ -144,7 +144,7 @@
 
 - [ ] T055 [P] [US3] Write contract test in `/tests/contract/test_projects_api.py` for GET /api/projects endpoint (validates project list structure, location_status field)
 - [ ] T056 [P] [US3] Write contract test in `/tests/contract/test_projects_api.py` for PUT /api/settings endpoint (validates path validation, error on invalid paths)
-- [ ] T057 [P] [US3] Write integration test in `/tests/integration/test_project_discovery.py` for filesystem project discovery (scan location, load projects, empty location)
+- [ ] T057 [P] [US3] Write integration test in `/tests/integration/test_project_discovery.py` for filesystem project discovery (single-level non-recursive scan, metadata validation, empty location handling)
 - [ ] T058 [P] [US3] Write integration test in `/tests/integration/test_settings_flow.py` for settings change → Videos list refresh workflow
 
 ### Backend Implementation for US3
@@ -215,8 +215,8 @@
 - [ ] T096 [P] Run all integration tests: `pytest tests/integration/test_*.py`
 - [ ] T097 [P] Run all unit tests: `pytest tests/unit/test_*.py`
 - [ ] T098 [P] Run frontend tests: `npm run test:ui` in src/web/frontend/
-- [ ] T099 Manual end-to-end test: Full workflow on dev machine (settings → analysis → review → project management)
-- [ ] T100 Manual usability test: Verify UI matches Stitch designs, interactions smooth, no broken links
+- [ ] T099 Manual end-to-end test: Full workflow on dev machine (settings → analysis → review → project management), including timed verification for auto-open-to-review <= 2s
+- [ ] T100 Manual usability test: Execute SC usability protocol (n >= 20, first-attempt only, no hints) and record pass/fail for SC-003, SC-004, SC-006
 
 ---
 

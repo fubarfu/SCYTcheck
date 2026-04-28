@@ -108,7 +108,7 @@ As a user, I can manage video projects from a dedicated Videos view and configur
 - **FR-011**: The former History view MUST be replaced by a Videos view centered on loading and managing projects from the configured project location.
 - **FR-012**: The Videos view MUST allow users to locate, open, and manage existing video projects without requiring file-path entry.
 - **FR-013**: When project location configuration changes, the Videos view MUST reflect projects in the newly configured location.
-- **FR-014**: The Videos view MUST discover available projects by scanning the configured project location directly.
+- **FR-014**: The Videos view MUST discover available projects by performing a non-recursive scan of the configured project location directory and validating project metadata in immediate child folders only.
 - **FR-015**: The system MUST NOT require or maintain a separate app-level history list or app-level history setting for project discovery.
 - **FR-016**: The system MUST define a default project location in app-level settings and use it automatically on first run.
 - **FR-017**: The system MUST NOT require users to manually define a project location before starting analysis for the first time unless the default location is unavailable or unusable.
@@ -131,11 +131,18 @@ As a user, I can manage video projects from a dedicated Videos view and configur
 
 - **SC-001**: In at least 95% of validation attempts, users can enter review for a newly analyzed video without performing any manual file-load step.
 - **SC-002**: In at least 99% of validation comparisons, review data shown for a video matches the combined outputs of that video and excludes other videos.
-- **SC-003**: In at least 95% of user tests, participants correctly identify new candidates from the latest run on first pass.
-- **SC-004**: In at least 90% of usability checks, users can find and use project location settings through the top-row gear entry point without guidance.
+- **SC-003**: In at least 95% of moderated user tests (n >= 20), participants correctly identify all newly marked candidates within 30 seconds on first pass.
+- **SC-004**: In at least 90% of moderated usability checks (n >= 20), users reach and use project location settings within 2 clicks and 15 seconds from the top navigation without hints.
 - **SC-005**: In at least 95% of usability checks, users can open an existing project from the Videos view within 30 seconds.
-- **SC-006**: In at least 95% of user tests, participants understand whether a new project is being created or results are being merged based solely on the progress window message during analysis.
+- **SC-006**: In at least 95% of moderated user tests (n >= 20), participants correctly state whether analysis is creating a new project or merging into an existing project after reading the progress message once.
 - **SC-007**: In at least 95% of validation runs, the review view automatically opens within 2 seconds of analysis completion without manual user action.
+
+### Measurement Protocol
+
+- Test population: minimum 20 participants for each SC usability/user-test metric.
+- Pass rule: percentage thresholds apply to first-attempt performance only.
+- No-hint condition: facilitator may not provide navigational or semantic hints before completion.
+- Timing method: stopwatch timing starts when target view first renders and stops at successful action/answer.
 
 ## Assumptions
 
