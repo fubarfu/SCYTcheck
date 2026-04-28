@@ -53,12 +53,12 @@
 
 ### UI Design Authority (Google Stitch)
 
-- [ ] T017 Open Google Stitch project at `specs/013-video-primary-review/stitch/` and verify/create design system (theme, typography, colors, component styles)
-- [ ] T018 [P] Design Analysis view screen in Stitch: remove output filename input, show progress window placeholder, show "Review will auto-open" messaging
-- [ ] T019 [P] Design Review view screen in Stitch: show video URL (read-only), candidate list with "new" badge indicator, group visualization
-- [ ] T020 [P] Design Videos view screen in Stitch: project list cards/table, project metadata (URL, run count, last analyzed), empty state message
-- [ ] T021 [P] Design Settings view screen in Stitch: project location input field, validation feedback, "Browse" button, "Reset to Default" button
-- [ ] T022 [P] Design MainLayout update in Stitch: gear icon placement and styling, "Videos" tab rename from "History"
+- [X] T017 Open Google Stitch project at `specs/013-video-primary-review/stitch/` and verify/create design system (theme, typography, colors, component styles)
+- [X] T018 [P] Design Analysis view screen in Stitch: remove output filename input, show progress window placeholder, show "Review will auto-open" messaging
+- [X] T019 [P] Design Review view screen in Stitch: show video URL (read-only), candidate list with "new" badge indicator, group visualization
+- [X] T020 [P] Design Videos view screen in Stitch: project list cards/table, project metadata (URL, run count, last analyzed), empty state message
+- [X] T021 [P] Design Settings view screen in Stitch: project location input field, validation feedback, "Browse" button, "Reset to Default" button
+- [X] T022 [P] Design MainLayout update in Stitch: gear icon placement and styling, "Videos" tab rename from "History"
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
