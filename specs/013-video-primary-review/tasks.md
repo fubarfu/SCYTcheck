@@ -38,7 +38,7 @@
 
 - [X] T006 Modify `/src/config.py` to add app-level project location setting with default path (platform-aware: Windows, macOS, Linux)
 - [X] T007 [P] Create `/src/services/project_service.py` with filesystem project discovery algorithm (scan directory, validate metadata.json, load project metadata)
-- [ ] T008 [P] Modify `/src/services/history_service.py` to replace app-level history with filesystem scan (no separate history list maintained)
+- [X] T008 [P] Modify `/src/services/history_service.py` to replace app-level history with filesystem scan (no separate history list maintained)
 - [X] T009 [P] Create `/src/services/review_service.py` with merge algorithm (deduplication by spelling, prior-decision-wins conflict resolution)
 - [X] T010 [P] Implement candidate freshness algorithm in `/src/services/review_service.py` (spelling-based "new" marker logic)
 - [X] T011 [P] Create `/src/web/api/settings.py` endpoints: GET /api/settings, PUT /api/settings, POST /api/settings/validate

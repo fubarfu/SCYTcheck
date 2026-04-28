@@ -5,6 +5,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from src.config import load_advanced_settings
+from src.services.project_service import ProjectService
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.history_store import (
     HistoryStore,
@@ -19,11 +21,35 @@ from src.web.app.history_store import (
 class HistoryService:
     """Business logic for video history persistence and reopen workflows."""
 
-    def __init__(self, store: HistoryStore | None = None) -> None:
+    def __init__(
+        self,
+        store: HistoryStore | None = None,
+        project_service: ProjectService | None = None,
+        settings_loader: Any | None = None,
+    ) -> None:
         self.store = store or HistoryStore()
+        self.project_service = project_service or ProjectService()
+        self.settings_loader = settings_loader or load_advanced_settings
         self.sidecar_store = ReviewSidecarStore()
 
     def list_videos(self, include_deleted: bool = False, limit: int = 200) -> dict[str, Any]:
+        project_location = ""
+        try:
+            settings = self.settings_loader()
+            project_location = str(getattr(settings, "project_location", "") or "").strip()
+        except Exception:
+            project_location = ""
+
+        if project_location:
+            projects = self.project_service.discover_projects(project_location)
+            if projects:
+                items = [self._project_to_list_item(project) for project in projects]
+                bounded = items[: max(1, min(limit, 5000))]
+                return {
+                    "items": bounded,
+                    "total": len(items),
+                }
+
         items = self.store.list_entries(include_deleted=include_deleted, limit=limit)
         return {
             "items": [self._to_list_item(item) for item in items],
@@ -203,4 +229,20 @@ class HistoryService:
             "run_count": int(entry.get("run_count", 0)),
             "output_folder": entry.get("output_folder"),
             "updated_at": entry.get("updated_at"),
+        }
+
+    @staticmethod
+    def _project_to_list_item(project: dict[str, Any]) -> dict[str, Any]:
+        video_url = str(project.get("video_url") or "")
+        created = str(project.get("created_date") or "")
+        run_count = int(project.get("run_count") or 0)
+        return {
+            "history_id": str(project.get("project_id") or ""),
+            "display_name": video_url or str(project.get("project_id") or ""),
+            "canonical_source": video_url,
+            "duration_seconds": None,
+            "potential_duplicate": False,
+            "run_count": run_count,
+            "output_folder": str(project.get("project_location") or ""),
+            "updated_at": str(project.get("last_analyzed") or created),
         }
