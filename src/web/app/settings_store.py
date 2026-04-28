@@ -5,8 +5,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from src.config import default_advanced_settings
-
+from src.config import default_advanced_settings, default_project_location
 DEFAULT_SETTINGS_FILENAME = "scytcheck_settings.json"
 
 
@@ -25,13 +24,19 @@ class SettingsStore:
 
     def load(self) -> dict[str, Any]:
         defaults = self._default_settings_payload()
+        self._ensure_default_project_location(defaults)
         if not self.settings_path.exists():
+            self.settings_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.settings_path.open("w", encoding="utf-8") as handle:
+                json.dump(defaults, handle, ensure_ascii=True, indent=2)
             return defaults
         with self.settings_path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
             if not isinstance(data, dict):
                 return defaults
-            return self._deep_merge(defaults, data)
+            merged = self._deep_merge(defaults, data)
+            self._ensure_default_project_location(merged)
+            return merged
 
     def save(self, partial_update: dict[str, Any]) -> dict[str, Any]:
         current = self.load()
@@ -51,6 +56,14 @@ class SettingsStore:
         return merged
 
     @staticmethod
+    def _ensure_default_project_location(settings: dict[str, Any]) -> None:
+        project_location = str(settings.get("project_location", "")).strip()
+        if not project_location:
+            project_location = str(default_project_location())
+            settings["project_location"] = project_location
+        Path(project_location).mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
     def _default_settings_payload() -> dict[str, Any]:
         advanced = default_advanced_settings()
         return {
@@ -63,4 +76,5 @@ class SettingsStore:
             "filter_non_matching": advanced.filter_non_matching,
             "logging_enabled": advanced.logging_enabled,
             "context_patterns": list(advanced.context_patterns),
+            "project_location": advanced.project_location or str(default_project_location()),
         }

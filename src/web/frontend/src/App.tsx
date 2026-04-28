@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AnalysisPage } from "./pages/AnalysisPage";
 import { HistoryPage } from "./pages/HistoryPage";
+import { MainLayout } from "./pages/MainLayout";
 import { ReviewPage } from "./pages/ReviewPage";
 import { hydrateFromReopen, initialReviewStoreState } from "./state/reviewStore";
 import type { ReopenResponse } from "./state/historyStore";
 
-type ViewMode = "analysis" | "review" | "history";
+type ViewMode = "analysis" | "review" | "videos";
 
 export function App() {
   const [view, setView] = useState<ViewMode>("analysis");
@@ -44,41 +45,17 @@ export function App() {
   };
 
   return (
-    <main className="app-shell">
-      <header className="app-nav">
-        <div className="app-nav-left">
-          <h1>SCYTcheck</h1>
-          <nav className="app-nav-links">
-            <button
-              type="button"
-              className={`app-nav-link${view === "analysis" ? " active" : ""}`}
-              onClick={() => setView("analysis")}
-            >
-              Analysis
-            </button>
-            <button
-              type="button"
-              className={`app-nav-link${view === "review" ? " active" : ""}`}
-              onClick={() => setView("review")}
-            >
-              Review
-            </button>
-            <button
-              type="button"
-              className={`app-nav-link${view === "history" ? " active" : ""}`}
-              onClick={() => setView("history")}
-            >
-              History
-            </button>
-          </nav>
-        </div>
-        <ThemeToggle />
-      </header>
+    <MainLayout
+      view={view}
+      onViewChange={setView}
+      onOpenSettings={() => setView("videos")}
+      rightSlot={<ThemeToggle />}
+    >
       {view === "analysis" && <AnalysisPage reopenPayload={lastReopenPayload} />}
       {view === "review" && (
         <ReviewPage reopenContext={reviewStore.reopenContext} autoCsvPath={lastReviewCsvPath} />
       )}
-      {view === "history" && <HistoryPage onReopenToReview={handleReopenToReview} />}
-    </main>
+      {view === "videos" && <HistoryPage onReopenToReview={handleReopenToReview} />}
+    </MainLayout>
   );
 }

@@ -26,6 +26,8 @@ class AnalysisRunState:
     output_csv_path: str | None = None
     history_id: str | None = None
     history_run_id: str | None = None
+    project_status: str | None = None
+    video_id: str | None = None
     error_message: str | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
@@ -116,3 +118,11 @@ class AnalysisAdapter:
                 return
             state.history_id = history_id
             state.history_run_id = history_run_id
+
+    def set_project_metadata(self, run_id: str, project_status: str, video_id: str) -> None:
+        with self._lock:
+            state = self._runs.get(run_id)
+            if state is None:
+                return
+            state.project_status = project_status
+            state.video_id = video_id

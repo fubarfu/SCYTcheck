@@ -15,12 +15,14 @@ from urllib.parse import parse_qs, urlparse
 from src.web.api.routes.analysis import AnalysisHandler
 from src.web.api.routes.fs import FsHandler
 from src.web.api.routes.history import HistoryHandler
+from src.web.api.routes.review import ReviewHandler
 from src.web.api.routes.review_actions import ReviewActionsHandler
 from src.web.api.routes.review_assets import ReviewAssetsHandler
 from src.web.api.routes.review_export import ReviewExportHandler
 from src.web.api.routes.review_history import ReviewHistoryHandler
 from src.web.api.routes.review_sessions import ReviewSessionHandler
 from src.web.api.routes.settings import SettingsHandler
+from src.web.api.routes.projects import ProjectsHandler
 from src.web.app.review_history_store import ReviewHistoryStore
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
@@ -35,6 +37,8 @@ class _AppServices:
         self.settings = SettingsHandler()
         self.analysis = AnalysisHandler()
         self.fs = FsHandler()
+        self.projects = ProjectsHandler(settings_handler=self.settings)
+        self.review = ReviewHandler(settings_handler=self.settings)
         self.review_sessions = ReviewSessionHandler(
             session_manager=session_manager,
             history_store=history_store,
@@ -106,6 +110,11 @@ class _RequestHandler(SimpleHTTPRequestHandler):
                 self._send_json(status, body)
                 return True
 
+        if path == "/api/settings/validate" and method == "POST":
+            status, body = self._services.settings.post_validate_settings(self._read_json_body())
+            self._send_json(status, body)
+            return True
+
         if path == "/api/analysis/preview" and method == "POST":
             status, body = self._services.analysis.post_preview(self._read_json_body())
             self._send_json(status, body)
@@ -149,6 +158,17 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
+        if path == "/api/projects" and method == "GET":
+            status, body = self._services.projects.get_projects()
+            self._send_json(status, body)
+            return True
+
+        project_match = re.fullmatch(r"/api/projects/([^/]+)", path)
+        if project_match and method == "GET":
+            status, body = self._services.projects.get_projects_detail(project_match.group(1))
+            self._send_json(status, body)
+            return True
+
         if path == "/api/history/merge-run" and method == "POST":
             status, body = self._services.history.post_merge_run(self._read_json_body())
             self._send_json(status, body)
@@ -166,6 +186,19 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             return True
         if history_match and method == "DELETE":
             status, body = self._services.history.delete_video(history_match.group(1))
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/review/context" and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            status, body = self._services.review.get_review_context(
+                {"video_id": query.get("video_id", [""])[0]}
+            )
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/review/action" and method == "PUT":
+            status, body = self._services.review.put_review_action(self._read_json_body())
             self._send_json(status, body)
             return True
 

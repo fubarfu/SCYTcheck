@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import base64
 import csv
+import json
 import re
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -210,13 +212,16 @@ class AnalysisHandler:
             return 400, {"error": "validation_error", "message": str(exc)}
 
         output_folder = Path(dto.output_folder)
-        if not output_folder.exists():
+        try:
+            output_folder.mkdir(parents=True, exist_ok=True)
+        except Exception:
             return 400, {"error": "validation_error", "message": "output_folder does not exist"}
 
         run_id = f"run_{uuid.uuid4().hex[:12]}"
         # Route CSV (and all analysis artifacts) into the per-video workspace folder.
         video_id = ReviewSidecarStore.make_video_id(dto.source_value)
         workspace_root = output_folder / ".scyt_review_workspaces" / video_id
+        project_status = "merging" if workspace_root.exists() else "creating"
         output_path = workspace_root / dto.output_filename
 
         try:
@@ -242,6 +247,26 @@ class AnalysisHandler:
                 output_path,
                 {"source_type": dto.source_type, "source_value": dto.source_value},
             )
+            workspace_root.mkdir(parents=True, exist_ok=True)
+            metadata_path = workspace_root / "metadata.json"
+            existing_metadata: dict[str, Any] = {}
+            if metadata_path.exists():
+                try:
+                    loaded = json.loads(metadata_path.read_text(encoding="utf-8"))
+                    if isinstance(loaded, dict):
+                        existing_metadata = loaded
+                except Exception:
+                    existing_metadata = {}
+            metadata_payload = {
+                "project_id": video_id,
+                "video_url": dto.source_value,
+                "created_date": existing_metadata.get("created_date") or datetime.now(UTC).isoformat(),
+                "run_count": int(existing_metadata.get("run_count") or 0) + 1,
+                "last_analyzed": datetime.now(UTC).isoformat(),
+                "candidate_count_total": int(existing_metadata.get("candidate_count_total") or 0),
+                "candidate_count_reviewed": int(existing_metadata.get("candidate_count_reviewed") or 0),
+            }
+            metadata_path.write_text(json.dumps(metadata_payload, ensure_ascii=True, indent=2), encoding="utf-8")
             frames_output_dir = workspace_root / "frames"
             log_writer_ctx = (
                 SidecarLogWriter(str(output_folder), dto.output_filename)
@@ -250,7 +275,8 @@ class AnalysisHandler:
             )
 
             def on_progress(percent: int) -> None:
-                self.adapter.update_progress(run_id, percent, 100, "Processing frames")
+                status_label = "Creating project" if project_status == "creating" else "Merging with existing project"
+                self.adapter.update_progress(run_id, percent, 100, status_label)
                 if stop_event is not None and stop_event.is_set():
                     raise _AnalysisCancelled("Analysis cancelled")
 
@@ -354,10 +380,23 @@ class AnalysisHandler:
 
         try:
             self.adapter.start(run_id, work)
+            self.adapter.set_project_metadata(run_id, project_status, video_id)
         except ValueError as exc:
             return 409, {"error": "conflict", "message": str(exc)}
 
-        return 202, {"run_id": run_id, "status": RunStatus.RUNNING.value}
+        message = (
+            f"Creating new project for {dto.source_value}"
+            if project_status == "creating"
+            else "Merging results with existing project"
+        )
+        return 202, {
+            "run_id": run_id,
+            "analysis_id": run_id,
+            "video_id": video_id,
+            "project_status": project_status,
+            "status": RunStatus.RUNNING.value,
+            "message": message,
+        }
 
     @staticmethod
     def _validate_regions(
@@ -487,12 +526,21 @@ class AnalysisHandler:
         if state is None:
             return 404, {"error": "not_found", "message": f"run_id {run_id} not found"}
 
+        total = max(1, int(state.frames_estimated_total or 0))
+        progress_percent = int(min(100, max(0, round((state.frames_processed / total) * 100))))
+
         return 200, {
             "run_id": state.run_id,
+            "analysis_id": state.run_id,
             "status": state.status.value,
+            "project_status": state.project_status or "creating",
+            "message": state.stage_label,
             "stage_label": state.stage_label,
             "frames_processed": state.frames_processed,
             "frames_estimated_total": state.frames_estimated_total,
+            "progress_percent": progress_percent,
+            "review_ready": state.status == RunStatus.COMPLETED,
+            "video_id": state.video_id,
         }
 
     def post_stop(self, run_id: str) -> tuple[int, dict]:

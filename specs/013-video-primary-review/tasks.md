@@ -20,11 +20,11 @@
 
 **Purpose**: Project initialization and foundational code structure
 
-- [ ] T001 Create `/src/data/models.py` with base entity classes (VideoProject, AnalysisRun, ReviewContext, Candidate, CandidateGroup, ProjectLocationSetting)
-- [ ] T002 [P] Create `/src/web/api/__init__.py` REST API module structure
-- [ ] T003 [P] Create `/src/web/frontend/src/types/index.ts` TypeScript interfaces for API responses
-- [ ] T004 [P] Create `/tests/unit/` and `/tests/integration/` directory structure
-- [ ] T005 [P] Create `/tests/contract/` directory for API contract tests
+- [X] T001 Create `/src/data/models.py` with base entity classes (VideoProject, AnalysisRun, ReviewContext, Candidate, CandidateGroup, ProjectLocationSetting)
+- [X] T002 [P] Create `/src/web/api/__init__.py` REST API module structure
+- [X] T003 [P] Create `/src/web/frontend/src/types/index.ts` TypeScript interfaces for API responses
+- [X] T004 [P] Create `/tests/unit/` and `/tests/integration/` directory structure
+- [X] T005 [P] Create `/tests/contract/` directory for API contract tests
 
 ---
 
@@ -36,20 +36,20 @@
 
 ### Backend Foundational
 
-- [ ] T006 Modify `/src/config.py` to add app-level project location setting with default path (platform-aware: Windows, macOS, Linux)
-- [ ] T007 [P] Create `/src/services/project_service.py` with filesystem project discovery algorithm (scan directory, validate metadata.json, load project metadata)
+- [X] T006 Modify `/src/config.py` to add app-level project location setting with default path (platform-aware: Windows, macOS, Linux)
+- [X] T007 [P] Create `/src/services/project_service.py` with filesystem project discovery algorithm (scan directory, validate metadata.json, load project metadata)
 - [ ] T008 [P] Modify `/src/services/history_service.py` to replace app-level history with filesystem scan (no separate history list maintained)
-- [ ] T009 [P] Create `/src/services/review_service.py` with merge algorithm (deduplication by spelling, prior-decision-wins conflict resolution)
-- [ ] T010 [P] Implement candidate freshness algorithm in `/src/services/review_service.py` (spelling-based "new" marker logic)
-- [ ] T011 [P] Create `/src/web/api/settings.py` endpoints: GET /api/settings, PUT /api/settings, POST /api/settings/validate
-- [ ] T012 Modify `/src/main.py` to register new API routes (settings, analysis, projects)
+- [X] T009 [P] Create `/src/services/review_service.py` with merge algorithm (deduplication by spelling, prior-decision-wins conflict resolution)
+- [X] T010 [P] Implement candidate freshness algorithm in `/src/services/review_service.py` (spelling-based "new" marker logic)
+- [X] T011 [P] Create `/src/web/api/settings.py` endpoints: GET /api/settings, PUT /api/settings, POST /api/settings/validate
+- [X] T012 Modify `/src/main.py` to register new API routes (settings, analysis, projects)
 
 ### Frontend Foundational
 
-- [ ] T013 [P] Update `/src/web/frontend/src/types/index.ts` with all API response types (AnalysisProgress, ReviewContext, ProjectList, AppSettings)
-- [ ] T014 [P] Create `/src/web/frontend/src/services/api.ts` REST client with methods: startAnalysis, getProgress, getProjects, getSettings, updateSettings
-- [ ] T015 [P] Create `/src/web/frontend/src/components/ProgressWindow.tsx` component (message display, auto-dismiss on completion)
-- [ ] T016 Modify `/src/web/frontend/src/pages/MainLayout.tsx` to add gear icon in top navigation → opens Settings view
+- [X] T013 [P] Update `/src/web/frontend/src/types/index.ts` with all API response types (AnalysisProgress, ReviewContext, ProjectList, AppSettings)
+- [X] T014 [P] Create `/src/web/frontend/src/services/api.ts` REST client with methods: startAnalysis, getProgress, getProjects, getSettings, updateSettings
+- [X] T015 [P] Create `/src/web/frontend/src/components/ProgressWindow.tsx` component (message display, auto-dismiss on completion)
+- [X] T016 Modify `/src/web/frontend/src/pages/MainLayout.tsx` to add gear icon in top navigation → opens Settings view
 
 ### UI Design Authority (Google Stitch)
 

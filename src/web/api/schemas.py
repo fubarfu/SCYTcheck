@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from src.config import default_project_location
 
 class SchemaValidationError(ValueError):
     """Raised when incoming API payload data is invalid."""
@@ -44,18 +45,16 @@ class AnalysisStartRequestDTO:
     def from_payload(payload: dict[str, Any]) -> AnalysisStartRequestDTO:
         source_type = str(payload.get("source_type", "")).strip()
         source_value = str(payload.get("source_value", "")).strip()
-        output_folder = str(payload.get("output_folder", "")).strip()
+        output_folder = str(payload.get("output_folder", payload.get("project_location", ""))).strip()
         output_filename = str(payload.get("output_filename", "")).strip()
-
         if source_type not in {"youtube_url", "local_file"}:
             raise SchemaValidationError("source_type must be 'youtube_url' or 'local_file'")
         if not source_value:
             raise SchemaValidationError("source_value is required")
         if not output_folder:
-            raise SchemaValidationError("output_folder is required")
+            output_folder = str(default_project_location())
         if not output_filename:
-            raise SchemaValidationError("output_filename is required")
-
+            output_filename = "result_latest.csv"
         scan_regions_payload = payload.get("scan_regions")
         scan_regions: list[ScanRegionDTO] = []
 

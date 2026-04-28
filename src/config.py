@@ -10,6 +10,18 @@ SETTINGS_FILE = "scytcheck_settings.json"
 HISTORY_INDEX_FILE = "video_history.json"
 
 
+def default_project_location() -> Path:
+    """Return the default per-user project location for video-primary workspaces."""
+    appdata = os.getenv("APPDATA")
+    if appdata:
+        return Path(appdata) / "SCYTcheck" / "projects"
+
+    home = Path.home()
+    if sys.platform == "darwin":
+        return home / "Library" / "Application Support" / "SCYTcheck" / "projects"
+    return home / ".local" / "share" / "scytcheck" / "projects"
+
+
 @dataclass(frozen=True)
 class AppConfig:
     sample_fps: int = 1
@@ -68,7 +80,7 @@ class AdvancedSettings:
     tolerance_value: float = 0.75
     gating_enabled: bool = False
     gating_threshold: float = 0.02
-
+    project_location: str = ""
 
 def default_advanced_settings() -> AdvancedSettings:
     return AdvancedSettings(
@@ -107,8 +119,8 @@ def default_advanced_settings() -> AdvancedSettings:
         tolerance_value=0.75,
         gating_enabled=False,
         gating_threshold=0.02,
+        project_location=str(default_project_location()),
     )
-
 
 def load_config() -> AppConfig:
     sample_fps = int(os.getenv("SCYTCHECK_SAMPLE_FPS", "1"))
@@ -203,8 +215,8 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
                 min(float(payload.get("gating_threshold", defaults.gating_threshold)), 1.0),
             )
         ),
+        project_location=str(payload.get("project_location", defaults.project_location) or defaults.project_location),
     )
-
 
 def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = None) -> None:
     """Persist advanced settings for next app startup."""
@@ -224,8 +236,8 @@ def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = No
                 "tolerance_value": float(max(0.60, min(settings.tolerance_value, 0.95))),
                 "gating_enabled": settings.gating_enabled,
                 "gating_threshold": float(max(0.0, min(settings.gating_threshold, 1.0))),
-            },
-            indent=2,
+                "project_location": settings.project_location,
+            },            indent=2,
         ),
         encoding="utf-8",
     )
