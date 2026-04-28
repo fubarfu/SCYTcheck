@@ -37,13 +37,6 @@ import {
 const CANDIDATE_DRAG_MIME = "application/x-scyt-candidate";
 const FALLBACK_DRAG_MIME = "text/plain";
 
-interface ReviewSessionSummary {
-  session_id: string;
-  display_name: string;
-  csv_path: string;
-  updated_at: string;
-}
-
 interface ReviewSessionPayload {
   session_id: string;
   csv_path: string;
@@ -113,7 +106,6 @@ function parseCandidateFallbackPayload(raw: string): { candidate_id?: string; so
 }
 
 export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewPageProps) {
-  const [sessions, setSessions] = useState<ReviewSessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
   const [csvPathInput, setCsvPathInput] = useState("");
@@ -184,12 +176,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     [selectedSession?.groups],
   );
 
-  const refreshSessions = async () => {
-    const resp = await fetch("/api/review/sessions");
-    if (!resp.ok) return;
-    const data = await resp.json() as { sessions: ReviewSessionSummary[] };
-    setSessions(data.sessions);
-  };
+
 
   const syncGroupingSettingsDraft = (session: ReviewSessionPayload) => {
     const spellingInfluence = session.thresholds?.spelling_influence ?? 50;
@@ -336,7 +323,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     const body = await resp.json() as { session_id: string };
     setHasPendingGroupingSettings(false);
     setSelectedSessionId(body.session_id);
-    await refreshSessions();
     await fetchSession(body.session_id, { syncGroupingSettingsDraft: true });
   };
 
@@ -659,21 +645,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                   </button>
                 </div>
               </label>
-              {sessions.length > 0 && (
-                <div className="review-session-strip">
-                  {sessions.slice(0, 6).map((s) => (
-                    <button
-                      key={s.session_id}
-                      type="button"
-                      className={s.session_id === selectedSessionId ? "session-item active" : "session-item"}
-                      onClick={() => { void fetchSession(s.session_id, { syncGroupingSettingsDraft: true }); }}
-                    >
-                      <span>{s.display_name}</span>
-                      <small>{new Date(s.updated_at).toLocaleDateString()}</small>
-                    </button>
-                  ))}
-                </div>
-              )}
+
             </div>
 
             <div className="review-summary-block">
