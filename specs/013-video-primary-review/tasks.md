@@ -142,32 +142,32 @@
 
 ### API Contracts & Tests for US3
 
-- [ ] T055 [P] [US3] Write contract test in `/tests/contract/test_projects_api.py` for GET /api/projects endpoint (validates project list structure, location_status field)
-- [ ] T056 [P] [US3] Write contract test in `/tests/contract/test_projects_api.py` for PUT /api/settings endpoint (validates path validation, error on invalid paths)
-- [ ] T057 [P] [US3] Write integration test in `/tests/integration/test_project_discovery.py` for filesystem project discovery (single-level non-recursive scan, metadata validation, empty location handling)
-- [ ] T058 [P] [US3] Write integration test in `/tests/integration/test_settings_flow.py` for settings change → Videos list refresh workflow
+- [X] T055 [P] [US3] Write contract test in `/tests/contract/test_projects_api_013.py` for GET /api/projects endpoint (validates project list structure, location_status field)
+- [X] T056 [P] [US3] Write contract test in `/tests/contract/test_projects_api_013.py` for PUT /api/settings endpoint (validates path validation behavior)
+- [X] T057 [P] [US3] Write integration test in `/tests/integration/test_project_discovery_013.py` for filesystem project discovery (single-level non-recursive scan, metadata validation, empty location handling)
+- [X] T058 [P] [US3] Write integration test in `/tests/integration/test_settings_flow_013.py` for settings change → Videos list refresh workflow
 
 ### Backend Implementation for US3
 
-- [ ] T059 [US3] Implement `/src/web/api/projects.py::get_projects()` endpoint (call project_service.discover_projects(), return sorted list with metadata)
-- [ ] T060 [P] [US3] Implement `/src/web/api/projects.py::get_projects_detail()` endpoint for single project GET /api/projects/:project_id
-- [ ] T061 [P] [US3] Implement project_service.discover_projects() in `/src/services/project_service.py` (scan filesystem, validate metadata.json, load VideoProject objects)
-- [ ] T062 [P] [US3] Implement `/src/web/api/settings.py::put_settings()` endpoint with path validation (check existence, writability, auto-create directory if possible)
-- [ ] T063 [P] [US3] Implement path fallback in config.py: if settings file missing on first run, create default location + write to scytcheck_settings.json
-- [ ] T064 [US3] Write unit test in `/tests/unit/test_project_discovery.py` for filesystem scanning (valid projects found, invalid projects skipped)
-- [ ] T065 [P] [US3] Write unit test in `/tests/unit/test_project_discovery.py` for metadata loading (valid metadata parsed, invalid metadata skipped)
+- [X] T059 [US3] Implement `/src/web/api/routes/projects.py::get_projects()` endpoint (call project_service.discover_projects(), return sorted list with metadata)
+- [X] T060 [P] [US3] Implement `/src/web/api/routes/projects.py::get_projects_detail()` endpoint for single project GET /api/projects/:project_id
+- [X] T061 [P] [US3] Implement project_service.discover_projects() in `/src/services/project_service.py` (scan filesystem, validate metadata.json, load VideoProject objects)
+- [X] T062 [P] [US3] Implement `/src/web/api/routes/settings.py::put_settings()` endpoint with path validation (check existence, writability, auto-create directory if possible)
+- [X] T063 [P] [US3] Implement path fallback in config.py/settings store: if settings file missing on first run, create default location + write settings file
+- [X] T064 [US3] Write unit test in `/tests/unit/test_project_discovery_013.py` for filesystem scanning (valid projects found, invalid projects skipped)
+- [X] T065 [P] [US3] Write unit test in `/tests/unit/test_project_discovery_013.py` for metadata loading (valid metadata parsed, invalid metadata skipped)
 
 ### Frontend Implementation for US3
 
-- [ ] T066 [P] [US3] Create `/src/web/frontend/src/pages/SettingsPage.tsx` with project location input field, validation feedback, browse button, reset button
-- [ ] T067 [P] [US3] Implement project location form in SettingsPage: validate on change via PUT /api/settings/validate, show feedback ("valid", "missing", "unwritable")
-- [ ] T068 [P] [US3] Implement save handler in SettingsPage: PUT /api/settings with confirmed path, reload app-level settings on success
-- [ ] T069 [US3] Create `/src/web/frontend/src/pages/VideosPage.tsx` (renamed from History) with project discovery UI
-- [ ] T070 [P] [US3] Implement project list loading in VideosPage: GET /api/projects on mount, handle empty state and error states (missing location, unwritable)
-- [ ] T071 [P] [US3] Implement "open project" action in VideosPage: click project → navigate to ReviewPage with video_id parameter
-- [ ] T072 [P] [US3] Show project metadata in VideosPage: video URL, run count, last analyzed date, candidate counts
-- [ ] T073 [US3] Modify `/src/web/frontend/src/pages/MainLayout.tsx` to replace "History" tab with "Videos" tab → navigate to VideosPage
-- [ ] T074 [US3] Add test in `/tests/integration/test_project_discovery.py` to verify VideosPage loads and displays projects correctly after location change in Settings
+- [X] T066 [P] [US3] Create `/src/web/frontend/src/pages/SettingsPage.tsx` with project location input field, validation feedback, browse button, reset button
+- [X] T067 [P] [US3] Implement project location form in SettingsPage: validate on change via POST /api/settings/validate, show feedback ("valid", "missing", "unwritable")
+- [X] T068 [P] [US3] Implement save handler in SettingsPage: PUT /api/settings with confirmed path, reload app-level settings on success
+- [X] T069 [US3] Create `/src/web/frontend/src/pages/VideosPage.tsx` (video-centric replacement for history list)
+- [X] T070 [P] [US3] Implement project list loading in VideosPage: GET /api/projects on mount, handle empty state and error states
+- [X] T071 [P] [US3] Implement "open project" action in VideosPage: click project → navigate to ReviewPage with video_id parameter
+- [X] T072 [P] [US3] Show project metadata in VideosPage: video URL, run count, last analyzed date, candidate counts
+- [X] T073 [US3] Modify `/src/web/frontend/src/pages/MainLayout.tsx` and app routing to keep "Videos" as the navigation target for project discovery
+- [X] T074 [US3] Add integration test in `/tests/integration/test_project_discovery_013.py` to verify projects appear after location change in Settings
 
 **Checkpoint**: All user stories complete - video-primary review workflow fully functional
 

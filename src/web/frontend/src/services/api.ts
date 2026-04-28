@@ -46,6 +46,17 @@ export function updateSettings(payload: Partial<AppSettings>) {
   });
 }
 
+export function validateSettings(payload: { project_location: string }) {
+  return requestJson<{ project_location: string; location_status: AppSettings["location_status"]; message: string }>(
+    "/api/settings/validate",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
 export function getReviewContext(videoId: string) {
   return requestJson<ReviewContext>(`/api/review/context?video_id=${encodeURIComponent(videoId)}`);
 }

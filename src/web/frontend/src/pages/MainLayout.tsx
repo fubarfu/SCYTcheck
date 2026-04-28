@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type ViewMode = "analysis" | "review" | "videos";
+type ViewMode = "analysis" | "review" | "videos" | "settings";
 
 type MainLayoutProps = {
   view: ViewMode;

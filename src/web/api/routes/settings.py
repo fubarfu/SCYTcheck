@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from src.config import default_project_location
 from src.web.app.settings_store import SettingsStore
 
 
@@ -16,6 +17,9 @@ class SettingsHandler:
         payload = self.store.load()
         project_location = str(payload.get("project_location", "")).strip()
         payload["location_status"] = self._location_status(project_location)
+        default_location = str(default_project_location())
+        payload["default_project_location"] = default_location
+        payload["is_default"] = project_location == default_location
         return payload
 
     def put_settings(self, partial_update: dict) -> tuple[int, dict]:
@@ -36,7 +40,11 @@ class SettingsHandler:
             partial_update["project_location"] = project_location
 
         merged = self.store.save(partial_update)
-        merged["location_status"] = self._location_status(str(merged.get("project_location", "")))
+        current_location = str(merged.get("project_location", ""))
+        merged["location_status"] = self._location_status(current_location)
+        default_location = str(default_project_location())
+        merged["default_project_location"] = default_location
+        merged["is_default"] = current_location == default_location
         return 200, merged
 
     def post_validate_settings(self, payload: dict) -> tuple[int, dict]:

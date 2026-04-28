@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AnalysisPage } from "./pages/AnalysisPage";
-import { HistoryPage } from "./pages/HistoryPage";
 import { MainLayout } from "./pages/MainLayout";
 import { ReviewPage } from "./pages/ReviewPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { VideosPage } from "./pages/VideosPage";
 import { hydrateFromReopen, initialReviewStoreState } from "./state/reviewStore";
 import type { ReopenResponse } from "./state/historyStore";
 
-type ViewMode = "analysis" | "review" | "videos";
+type ViewMode = "analysis" | "review" | "videos" | "settings";
 
 function getViewFromHash(): ViewMode {
   if (typeof window === "undefined") {
@@ -17,6 +18,9 @@ function getViewFromHash(): ViewMode {
   const hash = window.location.hash;
   if (hash.startsWith("#/review")) {
     return "review";
+  }
+  if (hash.startsWith("#/settings")) {
+    return "settings";
   }
   if (hash.startsWith("#/videos")) {
     return "videos";
@@ -33,7 +37,14 @@ function setHashForView(view: ViewMode) {
     return;
   }
 
-  const nextHash = view === "videos" ? "#/videos" : view === "review" ? "#/review" : "#/analysis";
+  const nextHash =
+    view === "videos"
+      ? "#/videos"
+      : view === "settings"
+        ? "#/settings"
+        : view === "review"
+          ? "#/review"
+          : "#/analysis";
   if (window.location.hash !== nextHash) {
     window.location.hash = nextHash;
   }
@@ -75,36 +86,19 @@ export function App() {
     setView(nextView);
   };
 
-  const handleReopenToReview = (payload: ReopenResponse) => {
-    setLastReopenPayload(payload);
-    setReviewStore((prev) => hydrateFromReopen(prev, payload));
-    window.dispatchEvent(new CustomEvent("scyt:history-reopen", { detail: payload }));
-    const reopenCsvPath = payload.derived_results.primary_csv_path
-      ?? payload.derived_results.resolved_csv_paths[0]
-      ?? null;
-    if (reopenCsvPath) {
-      window.dispatchEvent(
-        new CustomEvent("scyt:open-review", {
-          detail: { csvPath: reopenCsvPath, autoLoad: true },
-        }),
-      );
-    }
-    setHashForView("review");
-    setView("review");
-  };
-
   return (
     <MainLayout
       view={view}
       onViewChange={handleViewChange}
-      onOpenSettings={() => handleViewChange("videos")}
+      onOpenSettings={() => handleViewChange("settings")}
       rightSlot={<ThemeToggle />}
     >
       {view === "analysis" && <AnalysisPage reopenPayload={lastReopenPayload} />}
       {view === "review" && (
         <ReviewPage reopenContext={reviewStore.reopenContext} autoCsvPath={lastReviewCsvPath} />
       )}
-      {view === "videos" && <HistoryPage onReopenToReview={handleReopenToReview} />}
+      {view === "videos" && <VideosPage />}
+      {view === "settings" && <SettingsPage />}
     </MainLayout>
   );
 }

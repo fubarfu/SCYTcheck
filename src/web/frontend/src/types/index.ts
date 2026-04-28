@@ -44,12 +44,14 @@ export interface VideoProject {
 }
 
 export interface ProjectListResponse {
+  project_location?: string;
   projects: VideoProject[];
   location_status: "valid" | "missing" | "unwritable" | "unknown";
 }
 
 export interface AppSettings {
   project_location: string;
-  is_default: boolean;
-  validation_status: "valid" | "missing" | "unwritable" | "unknown";
+  default_project_location?: string;
+  is_default?: boolean;
+  location_status: "valid" | "missing" | "unwritable" | "unknown";
 }
