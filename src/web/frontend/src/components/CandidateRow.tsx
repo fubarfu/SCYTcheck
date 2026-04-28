@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, memo, useMemo } from "react";
 import { ValidationFeedback } from "./ValidationFeedback";
 import {
   getDropCommitted,
@@ -88,7 +88,7 @@ function buildYouTubeTimestampLink(sourceValue: string, timestampSeconds: number
   }
 }
 
-export function CandidateRow({
+function CandidateRowComponent({
   candidate,
   groupId,
   selectedCandidateId = null,
@@ -100,97 +100,158 @@ export function CandidateRow({
   onAction,
   onOpenThumbnail,
   validationError = null,
-}: Props) {
+  thumbnailUrl,
+}: Props & { thumbnailUrl?: string | null }) {
   const [editing, setEditing] = useState(false);
   const [editedText, setEditedText] = useState(candidate.corrected_text ?? candidate.extracted_name);
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [thumbnailVisible, setThumbnailVisible] = useState(false);
 
+  // Optimize IntersectionObserver: simple and deterministic
   useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") {
+    // For test environments or small windows, skip lazy loading
+    if (typeof IntersectionObserver === "undefined" || typeof window === "undefined") {
       setThumbnailVisible(true);
       return;
     }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
           setThumbnailVisible(true);
           observer.disconnect();
-          return;
         }
-      }
-    });
+      },
+      { threshold: 0 }
+    );
+    
     if (rowRef.current) {
       observer.observe(rowRef.current);
     }
-    return () => observer.disconnect();
+    
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   const currentText = candidate.corrected_text ?? candidate.extracted_name;
   const currentStatus = candidate.status ?? "pending";
   const isSelected = selectedCandidateId === candidate.candidate_id || currentStatus === "confirmed";
   const isRejected = currentStatus === "rejected";
-  const timestampSeconds = parseTimestampSeconds(candidate.start_timestamp);
-  const deepLink =
-    sourceType === "youtube_url" && sourceValue
-      ? buildYouTubeTimestampLink(sourceValue, timestampSeconds)
-      : null;
+  
+  const { timestampSeconds, deepLink } = useMemo(() => {
+    const seconds = parseTimestampSeconds(candidate.start_timestamp);
+    const link =
+      sourceType === "youtube_url" && sourceValue
+        ? buildYouTubeTimestampLink(sourceValue, seconds)
+        : null;
+    return { timestampSeconds: seconds, deepLink: link };
+  }, [candidate.start_timestamp, sourceType, sourceValue]);
 
+  const handleDragStart = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    if (typeof event.dataTransfer.clearData === "function") {
+      event.dataTransfer.clearData();
+    }
+    const payload = JSON.stringify({
+      kind: "candidate",
+      candidate_id: candidate.candidate_id,
+      source_group_id: groupId ?? null,
+    });
+    event.dataTransfer.setData(CANDIDATE_DRAG_MIME, payload);
+    event.dataTransfer.setData(FALLBACK_DRAG_MIME, payload);
+    event.dataTransfer.effectAllowed = "move";
+    setDropCommitted(false);
+    setDraggedGroupId(null);
+    setDraggedCandidate({
+      candidate_id: candidate.candidate_id,
+      source_group_id: groupId ?? null,
+    });
+  }, [candidate.candidate_id, groupId]);
+
+  const handleDragEnd = useCallback(() => {
+    const didCommit = getDropCommitted();
+    const hoveredGroupId = getHoveredGroupId();
+    const hoveredNewGroup = getHoveredNewGroupZone();
+
+    if (!didCommit && hoveredGroupId && hoveredGroupId !== (groupId ?? null)) {
+      onAction({
+        action_type: "move_candidate",
+        target_ids: [candidate.candidate_id],
+        payload: {
+          candidate_id: candidate.candidate_id,
+          source_group_id: groupId ?? null,
+          to_group_id: hoveredGroupId,
+          group_id: hoveredGroupId,
+        },
+      });
+    } else if (!didCommit && hoveredNewGroup) {
+      onAction({
+        action_type: "move_candidate",
+        target_ids: [candidate.candidate_id],
+        payload: {
+          candidate_id: candidate.candidate_id,
+          source_group_id: groupId ?? null,
+          create_new_group: true,
+        },
+      });
+    }
+
+    resetDragSession();
+  }, [onAction, candidate.candidate_id, groupId]);
+
+  const handleConfirm = useCallback(() => {
+    onAction({
+      action_type: "confirm",
+      target_ids: [candidate.candidate_id],
+      payload: groupId ? { group_id: groupId } : undefined,
+    });
+  }, [onAction, candidate.candidate_id, groupId]);
+
+  const handleReject = useCallback(() => {
+    onAction({
+      action_type: isRejected ? "unreject" : "reject",
+      target_ids: [candidate.candidate_id],
+      payload: groupId ? { group_id: groupId } : undefined,
+    });
+  }, [onAction, candidate.candidate_id, isRejected, groupId]);
+
+  const handleClearNew = useCallback(() => {
+    onAction({
+      action_type: "clear_new",
+      target_ids: [candidate.candidate_id],
+      payload: groupId ? { group_id: groupId } : undefined,
+    });
+  }, [onAction, candidate.candidate_id, groupId]);
+
+  const handleOpenThumbnail = useCallback(() => {
+    onOpenThumbnail(candidate.candidate_id);
+  }, [onOpenThumbnail, candidate.candidate_id]);
+
+  const handleEdit = useCallback(() => {
+    setEditing(true);
+  }, []);
+
+  const handleSaveEdit = useCallback(() => {
+    onAction({
+      action_type: "edit",
+      target_ids: [candidate.candidate_id],
+      payload: { corrected_text: editedText },
+    });
+    setEditing(false);
+  }, [onAction, candidate.candidate_id, editedText]);
+
+  const handleRemove = useCallback(() => {
+    onAction({ action_type: "remove", target_ids: [candidate.candidate_id] });
+  }, [onAction, candidate.candidate_id]);
   return (
     <div
       className="candidate-row"
       ref={rowRef}
       draggable
-      onDragStart={(event) => {
-        event.stopPropagation();
-        if (typeof event.dataTransfer.clearData === "function") {
-          event.dataTransfer.clearData();
-        }
-        const payload = JSON.stringify({
-          kind: "candidate",
-          candidate_id: candidate.candidate_id,
-          source_group_id: groupId ?? null,
-        });
-        event.dataTransfer.setData(CANDIDATE_DRAG_MIME, payload);
-        event.dataTransfer.setData(FALLBACK_DRAG_MIME, payload);
-        event.dataTransfer.effectAllowed = "move";
-        setDropCommitted(false);
-        setDraggedGroupId(null);
-        setDraggedCandidate({
-          candidate_id: candidate.candidate_id,
-          source_group_id: groupId ?? null,
-        });
-      }}
-      onDragEnd={() => {
-        const didCommit = getDropCommitted();
-        const hoveredGroupId = getHoveredGroupId();
-        const hoveredNewGroup = getHoveredNewGroupZone();
-
-        if (!didCommit && hoveredGroupId && hoveredGroupId !== (groupId ?? null)) {
-          onAction({
-            action_type: "move_candidate",
-            target_ids: [candidate.candidate_id],
-            payload: {
-              candidate_id: candidate.candidate_id,
-              source_group_id: groupId ?? null,
-              to_group_id: hoveredGroupId,
-              group_id: hoveredGroupId,
-            },
-          });
-        } else if (!didCommit && hoveredNewGroup) {
-          onAction({
-            action_type: "move_candidate",
-            target_ids: [candidate.candidate_id],
-            payload: {
-              candidate_id: candidate.candidate_id,
-              source_group_id: groupId ?? null,
-              create_new_group: true,
-            },
-          });
-        }
-
-        resetDragSession();
-      }}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      style={{ contain: "layout paint style" }}
     >
       <div className="candidate-main review-candidate-main">
         <div>
@@ -232,14 +293,7 @@ export function CandidateRow({
           />
           <button
             type="button"
-            onClick={() => {
-              onAction({
-                action_type: "edit",
-                target_ids: [candidate.candidate_id],
-                payload: { corrected_text: editedText },
-              });
-              setEditing(false);
-            }}
+            onClick={handleSaveEdit}
           >
             Save
           </button>
@@ -251,22 +305,14 @@ export function CandidateRow({
             <button
               type="button"
               className={`decision-action${isSelected ? " is-selected" : ""}`}
-              onClick={() => onAction({
-                action_type: "confirm",
-                target_ids: [candidate.candidate_id],
-                payload: groupId ? { group_id: groupId } : undefined,
-              })}
+              onClick={handleConfirm}
             >
               Accept
             </button>
             <button
               type="button"
               className={`decision-action${isRejected ? " is-selected" : ""}`}
-              onClick={() => onAction({
-                action_type: isRejected ? "unreject" : "reject",
-                target_ids: [candidate.candidate_id],
-                payload: groupId ? { group_id: groupId } : undefined,
-              })}
+              onClick={handleReject}
             >
               Reject
             </button>
@@ -278,11 +324,7 @@ export function CandidateRow({
                 className="ghost-action icon-tool-button"
                 aria-label="Clear new marker"
                 title="Clear new marker"
-                onClick={() => onAction({
-                  action_type: "clear_new",
-                  target_ids: [candidate.candidate_id],
-                  payload: groupId ? { group_id: groupId } : undefined,
-                })}
+                onClick={handleClearNew}
               >
                 <span className="material-symbols-outlined" aria-hidden="true">new_releases</span>
               </button>
@@ -292,7 +334,7 @@ export function CandidateRow({
               className="ghost-action icon-tool-button"
               aria-label="Open thumbnail"
               title="Open thumbnail"
-              onClick={() => onOpenThumbnail(candidate.candidate_id)}
+              onClick={handleOpenThumbnail}
               disabled={!thumbnailVisible}
             >
               <span className="material-symbols-outlined" aria-hidden="true">image</span>
@@ -302,7 +344,7 @@ export function CandidateRow({
               className="ghost-action icon-tool-button"
               aria-label="Edit candidate"
               title="Edit candidate"
-              onClick={() => setEditing(true)}
+              onClick={handleEdit}
             >
               <span className="material-symbols-outlined" aria-hidden="true">edit</span>
             </button>
@@ -311,7 +353,7 @@ export function CandidateRow({
               className="ghost-action icon-tool-button"
               aria-label="Remove candidate"
               title="Remove candidate"
-              onClick={() => onAction({ action_type: "remove", target_ids: [candidate.candidate_id] })}
+              onClick={handleRemove}
             >
               <span className="material-symbols-outlined" aria-hidden="true">delete</span>
             </button>
@@ -338,3 +380,6 @@ export function CandidateRow({
     </div>
   );
 }
+
+export const CandidateRow = memo(CandidateRowComponent);
+

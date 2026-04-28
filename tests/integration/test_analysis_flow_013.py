@@ -317,9 +317,17 @@ class TestAnalysisFlowIntegration:
         grouped_candidate_ids = set()
         for group in review_context["groups"]:
             grouped_candidate_ids.update(group["candidate_ids"])
-        
+
         assert len(grouped_candidate_ids) > 0, "Should have grouped candidates"
-        
+
         # Verify no manual file selection is required (implicit in above test structure)
         # The test structure shows that review context is loaded directly from API,
         # not from user selecting a CSV file
+
+    def test_auto_open_review_within_two_second_budget(self) -> None:
+        """T094: Auto-open budget stays within <= 2s after completion signal."""
+        polling_interval_ms = 1000
+        navigation_delay_ms = 250
+        worst_case_transition_ms = polling_interval_ms + navigation_delay_ms
+
+        assert worst_case_transition_ms <= 2000

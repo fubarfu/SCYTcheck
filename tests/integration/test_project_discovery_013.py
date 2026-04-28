@@ -111,3 +111,42 @@ def test_videos_refresh_after_settings_change(tmp_path: Path) -> None:
     assert status_after == 200
     assert len(body_after["projects"]) == 1
     assert body_after["projects"][0]["project_id"] == "video-new"
+
+
+def test_project_discovery_ignores_legacy_app_history_data(tmp_path: Path) -> None:
+    projects_root = tmp_path / "projects"
+    projects_root.mkdir(parents=True)
+
+    # Legacy history artifacts should not be treated as discoverable video projects.
+    (projects_root / "history.json").write_text(
+        json.dumps({"items": [{"history_id": "legacy-1"}]}, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+    legacy_dir = projects_root / "legacy_history_workspace"
+    legacy_dir.mkdir(parents=True)
+    (legacy_dir / "history.json").write_text("{}", encoding="utf-8")
+
+    valid_project = projects_root / "video-current"
+    valid_project.mkdir(parents=True)
+    (valid_project / "metadata.json").write_text(
+        json.dumps(
+            {
+                "project_id": "video-current",
+                "video_url": "https://www.youtube.com/watch?v=current",
+                "created_date": "2026-04-28T14:00:00Z",
+                "run_count": 2,
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    handler = ProjectsHandler(
+        project_service=ProjectService(),
+        settings_handler=_settings_handler(tmp_path, projects_root),
+    )
+
+    status, body = handler.get_projects()
+    assert status == 200
+    assert [project["project_id"] for project in body["projects"]] == ["video-current"]

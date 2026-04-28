@@ -179,41 +179,41 @@
 
 ### Documentation & Validation
 
-- [ ] T075 [P] Verify `/src/data/models.py` entities match data-model.md entity definitions (VideoProject, AnalysisRun, ReviewContext, etc.)
-- [ ] T076 [P] Verify API endpoints match contracts/ specifications (analysis.md, review.md, projects.md)
-- [ ] T077 [P] Add API documentation comments to all endpoints in `/src/web/api/`
-- [ ] T078 [P] Update README.md with video-primary review workflow summary and user stories
+- [X] T075 [P] Verify `/src/data/models.py` entities match data-model.md entity definitions (VideoProject, AnalysisRun, ReviewContext, etc.)
+- [X] T076 [P] Verify API endpoints match contracts/ specifications (analysis.md, review.md, projects.md)
+- [X] T077 [P] Add API documentation comments to all endpoints in `/src/web/api/`
+- [X] T078 [P] Update README.md with video-primary review workflow summary and user stories
 
 ### UI Implementation vs. Stitch Design
 
-- [ ] T079 [P] Compare AnalysisPage.tsx implementation against Stitch Analysis view screen; document any justified deviations
-- [ ] T080 [P] Compare ReviewPage.tsx implementation against Stitch Review view screen; document any justified deviations
-- [ ] T081 [P] Compare VideosPage.tsx implementation against Stitch Videos view screen; document any justified deviations
-- [ ] T082 [P] Compare SettingsPage.tsx implementation against Stitch Settings view screen; document any justified deviations
-- [ ] T083 [P] Verify MainLayout.tsx gear icon styling matches Stitch design system
+- [X] T079 [P] Compare AnalysisPage.tsx implementation against Stitch Analysis view screen; document any justified deviations
+- [X] T080 [P] Compare ReviewPage.tsx implementation against Stitch Review view screen; document any justified deviations
+- [X] T081 [P] Compare VideosPage.tsx implementation against Stitch Videos view screen; document any justified deviations
+- [X] T082 [P] Compare SettingsPage.tsx implementation against Stitch Settings view screen; document any justified deviations
+- [X] T083 [P] Verify MainLayout.tsx gear icon styling matches Stitch design system
 
 ### Error Handling & Edge Cases
 
-- [ ] T084 [P] Add error handling for missing project location (show blocking error + recovery path in UI)
-- [ ] T085 [P] Add error handling for unwritable project location (show warning + guidance in UI)
-- [ ] T086 [P] Add error handling for corrupted metadata.json (skip project in discovery, log error)
-- [ ] T087 [P] Add error handling for interrupted analysis (persist partial state, show recovery message)
-- [ ] T088 [P] Test edge case: video with only one analysis run (verify auto-load works, no false merge conflicts)
-- [ ] T089 [P] Test edge case: project location with zero projects (verify empty state in VideosPage)
-- [ ] T090 [P] Test edge case: prior app-level history data exists (verify ignored for project discovery)
+- [X] T084 [P] Add error handling for missing project location (show blocking error + recovery path in UI)
+- [X] T085 [P] Add error handling for unwritable project location (show warning + guidance in UI)
+- [X] T086 [P] Add error handling for corrupted metadata.json (skip project in discovery, log error)
+- [X] T087 [P] Add error handling for interrupted analysis (persist partial state, show recovery message)
+- [X] T088 [P] Test edge case: video with only one analysis run (verify auto-load works, no false merge conflicts)
+- [X] T089 [P] Test edge case: project location with zero projects (verify empty state in VideosPage)
+- [X] T090 [P] Test edge case: prior app-level history data exists (verify ignored for project discovery)
 
 ### Performance & Optimization
 
-- [ ] T091 [P] Optimize project discovery (cache results, avoid repeated filesystem scans during session)
+- [X] T091 [P] Optimize project discovery (cache results, avoid repeated filesystem scans during session)
 - [ ] T092 [P] Optimize candidate merge algorithm (profile with 10k+ candidates, ensure <500ms)
-- [ ] T093 [P] Optimize progress polling (verify <1s latency, handle missed heartbeats gracefully)
-- [ ] T094 [P] Verify ReviewPage auto-opens within 2 seconds of analysis completion
+- [X] T093 [P] Optimize progress polling (verify <1s latency, handle missed heartbeats gracefully)
+- [X] T094 [P] Verify ReviewPage auto-opens within 2 seconds of analysis completion
 
 ### Comprehensive Testing
 
-- [ ] T095 [P] Run all contract tests: `pytest tests/contract/test_*.py`
-- [ ] T096 [P] Run all integration tests: `pytest tests/integration/test_*.py`
-- [ ] T097 [P] Run all unit tests: `pytest tests/unit/test_*.py`
+- [X] T095 [P] Run all contract tests: `pytest tests/contract/test_*.py`
+- [X] T096 [P] Run all integration tests: `pytest tests/integration/test_*.py`
+- [X] T097 [P] Run all unit tests: `pytest tests/unit/test_*.py`
 - [ ] T098 [P] Run frontend tests: `npm run test:ui` in src/web/frontend/
 - [ ] T099 Manual end-to-end test: Full workflow on dev machine (settings → analysis → review → project management), including timed verification for auto-open-to-review <= 2s
 - [ ] T100 Manual usability test: Execute SC usability protocol (n >= 20, first-attempt only, no hints) and record pass/fail for SC-003, SC-004, SC-006

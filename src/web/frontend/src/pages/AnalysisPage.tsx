@@ -522,14 +522,20 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
       return;
     }
 
+    let missedHeartbeats = 0;
+
     const interval = setInterval(async () => {
       try {
         const resp = await fetch(`/api/analysis/progress/${encodeURIComponent(analysisId)}`);
         if (!resp.ok) {
-          setProgressStatus("failed");
-          setProgressMessage("Failed to fetch progress");
+          missedHeartbeats += 1;
+          if (missedHeartbeats >= 3) {
+            setProgressStatus("failed");
+            setProgressMessage("Progress updates were interrupted. Please retry analysis.");
+          }
           return;
         }
+        missedHeartbeats = 0;
         const data = await resp.json() as {
           status: "in_progress" | "completed" | "failed";
           progress_percent: number;
@@ -550,15 +556,18 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
           setTimeout(() => {
             const vidId = data.video_id || videoId || "";
             window.location.hash = `#/review?video_id=${encodeURIComponent(vidId)}`;
-          }, 500);
+          }, 250);
         } else if (data.status === "failed") {
           setIsRunning(false);
         }
       } catch (error) {
-        setProgressStatus("failed");
-        setProgressMessage(error instanceof Error ? error.message : "Network error");
+        missedHeartbeats += 1;
+        if (missedHeartbeats >= 3) {
+          setProgressStatus("failed");
+          setProgressMessage(error instanceof Error ? error.message : "Network error");
+        }
       }
-    }, 1500);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [analysisId, progressStatus, videoId]);

@@ -14,6 +14,7 @@ class ReviewHandler:
         self.settings_handler = settings_handler or SettingsHandler()
 
     def get_review_context(self, query: dict[str, str] | None = None) -> tuple[int, dict]:
+        """Load merged review context for one video_id from the configured project location."""
         params = query or {}
         video_id = str(params.get("video_id", "")).strip()
         if not video_id:
@@ -30,6 +31,7 @@ class ReviewHandler:
         return 200, payload
 
     def put_review_action(self, payload: dict[str, str]) -> tuple[int, dict]:
+        """Apply a review action to a candidate and persist the resulting decision state."""
         video_id = str(payload.get("video_id", "")).strip()
         candidate_id = str(payload.get("candidate_id", "")).strip()
         action = str(payload.get("action", "")).strip()

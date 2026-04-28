@@ -111,6 +111,7 @@ class AnalysisHandler:
         self._sidecar_store = ReviewSidecarStore()
 
     def post_preview(self, payload: dict[str, Any]) -> tuple[int, dict]:
+        """Generate a preview frame for the requested video source and timestamp."""
         source_type = str(payload.get("source_type", "")).strip()
         source_value = str(payload.get("source_value", "")).strip()
         time_seconds = float(payload.get("time_seconds", 0.0) or 0.0)
@@ -206,6 +207,7 @@ class AnalysisHandler:
             return 400, {"error": "validation_error", "message": str(exc)}
 
     def post_start(self, payload: dict[str, Any]) -> tuple[int, dict]:
+        """Start an asynchronous analysis run and return run metadata for progress polling."""
         try:
             dto = AnalysisStartRequestDTO.from_payload(payload)
         except SchemaValidationError as exc:
@@ -522,6 +524,7 @@ class AnalysisHandler:
         return AnalysisService(video_service=video_service, ocr_service=ocr_service)
 
     def get_progress(self, run_id: str) -> tuple[int, dict]:
+        """Return current run progress, including project status and review-ready signal."""
         state = self.adapter.progress(run_id)
         if state is None:
             return 404, {"error": "not_found", "message": f"run_id {run_id} not found"}
@@ -529,27 +532,39 @@ class AnalysisHandler:
         total = max(1, int(state.frames_estimated_total or 0))
         progress_percent = int(min(100, max(0, round((state.frames_processed / total) * 100))))
 
+        message = state.stage_label
+        recovery_message = None
+        recovery_action = None
+        if state.status == RunStatus.FAILED:
+            message = state.error_message or "Analysis interrupted. You can retry analysis."
+            recovery_message = "Analysis was interrupted. Previous outputs were kept where possible; retry to continue."
+            recovery_action = "retry_analysis"
+
         return 200, {
             "run_id": state.run_id,
             "analysis_id": state.run_id,
             "status": state.status.value,
             "project_status": state.project_status or "creating",
-            "message": state.stage_label,
+            "message": message,
             "stage_label": state.stage_label,
             "frames_processed": state.frames_processed,
             "frames_estimated_total": state.frames_estimated_total,
             "progress_percent": progress_percent,
             "review_ready": state.status == RunStatus.COMPLETED,
             "video_id": state.video_id,
+            "recovery_message": recovery_message,
+            "recovery_action": recovery_action,
         }
 
     def post_stop(self, run_id: str) -> tuple[int, dict]:
+        """Request graceful cancellation of an in-flight analysis run."""
         state = self.adapter.stop(run_id)
         if state is None:
             return 404, {"error": "not_found", "message": f"run_id {run_id} not found"}
         return 202, {"run_id": state.run_id, "status": state.status.value}
 
     def get_result(self, run_id: str) -> tuple[int, dict]:
+        """Return terminal run result metadata, including partial flag for failures."""
         state = self.adapter.progress(run_id)
         if state is None:
             return 404, {"error": "not_found", "message": f"run_id {run_id} not found"}

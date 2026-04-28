@@ -14,6 +14,7 @@ class SettingsHandler:
         self.store = store or SettingsStore()
 
     def get_settings(self) -> dict:
+        """Return persisted app settings with derived project-location status metadata."""
         payload = self.store.load()
         project_location = str(payload.get("project_location", "")).strip()
         payload["location_status"] = self._location_status(project_location)
@@ -23,6 +24,7 @@ class SettingsHandler:
         return payload
 
     def put_settings(self, partial_update: dict) -> tuple[int, dict]:
+        """Validate and persist mutable settings fields, including project_location."""
         allowed_types = {str, int, float, bool, list, type(None)}
         for key, value in partial_update.items():
             if type(value) not in allowed_types and not isinstance(value, dict):
@@ -48,6 +50,7 @@ class SettingsHandler:
         return 200, merged
 
     def post_validate_settings(self, payload: dict) -> tuple[int, dict]:
+        """Validate a candidate project_location without persisting any setting changes."""
         project_location = str(payload.get("project_location", "")).strip()
         status, message = self._validate_project_location(project_location)
         return 200, {

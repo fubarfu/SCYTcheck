@@ -353,7 +353,7 @@ class WorkspaceLock:
 class Candidate:
     """Merged review candidate scoped to a video project."""
 
-    candidate_id: str
+    id: str
     spelling: str
     discovered_in_run: str
     marked_new: bool = False
@@ -364,7 +364,8 @@ class Candidate:
 class CandidateGroup:
     """Grouping of related candidates in review context."""
 
-    group_id: str
+    id: str
+    name: str = ""
     candidate_ids: list[str] = field(default_factory=list)
     decision: str = "unreviewed"
 
@@ -375,6 +376,9 @@ class ReviewContext:
 
     video_id: str
     video_url: str = ""
+    project_location: str = ""
+    run_count: int = 0
+    latest_run_id: str = "0"
     merged_timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     candidates: list[Candidate] = field(default_factory=list)
     groups: list[CandidateGroup] = field(default_factory=list)
@@ -385,10 +389,10 @@ class AnalysisRun:
     """Analysis run metadata used by video-primary review workflows."""
 
     run_id: str
-    run_timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    run_timestamp: datetime | str = field(default_factory=lambda: datetime.now(UTC))
+    candidate_count: int = 0
     output_filepath: str = ""
     run_order: int = 0
-    candidate_count: int = 0
 
 
 @dataclass
@@ -398,7 +402,7 @@ class VideoProject:
     project_id: str
     video_url: str
     project_location: str
-    created_date: datetime = field(default_factory=lambda: datetime.now(UTC))
+    created_date: datetime | str = field(default_factory=lambda: datetime.now(UTC))
     runs: list[AnalysisRun] = field(default_factory=list)
     merged_review_state: ReviewContext | None = None
 
@@ -411,55 +415,3 @@ class ProjectLocationSetting:
     is_default: bool = True
     validation_status: str = "unknown"
     last_validated: datetime | None = None
-
-
-@dataclass
-class Candidate:
-    id: str
-    spelling: str
-    discovered_in_run: str = "0"
-    marked_new: bool = False
-    decision: str = "unreviewed"
-
-
-@dataclass
-class CandidateGroup:
-    id: str
-    name: str = ""
-    candidate_ids: list[str] = field(default_factory=list)
-    decision: str = "unreviewed"
-
-
-@dataclass
-class ReviewContext:
-    video_id: str
-    video_url: str = ""
-    project_location: str = ""
-    run_count: int = 0
-    latest_run_id: str = "0"
-    candidates: list[Candidate] = field(default_factory=list)
-    groups: list[CandidateGroup] = field(default_factory=list)
-
-
-@dataclass
-class AnalysisRun:
-    run_id: str
-    run_timestamp: str = ""
-    candidate_count: int = 0
-    output_filepath: str = ""
-
-
-@dataclass
-class VideoProject:
-    project_id: str
-    video_url: str
-    project_location: str
-    created_date: str = ""
-    runs: list[AnalysisRun] = field(default_factory=list)
-
-
-@dataclass
-class ProjectLocationSetting:
-    project_location_path: str
-    is_default: bool = True
-    validation_status: str = "unknown"

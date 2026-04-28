@@ -14,6 +14,7 @@ class ProjectsHandler:
         self.settings_handler = settings_handler or SettingsHandler()
 
     def get_projects(self) -> tuple[int, dict]:
+        """Return discovered video projects for the configured project location."""
         settings = self.settings_handler.get_settings()
         project_location = str(settings.get("project_location", "")).strip()
         location_status = str(settings.get("location_status", "unknown"))
@@ -33,6 +34,7 @@ class ProjectsHandler:
         }
 
     def get_projects_detail(self, project_id: str) -> tuple[int, dict]:
+        """Return details for one discovered project by project_id."""
         settings = self.settings_handler.get_settings()
         project_location = str(settings.get("project_location", "")).strip()
         project = self.project_service.get_project_detail(project_location, project_id)
