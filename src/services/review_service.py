@@ -38,7 +38,7 @@ class ReviewService:
         prior_decisions = self._extract_prior_decisions(prior_state)
 
         merged_candidates = self._merge_candidates(runs, prior_decisions)
-        merged_candidates = self.mark_new_candidates(merged_candidates, runs)
+        merged_candidates = self.mark_new_candidates(merged_candidates, runs, prior_decisions)
 
         return {
             "video_id": video_id,
@@ -50,9 +50,16 @@ class ReviewService:
             "groups": [],
         }
 
-    def mark_new_candidates(self, merged_candidates: list[dict[str, Any]], runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def mark_new_candidates(
+        self,
+        merged_candidates: list[dict[str, Any]],
+        runs: list[dict[str, Any]],
+        prior_decisions: dict[str, dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
         if not runs:
             return merged_candidates
+
+        prior_decisions = prior_decisions or {}
 
         prior_spellings: set[str] = set()
         latest = runs[-1]
@@ -70,11 +77,17 @@ class ReviewService:
                 latest_spellings.add(spelling)
 
         for candidate in merged_candidates:
+            candidate_id = str(candidate.get("id") or "").strip()
             spelling = str(candidate.get("spelling") or "").strip()
             if not spelling:
                 candidate["marked_new"] = False
                 continue
-            candidate["marked_new"] = spelling in latest_spellings and spelling not in prior_spellings
+            is_new = spelling in latest_spellings and spelling not in prior_spellings
+            prior = prior_decisions.get(candidate_id)
+            if isinstance(prior, dict) and prior.get("marked_new") is False:
+                candidate["marked_new"] = False
+            else:
+                candidate["marked_new"] = is_new
 
         return merged_candidates
 

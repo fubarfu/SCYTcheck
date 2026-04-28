@@ -72,31 +72,31 @@
 
 ### API Contracts & Tests for US1
 
-- [ ] T023 [P] [US1] Write contract test in `/tests/contract/test_analysis_api.py` for POST /api/analysis/start endpoint (validates project_status in response: "creating" or "merging")
-- [ ] T024 [P] [US1] Write contract test in `/tests/contract/test_analysis_api.py` for GET /api/analysis/progress endpoint (validates progress_percent, project_status, message fields)
-- [ ] T025 [P] [US1] Write contract test in `/tests/contract/test_review_api.py` for GET /api/review/context endpoint (validates merged candidates, groups structure)
-- [ ] T026 [P] [US1] Write integration test in `/tests/integration/test_analysis_flow.py` for end-to-end: analysis start → progress polling → completion → review context load
+- [X] T023 [P] [US1] Write contract test in `/tests/contract/test_analysis_api_013.py` for POST /api/analysis/start endpoint (validates project_status in response: "creating" or "merging")
+- [X] T024 [P] [US1] Write contract test in `/tests/contract/test_analysis_api_013.py` for GET /api/analysis/progress endpoint (validates progress_percent, project_status, message fields)
+- [X] T025 [P] [US1] Write contract test in `/tests/contract/test_review_api_013.py` for GET /api/review/context endpoint (validates merged candidates, groups structure)
+- [X] T026 [P] [US1] Write integration test in `/tests/integration/test_analysis_flow_013.py` for end-to-end: analysis start → progress polling → completion → review context load
 
 ### Backend Implementation for US1
 
-- [ ] T027 [US1] Implement `/src/web/api/analysis.py::post_analysis_start()` endpoint (validate video URL, detect create vs. merge status, start async analysis)
-- [ ] T028 [US1] Implement `/src/web/api/analysis.py::get_analysis_progress()` endpoint (return current progress, project_status message, stream updates)
-- [ ] T029 [P] [US1] Modify `/src/services/analysis_service.py` to detect project create vs. merge before starting analysis (determine run_id for new vs. existing project)
-- [ ] T030 [P] [US1] Modify `/src/services/analysis_service.py` to track project_status during execution (populate in progress stream: "creating" or "merging")
-- [ ] T031 [US1] Implement `/src/web/api/review.py::get_review_context()` endpoint (load all runs for video, call review_service.merge_review_context(), return merged context)
-- [ ] T032 [P] [US1] Implement `review_service.merge_review_context()` function (dedup candidates by spelling, apply prior decisions, return merged ReviewContext)
-- [ ] T033 [P] [US1] Add prior decision loading from `{project_location}/{video_id}/.scyt_review_workspaces/review_state.json` in review_service
-- [ ] T034 [US1] Write unit test in `/tests/unit/test_review_merge.py` for merge algorithm (prior decision wins, deduplication, edge cases)
+- [X] T027 [US1] Implement `/src/web/api/analysis.py::post_analysis_start()` endpoint (validate video URL, detect create vs. merge status, start async analysis)
+- [X] T028 [US1] Implement `/src/web/api/analysis.py::get_analysis_progress()` endpoint (return current progress, project_status message, stream updates)
+- [X] T029 [P] [US1] Modify `/src/services/analysis_service.py` to detect project create vs. merge before starting analysis (determine run_id for new vs. existing project)
+- [X] T030 [P] [US1] Modify `/src/services/analysis_service.py` to track project_status during execution (populate in progress stream: "creating" or "merging")
+- [X] T031 [US1] Implement `/src/web/api/review.py::get_review_context()` endpoint (load all runs for video, call review_service.merge_review_context(), return merged context)
+- [X] T032 [P] [US1] Implement `review_service.merge_review_context()` function (dedup candidates by spelling, apply prior decisions, return merged ReviewContext)
+- [X] T033 [P] [US1] Add prior decision loading from `{project_location}/{video_id}/.scyt_review_workspaces/review_state.json` in review_service
+- [X] T034 [US1] Write unit test in `/tests/unit/test_review_merge_013.py` for merge algorithm (prior decision wins, deduplication, edge cases)
 
 ### Frontend Implementation for US1
 
-- [ ] T035 [P] [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to remove output filename input field (keep only video URL input)
-- [ ] T036 [P] [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to call API: POST /api/analysis/start on "Start Analysis" click
-- [ ] T037 [P] [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to show ProgressWindow component with polling logic (GET /api/analysis/progress every 1-2 seconds)
-- [ ] T038 [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to auto-navigate to ReviewPage when progress status === "completed" with video_id parameter
-- [ ] T039 [P] [US1] Implement `/src/web/frontend/src/pages/ReviewPage.tsx` to load review context on mount (GET /api/review/context?video_id=...)
-- [ ] T040 [P] [US1] Modify `/src/web/frontend/src/pages/ReviewPage.tsx` to show video URL as read-only (not filename input field)
-- [ ] T041 [US1] Add test in `/tests/integration/test_analysis_flow.py` to verify ReviewPage renders without manual load action
+- [X] T035 [P] [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to remove output filename input field (keep only video URL input)
+- [X] T036 [P] [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to call API: POST /api/analysis/start on "Start Analysis" click
+- [X] T037 [P] [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to show ProgressWindow component with polling logic (GET /api/analysis/progress every 1-2 seconds)
+- [X] T038 [US1] Modify `/src/web/frontend/src/pages/AnalysisPage.tsx` to auto-navigate to ReviewPage when progress status === "completed" with video_id parameter
+- [X] T039 [P] [US1] Implement `/src/web/frontend/src/pages/ReviewPage.tsx` to load review context on mount (GET /api/review/context?video_id=...)
+- [X] T040 [P] [US1] Modify `/src/web/frontend/src/pages/ReviewPage.tsx` to show video URL as read-only (not filename input field)
+- [X] T041 [US1] Add test in `/tests/integration/test_analysis_flow_013.py` to verify ReviewPage renders without manual load action
 
 **Checkpoint**: User Story 1 complete - analysis workflow fully functional, review auto-opens
 
@@ -110,25 +110,25 @@
 
 ### API Contracts & Tests for US2
 
-- [ ] T042 [P] [US2] Write unit test in `/tests/unit/test_candidate_freshness.py` for freshness algorithm (new if spelling NOT in any prior run, only in latest run)
-- [ ] T043 [P] [US2] Write unit test in `/tests/unit/test_candidate_freshness.py` for false negatives (same spelling re-detected → NOT marked as new)
-- [ ] T044 [P] [US2] Write integration test in `/tests/integration/test_candidate_markers.py` for multi-run scenario (run 1 → run 2 → verify new markers only on run 2 candidates)
-- [ ] T045 [US2] Verify GET /api/review/context returns marked_new field in candidates (contract validation)
+- [X] T042 [P] [US2] Write unit test in `/tests/unit/test_candidate_freshness_013.py` for freshness algorithm (new if spelling NOT in any prior run, only in latest run)
+- [X] T043 [P] [US2] Write unit test in `/tests/unit/test_candidate_freshness_013.py` for false negatives (same spelling re-detected → NOT marked as new)
+- [X] T044 [P] [US2] Write integration test in `/tests/integration/test_candidate_markers_013.py` for multi-run scenario (run 1 → run 2 → verify new markers only on run 2 candidates)
+- [X] T045 [US2] Verify GET /api/review/context returns marked_new field in candidates (contract validation in `/tests/contract/test_review_api_013.py`)
 
 ### Backend Implementation for US2
 
-- [ ] T046 [US2] Implement `review_service.mark_new_candidates()` function in `/src/services/review_service.py` (depends on T032 merge output; spelling comparison: only new if unique to latest_run)
-- [ ] T047 [P] [US2] Call `mark_new_candidates()` in `merge_review_context()` after deduplication step
-- [ ] T048 [P] [US2] Implement `/src/web/api/review.py::put_review_action()` endpoint to handle candidate action (confirmed, rejected, edited, clear_new) → clears marked_new flag
-- [ ] T049 [P] [US2] Persist candidate actions to `review_state.json` in PUT /api/review/action handler
-- [ ] T050 [US2] Write unit test in `/tests/unit/test_candidate_freshness.py` for persistence (marked_new cleared on user action, persisted to review_state.json)
+- [X] T046 [US2] Implement `review_service.mark_new_candidates()` function in `/src/services/review_service.py` (depends on T032 merge output; spelling comparison: only new if unique to latest_run)
+- [X] T047 [P] [US2] Call `mark_new_candidates()` in `merge_review_context()` after deduplication step
+- [X] T048 [P] [US2] Implement `/src/web/api/review.py::put_review_action()` endpoint to handle candidate action (confirmed, rejected, edited, clear_new) → clears marked_new flag
+- [X] T049 [P] [US2] Persist candidate actions to `review_state.json` in PUT /api/review/action handler
+- [X] T050 [US2] Write unit test in `/tests/unit/test_candidate_freshness_013.py` for persistence (marked_new cleared on user action, persisted to review_state.json)
 
 ### Frontend Implementation for US2
 
-- [ ] T051 [P] [US2] Modify `/src/web/frontend/src/components/CandidateList.tsx` to render candidates from ReviewContext
-- [ ] T052 [P] [US2] Add visual "new" marker/badge to candidates where marked_new === true (Material Symbols icon + highlight)
-- [ ] T053 [P] [US2] Implement candidate action handlers in `/src/web/frontend/src/pages/ReviewPage.tsx` (confirm, reject, edit, clear → PUT /api/review/action)
-- [ ] T054 [US2] Add test in `/tests/integration/test_candidate_markers.py` to verify UI renders new markers correctly and clears them on action
+- [X] T051 [P] [US2] Modify `/src/web/frontend/src/pages/ReviewPage.tsx` and `/src/web/frontend/src/components/CandidateRow.tsx` to render candidates from ReviewContext
+- [X] T052 [P] [US2] Add visual "new" marker/badge to candidates where marked_new === true (Material Symbols icon + highlight)
+- [X] T053 [P] [US2] Implement candidate action handlers in `/src/web/frontend/src/pages/ReviewPage.tsx` and `/src/web/frontend/src/components/CandidateRow.tsx` (confirm, reject, edit, clear → PUT /api/review/action)
+- [X] T054 [US2] Add test in `/src/web/frontend/tests/review/CandidateRow.test.tsx` to verify UI renders new markers correctly and dispatches clear action
 
 **Checkpoint**: User Stories 1 & 2 complete - video review workflow with freshness indicators fully functional
 

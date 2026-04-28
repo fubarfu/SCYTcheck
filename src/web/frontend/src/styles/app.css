@@ -865,6 +865,19 @@ select,
   cursor: pointer;
 }
 
+.output-folder-row {
+  display: flex;
+  gap: 6px;
+}
+
+.output-folder-input {
+  flex: 1;
+}
+
+.output-folder-button {
+  flex-shrink: 0;
+}
+
 .preview-scrubber-row {
   display: flex;
   align-items: center;

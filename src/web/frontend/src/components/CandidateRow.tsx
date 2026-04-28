@@ -19,6 +19,7 @@ export interface Candidate {
   corrected_text?: string;
   start_timestamp?: string;
   status?: "pending" | "confirmed" | "rejected";
+  marked_new?: boolean;
   temporal_proximity?: number;
   recommendation_score?: number;
   recommendation?: "auto_confirm" | "review";
@@ -198,6 +199,7 @@ export function CandidateRow({
           </div>
           <div className="candidate-meta-inline">
             <span>{candidate.start_timestamp ?? "-"}</span>
+            {candidate.marked_new && <span className="chip recommendation">New</span>}
             {typeof candidate.recommendation_score === "number" && (
               <span className="chip recommendation">Rec {Math.round(candidate.recommendation_score)}</span>
             )}
@@ -270,6 +272,21 @@ export function CandidateRow({
             </button>
           </div>
           <div className="candidate-secondary-actions" role="group" aria-label="Candidate tools">
+            {candidate.marked_new && (
+              <button
+                type="button"
+                className="ghost-action icon-tool-button"
+                aria-label="Clear new marker"
+                title="Clear new marker"
+                onClick={() => onAction({
+                  action_type: "clear_new",
+                  target_ids: [candidate.candidate_id],
+                  payload: groupId ? { group_id: groupId } : undefined,
+                })}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">new_releases</span>
+              </button>
+            )}
             <button
               type="button"
               className="ghost-action icon-tool-button"

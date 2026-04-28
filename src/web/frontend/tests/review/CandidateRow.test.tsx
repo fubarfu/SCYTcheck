@@ -74,4 +74,29 @@ describe("CandidateRow feature 010", () => {
       payload: { group_id: "grp_1" },
     });
   });
+
+  it("renders new badge and dispatches clear_new action", () => {
+    const onAction = vi.fn();
+
+    render(
+      <CandidateRow
+        candidate={{ candidate_id: "c3", extracted_name: "Gamma", status: "pending", marked_new: true }}
+        groupId="grp_9"
+        selectedCandidateId={null}
+        sourceType="local_file"
+        sourceValue=""
+        onAction={onAction}
+        onOpenThumbnail={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("New")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Clear new marker" }));
+
+    expect(onAction).toHaveBeenCalledWith({
+      action_type: "clear_new",
+      target_ids: ["c3"],
+      payload: { group_id: "grp_9" },
+    });
+  });
 });

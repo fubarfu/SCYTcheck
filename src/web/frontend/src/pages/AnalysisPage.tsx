@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from "react";
-import { AnalysisProgressPanel } from "../components/AnalysisProgressPanel";
+import { ProgressWindow } from "../components/ProgressWindow";
 import { AnalysisSettingsPanel } from "../components/AnalysisSettingsPanel";
 import { ContextPatternsPanel } from "../components/ContextPatternsPanel";
 import { clampRegionToFrame, clientPointToFramePoint } from "../utils/regionMath";
@@ -54,27 +54,6 @@ interface AnalysisPageProps {
   reopenPayload?: ReopenResponse | null;
 }
 
-function deriveFilename(sourceType: SourceType, sourceValue: string): string {
-  const now = new Date();
-  const ts =
-    String(now.getFullYear()) +
-    String(now.getMonth() + 1).padStart(2, "0") +
-    String(now.getDate()).padStart(2, "0") +
-    "_" +
-    String(now.getHours()).padStart(2, "0") +
-    String(now.getMinutes()).padStart(2, "0") +
-    String(now.getSeconds()).padStart(2, "0");
-
-  if (!sourceValue.trim()) return `output_${ts}.csv`;
-  if (sourceType === "youtube_url") {
-    const match = sourceValue.match(/[?&]v=([^&]+)/);
-    const id = match ? match[1] : sourceValue.slice(-11);
-    return `yt_${id}_${ts}.csv`;
-  }
-  const base = (sourceValue.split(/[/\\]/).pop() ?? "output").replace(/\.[^.]+$/, "");
-  return `${base}_${ts}.csv`;
-}
-
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -93,7 +72,6 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
   const [sourceType, setSourceType] = useState<SourceType>("youtube_url");
   const [sourceValue, setSourceValue] = useState("");
   const [outputFolder, setOutputFolder] = useState("");
-  const [outputFilename, setOutputFilename] = useState("output.csv");
   const [scanRegions, setScanRegions] = useState<ScanRegion[]>([{ x: 120, y: 40, width: 480, height: 60 }]);
   const [activeRegionIndex, setActiveRegionIndex] = useState(0);
   const [settings, setSettings] = useState<Settings>({
@@ -107,15 +85,19 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
     logging_enabled: false,
     context_patterns: [],
   });
-  const [runId, setRunId] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [progressStatus, setProgressStatus] = useState<"in_progress" | "completed" | "failed" | null>(null);
+  const [progressMessage, setProgressMessage] = useState("");
+  const [projectStatus, setProjectStatus] = useState<"creating" | "merging" | null>(null);
+  const [progressPercent, setProgressPercent] = useState(0);
   const [preview, setPreview] = useState<PreviewFrame | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [scrubTime, setScrubTime] = useState(0);
   const [frameCursorClass, setFrameCursorClass] = useState("cursor-crosshair");
-  const derivedFilenameRef = useRef(true);
   const settingsLoadedRef = useRef(false);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
@@ -156,7 +138,6 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
         : prev.context_patterns,
     }));
 
-    derivedFilenameRef.current = true;
     setPreview(null);
     setPreviewError(null);
     setScrubTime(0);
@@ -216,12 +197,6 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
 
     return () => window.clearTimeout(handle);
   }, [outputFolder]);
-
-  useEffect(() => {
-    if (derivedFilenameRef.current) {
-      setOutputFilename(deriveFilename(sourceType, sourceValue));
-    }
-  }, [sourceType, sourceValue]);
 
   const loadPreview = async (timeSeconds = 0) => {
     if (!sourceValue.trim()) {
@@ -501,34 +476,92 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
 
   const handleStart = async () => {
     setStartError(null);
-    // Re-derive filename at start time so the timestamp reflects when the run begins.
-    const filename = derivedFilenameRef.current
-      ? deriveFilename(sourceType, sourceValue)
-      : outputFilename.trim();
-    if (derivedFilenameRef.current) setOutputFilename(filename);
+    setAnalysisId(null);
+    setVideoId(null);
+    setProgressStatus(null);
+    setProgressMessage("");
+    setProjectStatus(null);
+    setProgressPercent(0);
+
     const payload = {
-      source_type: sourceType,
-      source_value: sourceValue.trim(),
-      output_folder: outputFolder.trim(),
-      output_filename: filename,
-      scan_region: scanRegions[0],
-      scan_regions: scanRegions,
-      ...settings,
+      video_url: sourceValue.trim(),
     };
-    const resp = await fetch("/api/analysis/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (resp.status === 202) {
-      const data = await resp.json() as { run_id: string };
-      setRunId(data.run_id);
-      setIsRunning(true);
-    } else {
-      const err = await resp.json().catch(() => ({ message: "Unknown error" })) as { message?: string };
-      setStartError(err.message ?? "Start failed");
+
+    try {
+      const resp = await fetch("/api/analysis/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (resp.status === 202) {
+        const data = await resp.json() as {
+          analysis_id: string;
+          video_id: string;
+          project_status: "creating" | "merging";
+          message: string;
+        };
+        setAnalysisId(data.analysis_id);
+        setVideoId(data.video_id);
+        setProjectStatus(data.project_status);
+        setProgressMessage(data.message);
+        setProgressStatus("in_progress");
+        setIsRunning(true);
+      } else {
+        const err = await resp.json().catch(() => ({ message: "Unknown error" })) as { message?: string };
+        setStartError(err.message ?? "Start failed");
+      }
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : "Network error");
     }
   };
+
+  // Poll for progress when analysis is running
+  useEffect(() => {
+    if (!analysisId || progressStatus === "completed" || progressStatus === "failed") {
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const resp = await fetch(`/api/analysis/progress/${encodeURIComponent(analysisId)}`);
+        if (!resp.ok) {
+          setProgressStatus("failed");
+          setProgressMessage("Failed to fetch progress");
+          return;
+        }
+        const data = await resp.json() as {
+          status: "in_progress" | "completed" | "failed";
+          progress_percent: number;
+          project_status: "creating" | "merging";
+          message: string;
+          video_id?: string;
+        };
+        setProgressStatus(data.status);
+        setProgressPercent(data.progress_percent);
+        setProgressMessage(data.message);
+        setProjectStatus(data.project_status);
+        if (data.video_id) {
+          setVideoId(data.video_id);
+        }
+        if (data.status === "completed") {
+          setIsRunning(false);
+          // Navigate to ReviewPage after a short delay
+          setTimeout(() => {
+            const vidId = data.video_id || videoId || "";
+            window.location.hash = `#/review?video_id=${encodeURIComponent(vidId)}`;
+          }, 500);
+        } else if (data.status === "failed") {
+          setIsRunning(false);
+        }
+      } catch (error) {
+        setProgressStatus("failed");
+        setProgressMessage(error instanceof Error ? error.message : "Network error");
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [analysisId, progressStatus, videoId]);
 
   return (
     <section className="page-panel">
@@ -676,18 +709,17 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
               <div className="panel-card-body form-stack">
                 <label>
                   Output folder
-                  <div style={{ display: "flex", gap: "6px" }}>
+                  <div className="output-folder-row">
                     <input
+                      className="output-folder-input"
                       type="text"
                       value={outputFolder}
                       onChange={(e) => setOutputFolder(e.target.value)}
                       placeholder="C:/output"
-                      style={{ flex: 1 }}
                     />
                     <button
                       type="button"
-                      className="btn-secondary"
-                      style={{ flexShrink: 0 }}
+                      className="btn-secondary output-folder-button"
                       onClick={async () => {
                         const params = outputFolder.trim()
                           ? `?initial_dir=${encodeURIComponent(outputFolder.trim())}`
@@ -711,17 +743,6 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
                     </button>
                   </div>
                 </label>
-                <label>
-                  Output filename
-                  <input
-                    type="text"
-                    value={outputFilename}
-                    onChange={(e) => {
-                      derivedFilenameRef.current = false;
-                      setOutputFilename(e.target.value);
-                    }}
-                  />
-                </label>
               </div>
             </details>
           </div>
@@ -744,7 +765,7 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
                 <button
                   type="button"
                   className="primary-action"
-                  disabled={!sourceValue.trim() || !outputFolder.trim() || !preview || scanRegions.length === 0}
+                  disabled={!sourceValue.trim() || !preview || scanRegions.length === 0}
                   onClick={() => { void handleStart(); }}
                 >
                   Start analysis
@@ -755,20 +776,12 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
         </div>
       )}
 
-      {isRunning && runId && (
-        <AnalysisProgressPanel
-          runId={runId}
-          onCompleted={(csvPath) => {
-            setIsRunning(false);
-            setRunId(null);
-            window.dispatchEvent(new CustomEvent("scyt:open-review", { detail: { csvPath } }));
-          }}
-          onStopped={() => {
-            setIsRunning(false);
-            setRunId(null);
-          }}
+      {isRunning && analysisId ? (
+        <ProgressWindow 
+          visible={true}
+          statusText={`${projectStatus === "creating" ? "Creating" : "Merging"} project... ${progressMessage} (${progressPercent}%)`}
         />
-      )}
+      ) : null}
     </section>
   );
 }

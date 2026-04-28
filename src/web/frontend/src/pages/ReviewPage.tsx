@@ -105,6 +105,13 @@ function parseCandidateFallbackPayload(raw: string): { candidate_id?: string; so
   }
 }
 
+function getVideoIdFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  const hash = window.location.hash;
+  const reviewMatch = hash.match(/#\/review\?video_id=([^&]*)/);
+  return reviewMatch ? decodeURIComponent(reviewMatch[1]) : null;
+}
+
 export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewPageProps) {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
@@ -138,6 +145,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const sourceType = selectedSession?.source_type ?? "local_file";
   const sourceValue = selectedSession?.source_value ?? "";
   const videoId = selectedSession?.workspace?.video_id?.trim() ?? "";
+  const isVideoContextSession = Boolean(videoId) && selectedSessionId === videoId;
   const selectedHistoryEntryId = storeState.editHistory.selectedEntryId;
 
   const selectedCandidate = useMemo(
@@ -177,6 +185,88 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   );
 
 
+
+  const loadReviewContext = async (videoId: string) => {
+    try {
+      setLoadingError(null);
+      const resp = await fetch(`/api/review/context?video_id=${encodeURIComponent(videoId)}`);
+      if (!resp.ok) {
+        const error = await resp.json().catch(() => ({})) as { message?: string };
+        setLoadingError(error.message ?? "Failed to load review context");
+        return;
+      }
+      const context = await resp.json() as {
+        video_id: string;
+        video_url: string;
+        merged_timestamp: string;
+        candidates: Array<{
+          id: string;
+          spelling: string;
+          discovered_in_run?: string;
+          marked_new?: boolean;
+          decision?: "unreviewed" | "confirmed" | "rejected" | "edited";
+        }>;
+        groups: Array<{
+          id: string;
+          name?: string;
+          candidate_ids?: string[];
+          decision?: "unreviewed" | "confirmed" | "rejected";
+        }>;
+      };
+
+      const candidates: Candidate[] = context.candidates.map((candidate) => ({
+        candidate_id: candidate.id,
+        extracted_name: candidate.spelling,
+        status: candidate.decision === "unreviewed" || !candidate.decision ? "pending" : candidate.decision,
+        marked_new: Boolean(candidate.marked_new),
+      }));
+
+      const candidateById = new Map(candidates.map((candidate) => [candidate.candidate_id, candidate]));
+      const groups: CandidateGroup[] = context.groups.map((group) => {
+        const groupCandidates = (group.candidate_ids ?? [])
+          .map((candidateId) => candidateById.get(candidateId))
+          .filter((candidate): candidate is Candidate => Boolean(candidate));
+
+        return {
+          group_id: group.id,
+          display_name: group.name ?? group.id,
+          resolution_status: group.decision === "confirmed" ? "RESOLVED" : "UNRESOLVED",
+          candidates: groupCandidates,
+          total_candidate_count: groupCandidates.length,
+          active_candidate_count: groupCandidates.length,
+          occurrence_count: groupCandidates.length,
+          accepted_name: group.decision === "confirmed" ? group.name ?? null : null,
+          accepted_name_summary: group.decision === "confirmed" ? group.name ?? null : null,
+        };
+      });
+
+      const session: ReviewSessionPayload = {
+        session_id: videoId,
+        csv_path: context.video_url,
+        source_type: "youtube_url",
+        source_value: context.video_url,
+        workspace: {
+          video_id: context.video_id,
+          display_title: `Review: ${context.video_url}`,
+          reviewed_names: [],
+        },
+        candidates,
+        groups,
+        thresholds: {
+          similarity_threshold: 80,
+          recommendation_threshold: 70,
+          spelling_influence: 50,
+          temporal_influence: 50,
+        },
+      };
+      
+      setSelectedSession(session);
+      setSelectedSessionId(videoId);
+      syncGroupingSettingsDraft(session);
+    } catch (error) {
+      setLoadingError(error instanceof Error ? error.message : "Network error");
+    }
+  };
 
   const syncGroupingSettingsDraft = (session: ReviewSessionPayload) => {
     const spellingInfluence = session.thresholds?.spelling_influence ?? 50;
@@ -232,6 +322,15 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     }
     setReopenWarning(null);
   }, [reopenContext]);
+
+  // Auto-load review context when navigated with video_id URL parameter
+  useEffect(() => {
+    const videoIdFromUrl = getVideoIdFromUrl();
+    if (videoIdFromUrl) {
+      void loadReviewContext(videoIdFromUrl);
+    }
+  }, []);
+
 
   useEffect(() => {
     const sessionId = selectedSessionId?.trim() ?? "";
@@ -400,6 +499,42 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setExportMessage(null);
     const actionGroupId = String(action.payload?.group_id ?? "").trim();
     const actionCandidateId = action.target_ids[0] ?? null;
+
+    if (isVideoContextSession && videoId && actionCandidateId) {
+      const mappedAction = action.action_type === "confirm"
+        ? "confirmed"
+        : action.action_type === "reject"
+          ? "rejected"
+          : action.action_type === "edit"
+            ? "edited"
+            : action.action_type === "clear_new"
+              ? "clear_new"
+              : null;
+
+      if (mappedAction) {
+        const resp = await fetch("/api/review/action", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            video_id: videoId,
+            candidate_id: actionCandidateId,
+            action: mappedAction,
+            user_note: typeof action.payload?.corrected_text === "string"
+              ? action.payload.corrected_text
+              : undefined,
+          }),
+        });
+        if (!resp.ok) {
+          const errorBody = await resp.json().catch(() => ({ message: "Action failed" })) as { message?: string };
+          setLoadingError(errorBody.message ?? "Action failed");
+          return;
+        }
+        setLoadingError(null);
+        setUndoCount((value) => value + 1);
+        await loadReviewContext(videoId);
+        return;
+      }
+    }
 
     if (action.action_type === "toggle_collapse") {
       const groupId = String(action.payload?.group_id ?? "").trim();
@@ -600,7 +735,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         <p className="eyebrow">Review</p>
         <h2>Review detected names</h2>
         <p className="page-subtitle">
-          Load one result file, filter what matters, then confirm or reject candidates without the extra noise.
+          Review the merged video context, filter what matters, then confirm or reject candidates without the extra noise.
         </p>
       </div>
 
@@ -631,20 +766,33 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         <div className="panel-card">
           <div className="panel-card-body review-topbar">
             <div className="review-source-picker">
-              <label>
-                Result file
-                <div className="review-load-row">
-                  <input
-                    type="text"
-                    value={csvPathInput}
-                    onChange={(e) => setCsvPathInput(e.target.value)}
-                    placeholder="C:/output/match.csv"
-                  />
-                  <button type="button" className="primary-action" onClick={() => { void loadSessionFromCsv(); }}>
-                    Load result
-                  </button>
-                </div>
-              </label>
+              {videoId ? (
+                <>
+                  <label>
+                    Video URL
+                    <input type="text" value={sourceValue} readOnly />
+                  </label>
+                  <label>
+                    Project ID
+                    <input type="text" value={videoId} readOnly />
+                  </label>
+                </>
+              ) : (
+                <label>
+                  Result file
+                  <div className="review-load-row">
+                    <input
+                      type="text"
+                      value={csvPathInput}
+                      onChange={(e) => setCsvPathInput(e.target.value)}
+                      placeholder="C:/output/match.csv"
+                    />
+                    <button type="button" className="primary-action" onClick={() => { void loadSessionFromCsv(); }}>
+                      Load result
+                    </button>
+                  </div>
+                </label>
+              )}
 
             </div>
 
@@ -790,7 +938,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                 <div className="panel-card-body empty-region-state">
                   <div>
                     <strong>No candidates to review yet.</strong>
-                    <p>Load a result file or adjust the current filters.</p>
+                    <p>{videoId ? "This video has no merged candidates yet, or the current filters removed them." : "Load a result file or adjust the current filters."}</p>
                   </div>
                 </div>
               </div>
