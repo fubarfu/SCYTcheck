@@ -53,7 +53,15 @@ export function EditHistoryPanel({
         {entries.length === 0 ? (
           <p className="edit-history-empty">No history entries yet. State-changing actions will appear here.</p>
         ) : (
-          <ul className="edit-history-list" aria-label="Edit history entries">
+          <>
+            <div className="edit-history-table-head" aria-hidden="true">
+              <span>Snapshot</span>
+              <span>Trigger</span>
+              <span>Groups</span>
+              <span>Resolved</span>
+              <span>Unresolved</span>
+            </div>
+            <ul className="edit-history-list" aria-label="Edit history entries">
             {entries.map((entry) => {
               const isSelected = entry.entry_id === selectedEntryId;
               const isRestored = entry.entry_id === restoredEntryId;
@@ -65,39 +73,44 @@ export function EditHistoryPanel({
                 .filter(Boolean)
                 .join(" ");
               return (
-                <li key={entry.entry_id}>
-                  <button
-                    type="button"
-                    className={rowClassName}
-                    onClick={() => onSelectEntry(entry.entry_id)}
-                    disabled={busy}
-                  >
-                    <div className="edit-history-row-main">
-                      <div className="edit-history-row-title">
-                        <strong>{formatTimestamp(entry.created_at)}</strong>
-                        {entry.compressed && <span className="history-badge">Compressed</span>}
-                        {isRestored && <span className="history-badge">Restored</span>}
-                      </div>
-                      <p className="edit-history-row-meta">
-                        Trigger: {entry.trigger_type || "unknown"} · Groups: {entry.group_count} · Resolved: {entry.resolved_count} · Unresolved: {entry.unresolved_count}
-                      </p>
-                    </div>
-                    <span className="edit-history-action-label">Select</span>
-                  </button>
-                  <div className="edit-history-row-actions">
+                <li key={entry.entry_id} className="edit-history-item">
+                  <div className="edit-history-row-shell">
                     <button
                       type="button"
-                      className="ghost-action"
+                      className={rowClassName}
+                      onClick={() => onSelectEntry(entry.entry_id)}
+                      disabled={busy}
+                    >
+                      <span className="edit-history-cell edit-history-cell-time">
+                        <strong>{formatTimestamp(entry.created_at)}</strong>
+                        <span className="edit-history-cell-badges">
+                          {entry.compressed && <span className="history-badge">Compressed</span>}
+                          {isRestored && <span className="history-badge">Restored</span>}
+                        </span>
+                      </span>
+                      <span className="edit-history-cell">{entry.trigger_type || "unknown"}</span>
+                      <span className="edit-history-cell edit-history-cell-num">{entry.group_count}</span>
+                      <span className="edit-history-cell edit-history-cell-num">{entry.resolved_count}</span>
+                      <span className="edit-history-cell edit-history-cell-num">{entry.unresolved_count}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-action icon-tool-button edit-history-restore-icon"
                       disabled={busy}
                       onClick={() => setPendingRestoreEntryId(entry.entry_id)}
+                      aria-label="Restore snapshot"
+                      title="Restore snapshot"
                     >
-                      Restore snapshot
+                      <span className="material-symbols-outlined" aria-hidden="true">
+                        restore
+                      </span>
                     </button>
                   </div>
                 </li>
               );
             })}
-          </ul>
+            </ul>
+          </>
         )}
       </div>
       {pendingRestoreEntryId && (
