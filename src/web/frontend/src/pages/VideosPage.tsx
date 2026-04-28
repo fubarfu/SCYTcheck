@@ -83,8 +83,8 @@ export function VideosPage() {
         <div className="panel-card">
           <div className="panel-card-body empty-region-state">
             <div>
-              <strong>No projects found.</strong>
-              <p>Run an analysis first, or update your project location in Settings.</p>
+              <strong>No videos analyzed yet.</strong>
+              <p>Run an analysis to create your first project, or confirm the project location in Settings.</p>
             </div>
           </div>
         </div>

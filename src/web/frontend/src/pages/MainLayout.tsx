@@ -44,18 +44,20 @@ export function MainLayout({
             >
               Videos
             </button>
-            <button
-              type="button"
-              className="app-nav-link app-nav-gear"
-              onClick={onOpenSettings}
-              aria-label="Open Settings"
-              title="Settings"
-            >
-              ⚙
-            </button>
           </nav>
         </div>
-        {rightSlot}
+        <div className="app-nav-right">
+          {rightSlot}
+          <button
+            type="button"
+            className={`app-nav-gear-btn${view === "settings" ? " active" : ""}`}
+            onClick={onOpenSettings}
+            aria-label="Open Settings"
+            title="Settings"
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">settings</span>
+          </button>
+        </div>
       </header>
       {children}
     </main>

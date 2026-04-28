@@ -132,11 +132,18 @@ export function SettingsPage() {
               </label>
 
               <div className="review-progress-meta">
-                <span>Status: {locationStatus}</span>
+                <span className={`status-chip status-${locationStatus}`}>Status: {locationStatus}</span>
                 <span>{validationMessage}</span>
               </div>
 
               <div className="candidate-list-actions">
+                <button
+                  type="button"
+                  className="ghost-action"
+                  onClick={() => { void runValidation(projectLocation); }}
+                >
+                  Validate
+                </button>
                 <button type="button" className="ghost-action" onClick={() => { void handleResetDefault(); }}>
                   Reset to Default
                 </button>

@@ -215,7 +215,7 @@
 - [X] T096 [P] Run all integration tests: `pytest tests/integration/test_*.py`
 - [X] T097 [P] Run all unit tests: `pytest tests/unit/test_*.py`
 - [X] T098 [P] Run frontend tests: `npm run test:ui` in src/web/frontend/
-- [ ] T099 Manual end-to-end test: Full workflow on dev machine (settings → analysis → review → project management), including timed verification for auto-open-to-review <= 2s
+- [X] T099 Manual end-to-end test: Full workflow on dev machine (settings → analysis → review → project management), including timed verification for auto-open-to-review <= 2s
 - [ ] T100 Manual usability test: Execute SC usability protocol (n >= 20, first-attempt only, no hints) and record pass/fail for SC-003, SC-004, SC-006
 
 ---

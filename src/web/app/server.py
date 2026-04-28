@@ -110,7 +110,7 @@ class _RequestHandler(SimpleHTTPRequestHandler):
                 self._send_json(status, body)
                 return True
 
-        if path == "/api/settings/validate" and method == "POST":
+        if re.fullmatch(r"/api/settings/validate/?", path) and method == "POST":
             status, body = self._services.settings.post_validate_settings(self._read_json_body())
             self._send_json(status, body)
             return True
@@ -158,12 +158,12 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
-        if path == "/api/projects" and method == "GET":
+        if re.fullmatch(r"/api/projects/?", path) and method == "GET":
             status, body = self._services.projects.get_projects()
             self._send_json(status, body)
             return True
 
-        project_match = re.fullmatch(r"/api/projects/([^/]+)", path)
+        project_match = re.fullmatch(r"/api/projects/([^/]+)/?", path)
         if project_match and method == "GET":
             status, body = self._services.projects.get_projects_detail(project_match.group(1))
             self._send_json(status, body)

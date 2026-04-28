@@ -12,8 +12,9 @@ export function ProgressWindow({ visible, statusText, onClose }: ProgressWindowP
   return (
     <div className="progress-window" role="status" aria-live="polite">
       <div className="progress-window__panel">
-        <h3>Analysis In Progress</h3>
+        <h3>Preparing Review Session</h3>
         <p>{statusText || "Preparing analysis..."}</p>
+        <p className="progress-window__hint">This can take a minute for longer videos. Review will open automatically when ready.</p>
         <div className="progress-window__bar" aria-hidden="true">
           <div className="progress-window__bar-fill" />
         </div>

@@ -183,6 +183,19 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     () => (selectedSession?.groups ?? []).filter((group) => (group.resolution_status ?? "UNRESOLVED") === "RESOLVED").length,
     [selectedSession?.groups],
   );
+  const reviewedCandidateCount = useMemo(
+    () => (selectedSession?.candidates ?? []).filter((candidate) => (candidate.status ?? "pending") !== "pending").length,
+    [selectedSession?.candidates],
+  );
+  const newCandidateCount = useMemo(
+    () => (selectedSession?.candidates ?? []).filter((candidate) => Boolean(candidate.marked_new)).length,
+    [selectedSession?.candidates],
+  );
+  const runCount = useMemo(() => {
+    const raw = (selectedSession as { workspace?: { run_count?: unknown } } | null)?.workspace?.run_count;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null;
+  }, [selectedSession]);
 
 
 
@@ -797,6 +810,20 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
             </div>
 
             <div className="review-summary-block">
+              <div className="review-quick-stats" aria-label="Session quick stats">
+                <div className="review-quick-stat">
+                  <span className="review-quick-stat-label">Run count</span>
+                  <strong>{runCount ?? "--"}</strong>
+                </div>
+                <div className="review-quick-stat">
+                  <span className="review-quick-stat-label">Reviewed</span>
+                  <strong>{reviewedCandidateCount}</strong>
+                </div>
+                <div className="review-quick-stat">
+                  <span className="review-quick-stat-label">New</span>
+                  <strong>{newCandidateCount}</strong>
+                </div>
+              </div>
               <div className="review-progress-meta">
                 <span>{resolvedGroups} / {totalGroups} resolved</span>
                 <span>{filteredCandidates.length} visible</span>

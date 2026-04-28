@@ -484,7 +484,20 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
     setProgressPercent(0);
 
     const payload = {
-      video_url: sourceValue.trim(),
+      source_type: sourceType,
+      source_value: sourceValue.trim(),
+      output_folder: outputFolder.trim(),
+      output_filename: "result_latest.csv",
+      scan_regions: scanRegions,
+      video_quality: settings.video_quality ?? "best",
+      ocr_confidence_threshold: settings.ocr_confidence_threshold,
+      tolerance_value: settings.tolerance_value,
+      event_gap_threshold_sec: settings.event_gap_threshold_sec,
+      gating_enabled: settings.gating_enabled,
+      gating_threshold: settings.gating_threshold,
+      filter_non_matching: settings.filter_non_matching,
+      logging_enabled: settings.logging_enabled,
+      context_patterns: settings.context_patterns,
     };
 
     try {
@@ -777,8 +790,9 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
                   disabled={!sourceValue.trim() || !preview || scanRegions.length === 0}
                   onClick={() => { void handleStart(); }}
                 >
-                  Start analysis
+                  Select regions + analyze
                 </button>
+                <p className="analysis-start-note">Review opens automatically after project merge completes.</p>
               </div>
             </section>
           </div>
@@ -788,7 +802,7 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
       {isRunning && analysisId ? (
         <ProgressWindow 
           visible={true}
-          statusText={`${projectStatus === "creating" ? "Creating" : "Merging"} project... ${progressMessage} (${progressPercent}%)`}
+          statusText={`${projectStatus === "creating" ? "Creating video project" : "Merging into project"} - ${progressMessage} (${progressPercent}%)`}
         />
       ) : null}
     </section>
