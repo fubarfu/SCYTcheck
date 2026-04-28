@@ -40,9 +40,9 @@ def test_lifecycle_confirm_persist_reload(tmp_path: Path) -> None:
     assert state is not None
     assert state.payload["candidates"][0]["status"] == "confirmed"
 
-    # Check sidecar was written
-    csv_path = Path(state.csv_path)
-    sidecar_path = csv_path.with_suffix(".review.json")
+    # Check review state was written into the per-video workspace
+    workspace_path = Path(state.payload["workspace"]["workspace_path"])
+    sidecar_path = workspace_path / "review_state.json"
     assert sidecar_path.exists()
 
 

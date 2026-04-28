@@ -28,7 +28,9 @@ def test_thumbnail_returns_404_when_no_frame_exists(tmp_path: Path) -> None:
 def test_thumbnail_returns_url_when_persisted_frame_exists(tmp_path: Path) -> None:
     session_id, csv_path, manager = _make_session(tmp_path)
     # Create a fake persisted frame
-    frames_dir = csv_path.parent / f"{csv_path.stem}_frames"
+    state = manager.get(session_id)
+    assert state is not None
+    frames_dir = Path(state.payload["workspace"]["workspace_path"]) / "frames"
     frames_dir.mkdir()
     (frames_dir / "cand_1.png").write_bytes(b"FAKEPNG")
 

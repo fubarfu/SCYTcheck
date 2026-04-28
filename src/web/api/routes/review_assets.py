@@ -20,7 +20,8 @@ class ReviewAssetsHandler:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
 
         csv_path = Path(state.csv_path)
-        persisted = self.frame_store.persisted_frame_path(csv_path, candidate_id)
+        workspace_path = dict(state.payload or {}).get("workspace", {}).get("workspace_path")
+        persisted = self.frame_store.persisted_frame_path(csv_path, candidate_id, workspace_path=workspace_path)
         if persisted.exists():
             return 200, {
                 "candidate_id": candidate_id,
@@ -51,7 +52,8 @@ class ReviewAssetsHandler:
             return None
 
         csv_path = Path(state.csv_path)
-        persisted = self.frame_store.persisted_frame_path(csv_path, candidate_id)
+        workspace_path = dict(state.payload or {}).get("workspace", {}).get("workspace_path")
+        persisted = self.frame_store.persisted_frame_path(csv_path, candidate_id, workspace_path=workspace_path)
         cache_path = self.frame_store.cache_thumbnail_path(session_id, candidate_id)
 
         if asset_kind == "frames":

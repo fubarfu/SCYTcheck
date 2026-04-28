@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from src.config import history_index_path
+from src.web.app.review_sidecar_store import ReviewSidecarStore
 
 
 def _now_iso() -> str:
@@ -171,7 +172,30 @@ def derive_review_artifacts(
             "resolution_messages": ["Output folder does not exist or is not accessible"],
         }
 
-    csv_paths = sorted(output_folder.glob("*.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
+    csv_candidates: list[Path] = []
+    seen_csv_paths: set[str] = set()
+
+    def _add_csv_candidate(path: Path) -> None:
+        resolved = str(path.resolve(strict=False))
+        if resolved in seen_csv_paths:
+            return
+        if not path.exists() or not path.is_file() or path.suffix.lower() != ".csv":
+            return
+        seen_csv_paths.add(resolved)
+        csv_candidates.append(path)
+
+    for csv_path in output_folder.glob("*.csv"):
+        _add_csv_candidate(csv_path)
+
+    workspace_parent = output_folder / ".scyt_review_workspaces"
+    if workspace_parent.exists() and workspace_parent.is_dir():
+        for csv_path in workspace_parent.glob("*/*.csv"):
+            _add_csv_candidate(csv_path)
+
+    if preferred_csv_path:
+        _add_csv_candidate(Path(preferred_csv_path))
+
+    csv_paths = sorted(csv_candidates, key=lambda p: p.stat().st_mtime, reverse=True)
     if not csv_paths:
         return {
             "resolution_status": "missing_results",
@@ -188,11 +212,16 @@ def derive_review_artifacts(
                 csv_paths.insert(0, csv_paths.pop(index))
                 break
 
+    sidecar_store = ReviewSidecarStore()
     sidecars: list[str] = []
     for csv_path in csv_paths:
-        sidecar = csv_path.with_suffix(".review.json")
-        if sidecar.exists():
-            sidecars.append(str(sidecar))
+        workspace_sidecar = sidecar_store.review_state_path_for_csv(csv_path)
+        if workspace_sidecar is not None and workspace_sidecar.exists():
+            sidecars.append(str(workspace_sidecar))
+            continue
+        legacy_sidecar = csv_path.with_suffix(".review.json")
+        if legacy_sidecar.exists():
+            sidecars.append(str(legacy_sidecar))
 
     status = "ready"
     messages: list[str] = []

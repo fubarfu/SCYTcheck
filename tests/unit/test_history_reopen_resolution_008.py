@@ -3,9 +3,29 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.web.app.history_store import derive_review_artifacts
+from src.web.app.review_sidecar_store import ReviewSidecarStore
 
 
 def test_reopen_resolution_ready_when_csv_and_sidecar_present(tmp_path: Path) -> None:
+    output = tmp_path / "out"
+    output.mkdir()
+    csv_path = output / "result.csv"
+    csv_path.write_text("#schema_version=1.0\nPlayerName,StartTimestamp\nA,1\n", encoding="utf-8")
+    ReviewSidecarStore().save(
+        csv_path,
+        {
+            "source_value": "https://youtube.com/watch?v=abc123",
+            "candidates": [],
+            "action_history": [],
+        },
+    )
+
+    resolved = derive_review_artifacts(output)
+    assert resolved["resolution_status"] == "ready"
+    assert resolved["primary_csv_path"] == str(csv_path)
+
+
+def test_reopen_resolution_still_supports_legacy_csv_adjacent_sidecar(tmp_path: Path) -> None:
     output = tmp_path / "out"
     output.mkdir()
     csv_path = output / "result.csv"

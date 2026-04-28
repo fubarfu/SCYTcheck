@@ -12,17 +12,80 @@ from typing import Any
 class ReviewSidecarStore:
     """Sidecar persistence using atomic rename to avoid torn writes."""
 
+    WORKSPACE_REVIEW_STATE = "review_state.json"
+
     @staticmethod
     def sidecar_path_for_csv(csv_path: Path | str) -> Path:
         csv_file = Path(csv_path)
         return csv_file.with_suffix(".review.json")
 
-    def load(self, csv_path: Path | str) -> dict[str, Any] | None:
-        sidecar_path = self.sidecar_path_for_csv(csv_path)
-        if not sidecar_path.exists():
+    @classmethod
+    def workspace_review_state_path(cls, workspace_root: Path | str) -> Path:
+        return Path(workspace_root) / cls.WORKSPACE_REVIEW_STATE
+
+    def resolve_workspace_root(self, csv_path: Path | str) -> Path | None:
+        csv_file = Path(csv_path)
+        target_csv = str(csv_file.resolve(strict=False))
+
+        # Fast path: CSV already lives inside its workspace folder (sibling of review_state.json)
+        if csv_file.parent.parent.name == ".scyt_review_workspaces":
+            candidate = self.workspace_review_state_path(csv_file.parent)
+            if candidate.exists():
+                return csv_file.parent
+
+        workspace_parent = csv_file.parent / ".scyt_review_workspaces"
+        if not workspace_parent.exists():
             return None
-        with sidecar_path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
+
+        for workspace_dir in workspace_parent.iterdir():
+            if not workspace_dir.is_dir():
+                continue
+            review_state_path = self.workspace_review_state_path(workspace_dir)
+            if not review_state_path.exists():
+                continue
+            try:
+                payload = json.loads(review_state_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            result_csv_path = str(payload.get("result_csv_path", "")).strip()
+            if not result_csv_path:
+                continue
+            if str(Path(result_csv_path).resolve(strict=False)) == target_csv:
+                return workspace_dir
+        return None
+
+    def review_state_path_for_csv(self, csv_path: Path | str) -> Path | None:
+        workspace_root = self.resolve_workspace_root(csv_path)
+        if workspace_root is None:
+            return None
+        review_state_path = self.workspace_review_state_path(workspace_root)
+        return review_state_path if review_state_path.exists() else None
+
+    def load(self, csv_path: Path | str) -> dict[str, Any] | None:
+        candidate_paths: list[Path] = []
+        # If CSV lives inside its workspace folder, the sibling review_state.json is authoritative
+        csv_file = Path(csv_path)
+        if csv_file.parent.parent.name == ".scyt_review_workspaces":
+            sibling = self.workspace_review_state_path(csv_file.parent)
+            if sibling not in candidate_paths:
+                candidate_paths.append(sibling)
+        workspace_review_state = self.review_state_path_for_csv(csv_path)
+        if workspace_review_state is not None and workspace_review_state not in candidate_paths:
+            candidate_paths.append(workspace_review_state)
+        candidate_paths.append(self.sidecar_path_for_csv(csv_path))
+
+        payload: dict[str, Any] | None = None
+        for sidecar_path in candidate_paths:
+            if not sidecar_path.exists():
+                continue
+            with sidecar_path.open("r", encoding="utf-8") as handle:
+                loaded = json.load(handle)
+            if isinstance(loaded, dict):
+                payload = loaded
+                break
+
         if not isinstance(payload, dict):
             return None
         return payload
@@ -48,7 +111,12 @@ class ReviewSidecarStore:
 
         video_id = str(workspace.get("video_id", "")).strip() or self.make_video_id(source_hint)
         display_title = str(workspace.get("display_title", "")).strip() or csv_file.stem
-        workspace_root = csv_file.parent / ".scyt_review_workspaces" / video_id
+        # If the CSV already lives inside a workspace folder (parent is a video_id dir
+        # inside .scyt_review_workspaces), reuse that folder rather than double-nesting.
+        if csv_file.parent.parent.name == ".scyt_review_workspaces":
+            workspace_root = csv_file.parent
+        else:
+            workspace_root = csv_file.parent / ".scyt_review_workspaces" / video_id
         history_container = workspace_root / "history.json"
 
         payload["workspace"] = {
@@ -60,7 +128,10 @@ class ReviewSidecarStore:
         return payload
 
     def save(self, csv_path: Path | str, session_payload: dict[str, Any]) -> Path:
-        sidecar_path = self.sidecar_path_for_csv(csv_path)
+        payload = self.ensure_workspace_metadata(csv_path, session_payload)
+        payload["result_csv_path"] = str(Path(csv_path))
+        workspace_root = Path(payload["workspace"]["workspace_path"])
+        sidecar_path = self.workspace_review_state_path(workspace_root)
         sidecar_path.parent.mkdir(parents=True, exist_ok=True)
 
         with NamedTemporaryFile(
@@ -70,7 +141,7 @@ class ReviewSidecarStore:
             encoding="utf-8",
             suffix=".tmp",
         ) as tmp:
-            json.dump(session_payload, tmp, ensure_ascii=True, indent=2)
+            json.dump(payload, tmp, ensure_ascii=True, indent=2)
             tmp.flush()
             os.fsync(tmp.fileno())
             temp_path = Path(tmp.name)

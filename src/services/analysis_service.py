@@ -148,6 +148,7 @@ class AnalysisService:
         gating_threshold: float = 0.02,
         on_log_record: Callable[[LogRecord], None] | None = None,
         output_csv_path: str | Path | None = None,
+        frames_output_dir: str | Path | None = None,
     ) -> VideoAnalysis:
         tolerance_value = max(0.60, min(float(tolerance_value), 0.95))
         gating_threshold = max(0.0, min(float(gating_threshold), 1.0))
@@ -178,11 +179,14 @@ class AnalysisService:
         ocr_ms = 0.0
         post_processing_ms = 0.0
         total_start = perf_counter() if timing_enabled else 0.0
-        frames_output_dir: Path | None = None
-        if output_csv_path is not None:
+        resolved_frames_output_dir: Path | None = None
+        if frames_output_dir is not None:
+            resolved_frames_output_dir = Path(frames_output_dir)
+            resolved_frames_output_dir.mkdir(parents=True, exist_ok=True)
+        elif output_csv_path is not None:
             output_csv = Path(output_csv_path)
-            frames_output_dir = output_csv.parent / f"{output_csv.stem}_frames"
-            frames_output_dir.mkdir(parents=True, exist_ok=True)
+            resolved_frames_output_dir = output_csv.parent / f"{output_csv.stem}_frames"
+            resolved_frames_output_dir.mkdir(parents=True, exist_ok=True)
 
         for idx, (frame_time, frame) in enumerate(frames, start=1):
             processed_frames = idx
@@ -362,7 +366,7 @@ class AnalysisService:
                         )
                     )
 
-                    if frames_output_dir is not None:
+                    if resolved_frames_output_dir is not None:
                         x, y, width, height = region
                         frame_array = np.asarray(frame)
                         if frame_array.size > 0 and frame_array.ndim >= 2:
@@ -378,7 +382,7 @@ class AnalysisService:
                                         f"{normalized_name}_{int(frame_time * 1000)}_{region_id}",
                                     )
                                     cv2.imwrite(
-                                        str(frames_output_dir / f"{candidate_key}.png"),
+                                        str(resolved_frames_output_dir / f"{candidate_key}.png"),
                                         crop,
                                     )
 

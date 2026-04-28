@@ -5,6 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.history_store import (
     HistoryStore,
     canonicalize_source,
@@ -20,6 +21,7 @@ class HistoryService:
 
     def __init__(self, store: HistoryStore | None = None) -> None:
         self.store = store or HistoryStore()
+        self.sidecar_store = ReviewSidecarStore()
 
     def list_videos(self, include_deleted: bool = False, limit: int = 200) -> dict[str, Any]:
         items = self.store.list_entries(include_deleted=include_deleted, limit=limit)
@@ -60,6 +62,10 @@ class HistoryService:
 
         if entry is None:
             history_id = f"vh_{uuid.uuid4().hex[:12]}"
+            workspace_meta = self.sidecar_store.ensure_workspace_metadata(
+                result_csv_path,
+                {"source_type": source_type, "source_value": source_value},
+            )
             entry = {
                 "history_id": history_id,
                 "canonical_source": canonical,
@@ -70,6 +76,7 @@ class HistoryService:
                 "potential_duplicate": potential_duplicate,
                 "display_name": guess_display_name(source_type, source_value),
                 "output_folder": output_folder,
+                "workspace_path": workspace_meta["workspace"]["workspace_path"],
                 "last_result_csv": result_csv_path,
                 "run_count": 0,
                 "deleted": False,
@@ -77,9 +84,21 @@ class HistoryService:
                 "contexts": [],
             }
 
+        workspace_meta = self.sidecar_store.ensure_workspace_metadata(
+            result_csv_path,
+            {
+                "source_type": source_type,
+                "source_value": source_value,
+                "workspace": {"video_id": Path(str(entry.get("workspace_path", ""))).name},
+            },
+        )
+        workspace_path = str(workspace_meta["workspace"]["workspace_path"])
+        review_state_path = str(self.sidecar_store.workspace_review_state_path(workspace_path))
+
         run_id = f"run_{uuid.uuid4().hex[:12]}"
         context_id = f"ctx_{uuid.uuid4().hex[:12]}"
         entry["output_folder"] = output_folder
+        entry["workspace_path"] = workspace_path
         entry["source_type"] = source_type
         entry["source_value"] = source_value
         entry["last_result_csv"] = result_csv_path
@@ -92,7 +111,7 @@ class HistoryService:
                 "run_id": run_id,
                 "history_id": entry["history_id"],
                 "result_csv_path": result_csv_path,
-                "sidecar_review_path": str(Path(result_csv_path).with_suffix(".review.json")),
+                "sidecar_review_path": review_state_path,
                 "settings_snapshot_id": context_id,
             }
         )
@@ -131,6 +150,21 @@ class HistoryService:
             "context_patterns": [],
             "analysis_settings": {},
         }
+
+        sidecar_payload = None
+        last_result_csv = str(entry.get("last_result_csv") or "").strip()
+        if last_result_csv:
+            sidecar_payload = self.sidecar_store.load(last_result_csv)
+        if isinstance(sidecar_payload, dict):
+            latest_context = {
+                **latest_context,
+                "source_type": sidecar_payload.get("source_type", latest_context.get("source_type")),
+                "source_value": sidecar_payload.get("source_value", latest_context.get("source_value")),
+                "scan_region": dict(sidecar_payload.get("scan_region", latest_context.get("scan_region", {}))),
+                "output_folder": str(sidecar_payload.get("output_folder", latest_context.get("output_folder", ""))),
+                "context_patterns": list(sidecar_payload.get("context_patterns", latest_context.get("context_patterns", []))),
+                "analysis_settings": dict(sidecar_payload.get("analysis_settings", latest_context.get("analysis_settings", {}))),
+            }
 
         output_folder = Path(str(latest_context.get("output_folder") or entry.get("output_folder", "")))
         derived = derive_review_artifacts(output_folder, preferred_csv_path=str(entry.get("last_result_csv") or ""))

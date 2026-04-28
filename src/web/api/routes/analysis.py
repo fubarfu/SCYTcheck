@@ -177,7 +177,10 @@ class AnalysisHandler:
             return 400, {"error": "validation_error", "message": "output_folder does not exist"}
 
         run_id = f"run_{uuid.uuid4().hex[:12]}"
-        output_path = output_folder / dto.output_filename
+        # Route CSV (and all analysis artifacts) into the per-video workspace folder.
+        video_id = ReviewSidecarStore.make_video_id(dto.source_value)
+        workspace_root = output_folder / ".scyt_review_workspaces" / video_id
+        output_path = workspace_root / dto.output_filename
 
         try:
             app_config = load_config()
@@ -198,6 +201,11 @@ class AnalysisHandler:
 
         def work() -> str:
             stop_event = self.adapter.get_stop_event(run_id)
+            workspace_payload = self._sidecar_store.ensure_workspace_metadata(
+                output_path,
+                {"source_type": dto.source_type, "source_value": dto.source_value},
+            )
+            frames_output_dir = workspace_root / "frames"
             log_writer_ctx = (
                 SidecarLogWriter(str(output_folder), dto.output_filename)
                 if advanced.logging_enabled
@@ -231,15 +239,44 @@ class AnalysisHandler:
                     gating_threshold=advanced.gating_threshold,
                     on_log_record=writer.write_record if writer is not None else None,
                     output_csv_path=output_path,
+                    frames_output_dir=frames_output_dir,
                 )
                 exported = self.export_service.export_to_csv(
                     analysis,
-                    str(output_folder),
+                    str(workspace_root),
                     dto.output_filename,
                 )
                 if advanced.logging_enabled:
                     write_sidecar_log(str(output_folder), dto.output_filename, analysis.log_records)
-                self._write_review_sidecar(exported, analysis, dto.source_type, dto.source_value)
+                self._write_review_sidecar(
+                    exported,
+                    analysis,
+                    dto.source_type,
+                    dto.source_value,
+                    {
+                        "scan_regions": [
+                            {
+                                "x": region.x,
+                                "y": region.y,
+                                "width": region.width,
+                                "height": region.height,
+                            }
+                            for region in dto.scan_regions
+                        ],
+                        "output_folder": str(output_folder),
+                        "context_patterns": list(advanced.context_patterns),
+                        "analysis_settings": AnalysisService.history_settings_snapshot(
+                            ocr_confidence_threshold=advanced.ocr_confidence_threshold,
+                            tolerance_value=advanced.tolerance_value,
+                            event_gap_threshold_sec=advanced.event_gap_threshold_sec,
+                            gating_enabled=advanced.gating_enabled,
+                            gating_threshold=advanced.gating_threshold,
+                            video_quality=advanced.video_quality,
+                            filter_non_matching=advanced.filter_non_matching,
+                            logging_enabled=advanced.logging_enabled,
+                        ),
+                    },
+                )
                 merge_result = self.history_service.merge_run(
                     source_type=dto.source_type,
                     source_value=dto.source_value,
@@ -363,6 +400,7 @@ class AnalysisHandler:
         analysis: VideoAnalysis,
         source_type: str,
         source_value: str,
+        context: dict[str, Any],
     ) -> None:
         candidates: list[dict[str, Any]] = []
         for detection in analysis.detections:
@@ -380,6 +418,11 @@ class AnalysisHandler:
         payload = {
             "source_type": source_type,
             "source_value": source_value,
+            "scan_regions": list(context.get("scan_regions", [])),
+            "scan_region": dict((context.get("scan_regions") or [{}])[0]),
+            "output_folder": str(context.get("output_folder", "")),
+            "context_patterns": list(context.get("context_patterns", [])),
+            "analysis_settings": dict(context.get("analysis_settings", {})),
             "candidates": candidates,
             "candidates_original": [dict(candidate) for candidate in candidates],
             "action_history": [],

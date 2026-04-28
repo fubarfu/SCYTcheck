@@ -80,7 +80,8 @@ def test_analysis_start_writes_csv_and_review_sidecar(tmp_path: Path, monkeypatc
     progress = handler.get_progress(run_id)[1]
     assert progress["status"] == "completed"
 
-    csv_path = tmp_path / "result.csv"
+    video_id = ReviewSidecarStore.make_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    csv_path = tmp_path / ".scyt_review_workspaces" / video_id / "result.csv"
     assert csv_path.exists()
     assert "PlayerAlpha" in csv_path.read_text(encoding="utf-8")
 
