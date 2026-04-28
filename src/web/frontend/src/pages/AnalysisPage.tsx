@@ -33,6 +33,7 @@ interface PreviewFrame {
   width: number;
   height: number;
   time_seconds: number;
+  duration_seconds: number | null;
 }
 
 type SourceType = "local_file" | "youtube_url";
@@ -78,6 +79,14 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function computeScrubberMax(durationSeconds: number | null | undefined): number {
+  if (typeof durationSeconds !== "number" || durationSeconds <= 0) {
+    return 600;
+  }
+  // Keep one second below reported duration to avoid end-of-video seek failures.
+  return Math.max(0, Math.floor(durationSeconds) - 1);
 }
 
 export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
@@ -239,12 +248,20 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
         setPreviewError(data.message ?? "Preview unavailable");
         return;
       }
+      const durationSec =
+        typeof data.duration_seconds === "number" && data.duration_seconds > 0
+          ? data.duration_seconds
+          : null;
       setPreview({
         image_url: data.image_url,
         width: data.width,
         height: data.height,
         time_seconds: data.time_seconds,
+        duration_seconds: durationSec,
       });
+      if (durationSec != null) {
+        setScrubTime((prev) => Math.min(prev, computeScrubberMax(durationSec)));
+      }
     } catch {
       setPreview(null);
       setPreviewError("Network error while loading preview");
@@ -619,8 +636,8 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
                         id="preview-scrubber"
                         type="range"
                         min={0}
-                        max={600}
-                        step={5}
+                        max={computeScrubberMax(preview.duration_seconds)}
+                        step={1}
                         value={scrubTime}
                         onChange={(e) => setScrubTime(Number(e.target.value))}
                       />

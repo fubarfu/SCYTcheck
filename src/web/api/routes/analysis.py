@@ -114,6 +114,16 @@ class AnalysisHandler:
         time_seconds = float(payload.get("time_seconds", 0.0) or 0.0)
         quality = str(payload.get("video_quality", "best") or "best")
 
+        def build_seek_candidates(requested: float, duration: float | None) -> list[float]:
+            safe_max = max(0.0, (duration - 0.001) if duration is not None else requested)
+            clamped = max(0.0, min(requested, safe_max))
+            candidates = [clamped]
+            for backoff in (0.25, 0.5, 1.0, 2.0):
+                candidate = max(0.0, clamped - backoff)
+                if all(abs(candidate - existing) > 1e-9 for existing in candidates):
+                    candidates.append(candidate)
+            return candidates
+
         if source_type not in {"youtube_url", "local_file"}:
             return 400, {
                 "error": "validation_error",
@@ -123,12 +133,28 @@ class AnalysisHandler:
             return 400, {"error": "validation_error", "message": "source_value is required"}
 
         try:
+            duration_seconds: float | None = None
             if source_type == "youtube_url":
-                frame = self.video_service.get_frame_at_time(
-                    source_value,
-                    time_seconds,
-                    quality=quality,
-                )
+                video_info = self.video_service.get_video_info(source_value, quality=quality)
+                raw_duration = float(video_info.get("duration") or 0.0)
+                if raw_duration > 0:
+                    duration_seconds = raw_duration
+                last_error: Exception | None = None
+                for candidate_time in build_seek_candidates(time_seconds, duration_seconds):
+                    try:
+                        frame = self.video_service.get_frame_at_time(
+                            source_value,
+                            candidate_time,
+                            quality=quality,
+                        )
+                        time_seconds = candidate_time
+                        break
+                    except Exception as exc:  # pragma: no cover - defensive fallback path
+                        last_error = exc
+                else:
+                    if last_error is None:
+                        raise ValueError("Could not retrieve preview frame")
+                    raise last_error
             else:
                 capture = cv2.VideoCapture(source_value)
                 if not capture.isOpened():
@@ -137,8 +163,18 @@ class AnalysisHandler:
                         "message": "Could not open local video file",
                     }
                 try:
-                    capture.set(cv2.CAP_PROP_POS_MSEC, max(0.0, time_seconds) * 1000.0)
-                    ok, frame = capture.read()
+                    fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
+                    frame_count = capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0.0
+                    raw_duration = (frame_count / fps) if fps > 0 else 0.0
+                    if raw_duration > 0:
+                        duration_seconds = raw_duration
+                    ok = False
+                    for candidate_time in build_seek_candidates(time_seconds, duration_seconds):
+                        capture.set(cv2.CAP_PROP_POS_MSEC, candidate_time * 1000.0)
+                        ok, frame = capture.read()
+                        if ok:
+                            time_seconds = candidate_time
+                            break
                 finally:
                     capture.release()
                 if not ok:
@@ -162,6 +198,7 @@ class AnalysisHandler:
                 "width": int(frame.shape[1]),
                 "height": int(frame.shape[0]),
                 "time_seconds": time_seconds,
+                "duration_seconds": duration_seconds,
             }
         except Exception as exc:
             return 400, {"error": "validation_error", "message": str(exc)}
