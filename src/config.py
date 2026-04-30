@@ -104,6 +104,12 @@ def default_advanced_settings() -> AdvancedSettings:
                 "enabled": True,
             },
             {
+                "id": "default-party-bracket-colon",
+                "before_text": "Party]",
+                "after_text": ":",
+                "enabled": True,
+            },
+            {
                 "id": "default-started-by",
                 "before_text": "started by",
                 "after_text": None,

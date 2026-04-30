@@ -726,53 +726,12 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
               </div>
             </section>
 
-            <details className="settings-panel" open>
-              <summary>Pick where results are written</summary>
-              <div className="panel-card-body form-stack">
-                <label>
-                  Output folder
-                  <div className="output-folder-row">
-                    <input
-                      className="output-folder-input"
-                      type="text"
-                      value={outputFolder}
-                      onChange={(e) => setOutputFolder(e.target.value)}
-                      placeholder="C:/output"
-                    />
-                    <button
-                      type="button"
-                      className="btn-secondary output-folder-button"
-                      onClick={async () => {
-                        const params = outputFolder.trim()
-                          ? `?initial_dir=${encodeURIComponent(outputFolder.trim())}`
-                          : "";
-                        const controller = new AbortController();
-                        const timeout = setTimeout(() => controller.abort(), 180_000);
-                        try {
-                          const res = await fetch(`/api/fs/pick-folder${params}`, { signal: controller.signal });
-                          if (res.ok) {
-                            const data = await res.json();
-                            if (data.path) setOutputFolder(data.path);
-                          }
-                        } catch {
-                          // user cancelled or dialog timed out — ignore
-                        } finally {
-                          clearTimeout(timeout);
-                        }
-                      }}
-                    >
-                      Browse…
-                    </button>
-                  </div>
-                </label>
-              </div>
-            </details>
           </div>
 
           {/* Secondary column: settings + run */}
           <div className="analysis-column analysis-column-secondary">
-            <AnalysisSettingsPanel settings={settings} onChange={setSettings} />
-            <ContextPatternsPanel settings={settings} onChange={setSettings} />
+            <AnalysisSettingsPanel settings={settings} onChange={setSettings} disabled={!preview} />
+            <ContextPatternsPanel settings={settings} onChange={setSettings} disabled={!preview} />
 
             {startError && <p className="error-banner">{startError}</p>}
 
@@ -802,7 +761,9 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
       {isRunning && analysisId ? (
         <ProgressWindow 
           visible={true}
-          statusText={`${projectStatus === "creating" ? "Creating video project" : "Merging into project"} - ${progressMessage} (${progressPercent}%)`}
+          statusText={progressMessage}
+          progressPercent={progressPercent}
+          projectInfo={projectStatus === "creating" ? "Creating project" : "Merging into existing project"}
         />
       ) : null}
     </section>

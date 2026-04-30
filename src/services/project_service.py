@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,27 @@ class ProjectService:
             if str(project.get("project_id")) == project_id:
                 return project
         return None
+
+    def delete_project(self, project_location: str, project_id: str) -> bool:
+        project = self.get_project_detail(project_location, project_id)
+        if project is None:
+            return False
+
+        project_path = Path(str(project.get("project_location") or "")).resolve()
+        root_path = Path(project_location).resolve()
+
+        try:
+            project_path.relative_to(root_path)
+        except ValueError:
+            # Safety guard: only delete directories under the configured project root.
+            return False
+
+        if not project_path.exists() or not project_path.is_dir():
+            return False
+
+        shutil.rmtree(project_path)
+        self.invalidate_cache(project_location)
+        return True
 
     def invalidate_cache(self, project_location: str | None = None) -> None:
         if project_location is None:

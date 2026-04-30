@@ -9,6 +9,7 @@ import { hydrateFromReopen, initialReviewStoreState } from "./state/reviewStore"
 import type { ReopenResponse } from "./state/historyStore";
 
 type ViewMode = "analysis" | "review" | "videos" | "settings";
+const REVIEW_HASH_STORAGE_KEY = "scyt:last-review-hash";
 
 function getViewFromHash(): ViewMode {
   if (typeof window === "undefined") {
@@ -50,14 +51,40 @@ function setHashForView(view: ViewMode) {
   }
 }
 
+function normalizeReviewHash(hash: string | null | undefined): string {
+  const trimmed = (hash ?? "").trim();
+  return trimmed.startsWith("#/review") ? trimmed : "#/review";
+}
+
+function readLastReviewHash(): string {
+  if (typeof window === "undefined") {
+    return "#/review";
+  }
+  const stored = window.sessionStorage.getItem(REVIEW_HASH_STORAGE_KEY);
+  return normalizeReviewHash(stored ?? window.location.hash);
+}
+
+function writeLastReviewHash(hash: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(REVIEW_HASH_STORAGE_KEY, normalizeReviewHash(hash));
+}
+
 export function App() {
   const [view, setView] = useState<ViewMode>(() => getViewFromHash());
+  const [lastReviewHash, setLastReviewHash] = useState<string>(() => readLastReviewHash());
   const [reviewStore, setReviewStore] = useState(initialReviewStoreState);
   const [lastReopenPayload, setLastReopenPayload] = useState<ReopenResponse | null>(null);
   const [lastReviewCsvPath, setLastReviewCsvPath] = useState<string>("");
 
   useEffect(() => {
     const syncViewFromHash = () => {
+      if (window.location.hash.startsWith("#/review")) {
+        const nextHash = normalizeReviewHash(window.location.hash);
+        writeLastReviewHash(nextHash);
+        setLastReviewHash(nextHash);
+      }
       setView(getViewFromHash());
     };
 
@@ -70,7 +97,12 @@ export function App() {
       if (csvPath) {
         setLastReviewCsvPath(csvPath);
       }
-      setHashForView("review");
+      const nextReviewHash = normalizeReviewHash(window.location.hash);
+      writeLastReviewHash(nextReviewHash);
+      setLastReviewHash(nextReviewHash);
+      if (window.location.hash !== nextReviewHash) {
+        window.location.hash = nextReviewHash;
+      }
       setView("review");
     };
     window.addEventListener("scyt:open-review", captureOpenReview as EventListener);
@@ -82,7 +114,20 @@ export function App() {
   }, []);
 
   const handleViewChange = (nextView: ViewMode) => {
-    setHashForView(nextView);
+    if (nextView !== "review" && window.location.hash.startsWith("#/review")) {
+      const currentReviewHash = normalizeReviewHash(window.location.hash);
+      writeLastReviewHash(currentReviewHash);
+      setLastReviewHash(currentReviewHash);
+    }
+
+    if (nextView === "review") {
+      const nextHash = normalizeReviewHash(readLastReviewHash() || lastReviewHash);
+      if (window.location.hash !== nextHash) {
+        window.location.hash = nextHash;
+      }
+    } else {
+      setHashForView(nextView);
+    }
     setView(nextView);
   };
 

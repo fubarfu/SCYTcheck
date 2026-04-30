@@ -40,7 +40,7 @@ interface Props {
     payload?: Record<string, unknown>;
   }) => void;
   onOpenThumbnail: (candidateId: string) => void;
-  thumbnailUrl?: string | null;
+  thumbnailCheckUrl?: string | null;
   validationError?: {
     message: string;
     hint?: string | null;
@@ -56,7 +56,8 @@ function parseTimestampSeconds(raw: string | undefined): number {
   const trimmed = raw.trim();
   const numeric = Number(trimmed);
   if (!Number.isNaN(numeric)) {
-    return Math.max(0, Math.floor(numeric));
+    const normalized = numeric >= 10000 ? numeric / 1000 : numeric;
+    return Math.max(0, Math.floor(normalized));
   }
 
   if (!trimmed.includes(":")) {
@@ -100,21 +101,19 @@ function CandidateRowComponent({
   onAction,
   onOpenThumbnail,
   validationError = null,
-  thumbnailUrl,
-}: Props & { thumbnailUrl?: string | null }) {
+  thumbnailCheckUrl,
+}: Props & { thumbnailCheckUrl?: string | null }) {
   const [editing, setEditing] = useState(false);
   const [editedText, setEditedText] = useState(candidate.corrected_text ?? candidate.extracted_name);
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [thumbnailVisible, setThumbnailVisible] = useState(false);
+  const [resolvedThumbnailSrc, setResolvedThumbnailSrc] = useState<string | null>(null);
 
-  // Optimize IntersectionObserver: simple and deterministic
   useEffect(() => {
-    // For test environments or small windows, skip lazy loading
     if (typeof IntersectionObserver === "undefined" || typeof window === "undefined") {
       setThumbnailVisible(true);
       return;
     }
-    
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
@@ -124,15 +123,26 @@ function CandidateRowComponent({
       },
       { threshold: 0 }
     );
-    
     if (rowRef.current) {
       observer.observe(rowRef.current);
     }
-    
-    return () => {
-      observer.disconnect();
-    };
+    return () => { observer.disconnect(); };
   }, []);
+
+  useEffect(() => {
+    if (!thumbnailVisible || !thumbnailCheckUrl) return;
+    let cancelled = false;
+    fetch(thumbnailCheckUrl)
+      .then(async (resp) => {
+        if (!resp.ok || cancelled) return;
+        const body = await resp.json() as { thumbnail_url?: string };
+        if (body.thumbnail_url && !cancelled) {
+          setResolvedThumbnailSrc(body.thumbnail_url);
+        }
+      })
+      .catch(() => { /* no thumbnail available */ });
+    return () => { cancelled = true; };
+  }, [thumbnailVisible, thumbnailCheckUrl]);
 
   const currentText = candidate.corrected_text ?? candidate.extracted_name;
   const currentStatus = candidate.status ?? "pending";
@@ -254,13 +264,13 @@ function CandidateRowComponent({
       style={{ contain: "layout paint style" }}
     >
       <div className="candidate-main review-candidate-main">
-        <div>
+        <div className="candidate-main-left">
+          <div>
           <div className="candidate-radio-row">
             <strong>{currentText}</strong>
           </div>
           <div className="candidate-meta-inline">
             <span>{candidate.start_timestamp ?? "-"}</span>
-            {candidate.marked_new && <span className="chip recommendation">New</span>}
             {typeof candidate.recommendation_score === "number" && (
               <span className="chip recommendation">Rec {Math.round(candidate.recommendation_score)}</span>
             )}
@@ -270,11 +280,33 @@ function CandidateRowComponent({
               </a>
             )}
           </div>
+          </div>
         </div>
-        <span className={`status-chip ${currentStatus}`}>{currentStatus.charAt(0).toUpperCase()}{currentStatus.slice(1)}</span>
+        {resolvedThumbnailSrc ? (
+          <button
+            type="button"
+            className="candidate-inline-thumbnail"
+            onClick={handleOpenThumbnail}
+            aria-label="Open thumbnail"
+            title="Open thumbnail"
+          >
+            <img
+              src={resolvedThumbnailSrc}
+              alt={`Thumbnail for ${currentText}`}
+            />
+          </button>
+        ) : (
+          <div className="candidate-inline-thumbnail placeholder" aria-hidden="true">
+            <span className="material-symbols-outlined">image</span>
+          </div>
+        )}
+        <div className="candidate-status-stack">
+          {candidate.marked_new && <span className="status-chip new">New</span>}
+          <span className={`status-chip ${currentStatus}`}>{currentStatus.charAt(0).toUpperCase()}{currentStatus.slice(1)}</span>
+        </div>
       </div>
       <div className="candidate-meta">
-        <span>Candidate ID: {candidate.candidate_id}</span>
+        {isSelected && <span>Selected group name</span>}
         {showOccurrenceMetadata && typeof occurrenceIndex === "number" && typeof occurrenceCount === "number" && (
           <span>Occurrence {occurrenceIndex} of {occurrenceCount}</span>
         )}
@@ -332,16 +364,6 @@ function CandidateRowComponent({
             <button
               type="button"
               className="ghost-action icon-tool-button"
-              aria-label="Open thumbnail"
-              title="Open thumbnail"
-              onClick={handleOpenThumbnail}
-              disabled={!thumbnailVisible}
-            >
-              <span className="material-symbols-outlined" aria-hidden="true">image</span>
-            </button>
-            <button
-              type="button"
-              className="ghost-action icon-tool-button"
               aria-label="Edit candidate"
               title="Edit candidate"
               onClick={handleEdit}
@@ -361,13 +383,6 @@ function CandidateRowComponent({
         </div>
       )}
 
-      {isSelected && (
-        <ValidationFeedback
-          type="success"
-          message="Selection saved"
-          hint="This candidate is now the accepted name for the group."
-        />
-      )}
       {validationError && (
         <ValidationFeedback
           type="error"
@@ -376,7 +391,6 @@ function CandidateRowComponent({
           conflictGroupId={validationError.conflictGroupId}
         />
       )}
-      {isRejected && <ValidationFeedback type="error" message="Rejected" hint="This candidate is excluded until you undo reject." />}
     </div>
   );
 }

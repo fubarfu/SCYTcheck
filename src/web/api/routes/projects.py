@@ -41,3 +41,17 @@ class ProjectsHandler:
         if project is None:
             return 404, {"error": "project_not_found", "message": f"Project {project_id} not found."}
         return 200, project
+
+    def delete_project(self, project_id: str) -> tuple[int, dict]:
+        """Delete one project directory and all associated files by project_id."""
+        settings = self.settings_handler.get_settings()
+        project_location = str(settings.get("project_location", "")).strip()
+
+        deleted = self.project_service.delete_project(project_location, project_id)
+        if not deleted:
+            return 404, {"error": "project_not_found", "message": f"Project {project_id} not found."}
+
+        return 200, {
+            "project_id": project_id,
+            "deleted": True,
+        }

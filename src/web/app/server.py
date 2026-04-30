@@ -168,6 +168,10 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             status, body = self._services.projects.get_projects_detail(project_match.group(1))
             self._send_json(status, body)
             return True
+        if project_match and method == "DELETE":
+            status, body = self._services.projects.delete_project(project_match.group(1))
+            self._send_json(status, body)
+            return True
 
         if path == "/api/history/merge-run" and method == "POST":
             status, body = self._services.history.post_merge_run(self._read_json_body())
@@ -199,6 +203,11 @@ class _RequestHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/review/action" and method == "PUT":
             status, body = self._services.review.put_review_action(self._read_json_body())
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/review/grouping" and method == "PUT":
+            status, body = self._services.review.put_review_grouping(self._read_json_body())
             self._send_json(status, body)
             return True
 
@@ -295,7 +304,11 @@ class _RequestHandler(SimpleHTTPRequestHandler):
         thumb_png_match = re.fullmatch(r"/api/review/sessions/([^/]+)/thumbnails/([^/]+)\.png", path)
         if thumb_png_match and method == "GET":
             session_id, candidate_id = thumb_png_match.groups()
-            asset_path = self._services.review_assets.resolve_thumbnail_path(session_id, candidate_id)
+            query = parse_qs(urlparse(self.path).query)
+            project_location = query.get("pl", [None])[0]
+            asset_path = self._services.review_assets.resolve_thumbnail_path(
+                session_id, candidate_id, project_location=project_location
+            )
             if asset_path is None:
                 self._send_json(
                     HTTPStatus.NOT_FOUND,
@@ -310,9 +323,12 @@ class _RequestHandler(SimpleHTTPRequestHandler):
 
         thumb_match = re.fullmatch(r"/api/review/sessions/([^/]+)/thumbnails/([^/]+)", path)
         if thumb_match and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            project_location = query.get("pl", [None])[0]
             status, body = self._services.review_assets.get_thumbnail(
                 thumb_match.group(1),
                 thumb_match.group(2),
+                project_location=project_location,
             )
             self._send_json(status, body)
             return True
@@ -324,6 +340,29 @@ class _RequestHandler(SimpleHTTPRequestHandler):
                 session_id,
                 candidate_id,
                 asset_kind=asset_kind,
+            )
+            if asset_path is None:
+                self._send_json(
+                    HTTPStatus.NOT_FOUND,
+                    {
+                        "error": "not_found",
+                        "message": f"No thumbnail available for candidate {candidate_id}",
+                    },
+                )
+                return True
+            self._send_file(HTTPStatus.OK, asset_path, "image/png")
+            return True
+
+        video_asset_match = re.fullmatch(r"/api/assets/video/([^/]+)/([^/]+)\.png", path)
+        if video_asset_match and method == "GET":
+            session_id, candidate_id = video_asset_match.groups()
+            query = parse_qs(urlparse(self.path).query)
+            project_location = query.get("pl", [None])[0]
+            asset_path = self._services.review_assets.resolve_thumbnail_path(
+                session_id,
+                candidate_id,
+                asset_kind="video",
+                project_location=project_location,
             )
             if asset_path is None:
                 self._send_json(

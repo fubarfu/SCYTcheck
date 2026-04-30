@@ -14,9 +14,21 @@ class ReviewAssetsHandler:
         _cache_root = cache_root or Path.home() / ".scytcheck_cache" / "thumbs"
         self.frame_store = FrameAssetStore(cache_root=_cache_root)
 
-    def get_thumbnail(self, session_id: str, candidate_id: str) -> tuple[int, dict]:
+    def get_thumbnail(
+        self, session_id: str, candidate_id: str, *, project_location: str | None = None
+    ) -> tuple[int, dict]:
         state = self.sessions.get(session_id)
         if state is None:
+            # Fallback for video-context sessions not tracked by SessionManager
+            if project_location:
+                path = self._find_frame_in_project(project_location, candidate_id)
+                if path is not None:
+                    from urllib.parse import urlencode
+                    qs = urlencode({"pl": project_location})
+                    return 200, {
+                        "candidate_id": candidate_id,
+                        "thumbnail_url": f"/api/assets/video/{session_id}/{candidate_id}.png?{qs}",
+                    }
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
 
         csv_path = Path(state.csv_path)
@@ -46,9 +58,13 @@ class ReviewAssetsHandler:
         candidate_id: str,
         *,
         asset_kind: str | None = None,
+        project_location: str | None = None,
     ) -> Path | None:
         state = self.sessions.get(session_id)
         if state is None:
+            # Fallback for video-context sessions
+            if project_location and asset_kind in (None, "video"):
+                return self._find_frame_in_project(project_location, candidate_id)
             return None
 
         csv_path = Path(state.csv_path)
@@ -65,4 +81,21 @@ class ReviewAssetsHandler:
             return persisted
         if cache_path.exists():
             return cache_path
+        return None
+
+    @staticmethod
+    def _find_frame_in_project(project_location: str, candidate_id: str) -> Path | None:
+        """Find a candidate frame in workspace-style or CSV-style frame folders."""
+        root = Path(project_location)
+        if not root.exists():
+            return None
+
+        direct_frames = root / "frames" / f"{candidate_id}.png"
+        if direct_frames.exists():
+            return direct_frames
+
+        for frames_dir in root.glob("*_frames"):
+            candidate_path = frames_dir / f"{candidate_id}.png"
+            if candidate_path.exists():
+                return candidate_path
         return None

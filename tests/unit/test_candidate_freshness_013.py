@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from src.services.review_service import ReviewService
 
 
@@ -111,3 +113,123 @@ def test_marked_new_clear_persists_after_user_action(tmp_path: Path) -> None:
     state_path = workspace / ".scyt_review_workspaces" / "review_state.json"
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     assert payload["candidate_decisions"][str(new_candidate["id"])]["marked_new"] is False
+
+
+def test_confirm_action_propagates_group_selection_semantics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project_root = tmp_path / "projects"
+    video_id = "video-group-confirm"
+    workspace = project_root / video_id
+    workspace.mkdir(parents=True)
+
+    _write_sidecar(
+        workspace / "result_1.review.json",
+        "https://www.youtube.com/watch?v=group-confirm",
+        [
+            {"candidate_id": "cand-a", "extracted_name": "Alpha"},
+            {"candidate_id": "cand-b", "extracted_name": "Beta"},
+            {"candidate_id": "cand-c", "extracted_name": "Gamma"},
+        ],
+    )
+
+    def _group_all(payload: dict[str, object]) -> dict[str, object]:
+        incoming = list(payload.get("candidates") or [])
+        grouped_candidates = [
+            {
+                "candidate_id": str(candidate.get("candidate_id") or ""),
+                "extracted_name": str(candidate.get("extracted_name") or ""),
+                "status": str(candidate.get("status") or "unreviewed"),
+            }
+            for candidate in incoming
+        ]
+        return {
+            "candidates": grouped_candidates,
+            "groups": [
+                {
+                    "group_id": "grp-1",
+                    "display_name": "grp-1",
+                    "candidates": [
+                        {"candidate_id": str(candidate.get("candidate_id") or "")}
+                        for candidate in grouped_candidates
+                    ],
+                }
+            ],
+        }
+
+    monkeypatch.setattr("src.services.review_service.recompute_groups", _group_all)
+
+    service = ReviewService()
+    service.apply_candidate_action(
+        project_location=str(project_root),
+        video_id=video_id,
+        candidate_id="cand-a",
+        action="confirmed",
+    )
+
+    state_path = workspace / ".scyt_review_workspaces" / "review_state.json"
+    payload = json.loads(state_path.read_text(encoding="utf-8"))
+    decisions = payload["candidate_decisions"]
+    assert decisions["cand-a"]["decision"] == "confirmed"
+    assert decisions["cand-b"]["decision"] == "rejected"
+    assert decisions["cand-c"]["decision"] == "rejected"
+
+
+def test_reject_action_rejects_same_spelling_in_group(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project_root = tmp_path / "projects"
+    video_id = "video-group-reject"
+    workspace = project_root / video_id
+    workspace.mkdir(parents=True)
+
+    _write_sidecar(
+        workspace / "result_1.review.json",
+        "https://www.youtube.com/watch?v=group-reject",
+        [{"candidate_id": "seed", "extracted_name": "Seed"}],
+    )
+
+    def _merge_with_duplicates(_: list[dict[str, object]], __: dict[str, dict[str, object]]) -> list[dict[str, object]]:
+        return [
+            {"id": "cand-a1", "spelling": "Alpha", "discovered_in_run": "0", "marked_new": False, "decision": "unreviewed", "frame_count": 0, "frame_samples": []},
+            {"id": "cand-a2", "spelling": "Alpha", "discovered_in_run": "0", "marked_new": False, "decision": "unreviewed", "frame_count": 0, "frame_samples": []},
+            {"id": "cand-b", "spelling": "Beta", "discovered_in_run": "0", "marked_new": False, "decision": "unreviewed", "frame_count": 0, "frame_samples": []},
+        ]
+
+    def _group_all(payload: dict[str, object]) -> dict[str, object]:
+        incoming = list(payload.get("candidates") or [])
+        grouped_candidates = [
+            {
+                "candidate_id": str(candidate.get("candidate_id") or ""),
+                "extracted_name": str(candidate.get("extracted_name") or ""),
+                "status": str(candidate.get("status") or "unreviewed"),
+            }
+            for candidate in incoming
+        ]
+        return {
+            "candidates": grouped_candidates,
+            "groups": [
+                {
+                    "group_id": "grp-1",
+                    "display_name": "grp-1",
+                    "candidates": [
+                        {"candidate_id": str(candidate.get("candidate_id") or "")}
+                        for candidate in grouped_candidates
+                    ],
+                }
+            ],
+        }
+
+    monkeypatch.setattr(ReviewService, "_merge_candidates", staticmethod(_merge_with_duplicates))
+    monkeypatch.setattr("src.services.review_service.recompute_groups", _group_all)
+
+    service = ReviewService()
+    service.apply_candidate_action(
+        project_location=str(project_root),
+        video_id=video_id,
+        candidate_id="cand-a1",
+        action="rejected",
+    )
+
+    state_path = workspace / ".scyt_review_workspaces" / "review_state.json"
+    payload = json.loads(state_path.read_text(encoding="utf-8"))
+    decisions = payload["candidate_decisions"]
+    assert decisions["cand-a1"]["decision"] == "rejected"
+    assert decisions["cand-a2"]["decision"] == "rejected"
+    assert "cand-b" not in decisions

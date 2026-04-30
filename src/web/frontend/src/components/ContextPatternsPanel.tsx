@@ -12,9 +12,10 @@ interface Settings {
 interface Props {
   settings: Settings;
   onChange: (updated: Settings) => void;
+  disabled?: boolean;
 }
 
-export function ContextPatternsPanel({ settings, onChange }: Props) {
+export function ContextPatternsPanel({ settings, onChange, disabled = false }: Props) {
   const contextPatterns = settings.context_patterns ?? [];
 
   const update = (patterns: ContextPattern[]) => {
@@ -49,6 +50,7 @@ export function ContextPatternsPanel({ settings, onChange }: Props) {
     <details className="settings-panel context-patterns-panel">
       <summary>Text patterns</summary>
 
+      <fieldset className="settings-fieldset" disabled={disabled}>
       <div className="context-patterns-body">
         {contextPatterns.length === 0 ? (
           <p className="modal-hint">No context patterns configured.</p>
@@ -112,6 +114,7 @@ export function ContextPatternsPanel({ settings, onChange }: Props) {
           </div>
         )}
       </div>
+      </fieldset>
     </details>
   );
 }

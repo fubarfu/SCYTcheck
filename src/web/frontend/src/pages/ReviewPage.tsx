@@ -115,6 +115,7 @@ function getVideoIdFromUrl(): string | null {
 export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewPageProps) {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
+  const [projectLocation, setProjectLocation] = useState<string | null>(null);
   const [csvPathInput, setCsvPathInput] = useState("");
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isRecalculatingGroups, setIsRecalculatingGroups] = useState(false);
@@ -212,12 +213,20 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         video_id: string;
         video_url: string;
         merged_timestamp: string;
+        project_location?: string;
+        thresholds?: {
+          similarity_threshold?: number;
+          recommendation_threshold?: number;
+          spelling_influence?: number;
+          temporal_influence?: number;
+        };
         candidates: Array<{
           id: string;
           spelling: string;
           discovered_in_run?: string;
           marked_new?: boolean;
           decision?: "unreviewed" | "confirmed" | "rejected" | "edited";
+          start_timestamp?: string;
         }>;
         groups: Array<{
           id: string;
@@ -232,6 +241,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         extracted_name: candidate.spelling,
         status: candidate.decision === "unreviewed" || !candidate.decision ? "pending" : candidate.decision,
         marked_new: Boolean(candidate.marked_new),
+        start_timestamp: candidate.start_timestamp ?? "",
       }));
 
       const candidateById = new Map(candidates.map((candidate) => [candidate.candidate_id, candidate]));
@@ -266,15 +276,16 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         candidates,
         groups,
         thresholds: {
-          similarity_threshold: 80,
-          recommendation_threshold: 70,
-          spelling_influence: 50,
-          temporal_influence: 50,
+          similarity_threshold: context.thresholds?.similarity_threshold ?? 80,
+          recommendation_threshold: context.thresholds?.recommendation_threshold ?? 70,
+          spelling_influence: context.thresholds?.spelling_influence ?? 50,
+          temporal_influence: context.thresholds?.temporal_influence ?? 50,
         },
       };
       
       setSelectedSession(session);
       setSelectedSessionId(videoId);
+      setProjectLocation(context.project_location ?? null);
       syncGroupingSettingsDraft(session);
     } catch (error) {
       setLoadingError(error instanceof Error ? error.message : "Network error");
@@ -382,6 +393,20 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       }));
       return;
     }
+    if (isVideoContextSession) {
+      setStoreState((prev) => ({
+        ...prev,
+        editHistory: {
+          ...prev.editHistory,
+          entries: [],
+          selectedEntryId: null,
+          restoredEntryId: null,
+          loading: false,
+          error: null,
+        },
+      }));
+      return;
+    }
     setStoreState((prev) => ({
       ...prev,
       editHistory: {
@@ -391,7 +416,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       },
     }));
     void fetchEditHistory(videoId, selectedSessionId);
-  }, [selectedSessionId, videoId]);
+  }, [selectedSessionId, videoId, isVideoContextSession]);
 
   // Keep selectedGroupId valid: prefer an unresolved group (with validation error first),
   // then any visible group. Reset to null when no groups remain.
@@ -513,7 +538,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     const actionGroupId = String(action.payload?.group_id ?? "").trim();
     const actionCandidateId = action.target_ids[0] ?? null;
 
-    if (isVideoContextSession && videoId && actionCandidateId) {
+    if (isVideoContextSession && videoId) {
       const mappedAction = action.action_type === "confirm"
         ? "confirmed"
         : action.action_type === "reject"
@@ -522,31 +547,50 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
             ? "edited"
             : action.action_type === "clear_new"
               ? "clear_new"
+              : action.action_type === "deselect"
+                ? "unreviewed"
               : null;
 
       if (mappedAction) {
-        const resp = await fetch("/api/review/action", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            video_id: videoId,
-            candidate_id: actionCandidateId,
-            action: mappedAction,
-            user_note: typeof action.payload?.corrected_text === "string"
-              ? action.payload.corrected_text
-              : undefined,
-          }),
-        });
-        if (!resp.ok) {
-          const errorBody = await resp.json().catch(() => ({ message: "Action failed" })) as { message?: string };
-          setLoadingError(errorBody.message ?? "Action failed");
+        const targetCandidateIds = mappedAction === "unreviewed" && actionGroupId
+          ? ((selectedSession?.groups ?? [])
+            .find((group) => group.group_id === actionGroupId)
+            ?.candidates
+            .map((candidate) => candidate.candidate_id) ?? [])
+          : (actionCandidateId ? [actionCandidateId] : []);
+
+        if (targetCandidateIds.length === 0) {
+          setLoadingError(`Action ${action.action_type} has no candidate target in project review mode.`);
           return;
+        }
+
+        for (const targetId of targetCandidateIds) {
+          const resp = await fetch("/api/review/action", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              video_id: videoId,
+              candidate_id: targetId,
+              action: mappedAction,
+              user_note: typeof action.payload?.corrected_text === "string"
+                ? action.payload.corrected_text
+                : undefined,
+            }),
+          });
+          if (!resp.ok) {
+            const errorBody = await resp.json().catch(() => ({ message: "Action failed" })) as { message?: string };
+            setLoadingError(errorBody.message ?? "Action failed");
+            return;
+          }
         }
         setLoadingError(null);
         setUndoCount((value) => value + 1);
         await loadReviewContext(videoId);
         return;
       }
+
+      setLoadingError(`Action ${action.action_type} is not available in project review mode.`);
+      return;
     }
 
     if (action.action_type === "toggle_collapse") {
@@ -644,6 +688,24 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
         spelling_influence: 100 - spellingRelaxation,
         temporal_influence: temporalInfluence,
       };
+      if (isVideoContextSession && videoId) {
+        const groupedResp = await fetch("/api/review/grouping", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            video_id: videoId,
+            ...thresholdPayload,
+            reset_decisions: true,
+          }),
+        });
+        if (!groupedResp.ok) {
+          setLoadingError("Unable to update grouping settings");
+          return;
+        }
+        await loadReviewContext(videoId);
+        setUndoCount(0);
+        return;
+      }
       const thresholdsChanged = spellingRelaxation !== appliedSpellingRelaxation
         || temporalInfluence !== appliedTemporalInfluence;
       if (thresholdsChanged) {
@@ -699,9 +761,11 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
 
   const openThumbnail = async (candidateId: string) => {
     if (!selectedSessionId) return;
-    const resp = await fetch(`/api/review/sessions/${selectedSessionId}/thumbnails/${candidateId}`);
+    const plParam = projectLocation ? `?pl=${encodeURIComponent(projectLocation)}` : "";
+    const resp = await fetch(`/api/review/sessions/${selectedSessionId}/thumbnails/${candidateId}${plParam}`);
     if (resp.ok) {
-      setThumbnailUrl(`/api/review/sessions/${selectedSessionId}/thumbnails/${candidateId}.png`);
+      const body = await resp.json().catch(() => ({})) as { thumbnail_url?: string };
+      setThumbnailUrl(body.thumbnail_url ?? `/api/review/sessions/${selectedSessionId}/thumbnails/${candidateId}.png${plParam}`);
     } else {
       setThumbnailUrl(null);
     }
@@ -979,6 +1043,8 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                   <CandidateGroupCard
                     key={activeGroup.group_id}
                     group={activeGroup}
+                    selectedSessionId={selectedSessionId}
+                    projectLocation={projectLocation}
                     sourceType={sourceType}
                     sourceValue={sourceValue}
                     validationFeedback={groupValidationFeedback[activeGroup.group_id] ?? null}
@@ -1002,6 +1068,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
                     candidate={c}
                     sourceType={sourceType}
                     sourceValue={sourceValue}
+                    thumbnailCheckUrl={selectedSessionId ? `/api/review/sessions/${selectedSessionId}/thumbnails/${c.candidate_id}${projectLocation ? `?pl=${encodeURIComponent(projectLocation)}` : ""}` : null}
                     onAction={(action) => {
                       if (action.target_ids.length > 1) {
                         action.target_ids = action.target_ids.filter((id) => visibleCandidateIds.has(id));

@@ -13,15 +13,17 @@ interface Settings {
 interface Props {
   settings: Settings;
   onChange: (updated: Settings) => void;
+  disabled?: boolean;
 }
 
-export function AnalysisSettingsPanel({ settings, onChange }: Props) {
+export function AnalysisSettingsPanel({ settings, onChange, disabled = false }: Props) {
   const update = (partial: Partial<Settings>) => onChange({ ...settings, ...partial });
 
   return (
     <details className="settings-panel">
       <summary>Analysis settings</summary>
 
+      <fieldset className="settings-fieldset" disabled={disabled}>
       <div className="settings-grid">
         <label>
           Video quality
@@ -111,6 +113,7 @@ export function AnalysisSettingsPanel({ settings, onChange }: Props) {
           Detailed sidecar log
         </label>
       </div>
+      </fieldset>
     </details>
   );
 }

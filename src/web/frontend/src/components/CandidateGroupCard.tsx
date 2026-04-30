@@ -59,6 +59,8 @@ export interface CandidateGroup {
 
 interface Props {
   group: CandidateGroup;
+  selectedSessionId?: string | null;
+    projectLocation?: string | null;
   sourceType: "local_file" | "youtube_url";
   sourceValue: string;
   validationFeedback?: {
@@ -79,6 +81,8 @@ interface Props {
 
 export function CandidateGroupCard({
   group,
+  selectedSessionId = null,
+    projectLocation = null,
   sourceType,
   sourceValue,
   validationFeedback = null,
@@ -323,6 +327,7 @@ export function CandidateGroupCard({
               }
               onAction={onAction}
               onOpenThumbnail={onOpenThumbnail}
+              thumbnailCheckUrl={selectedSessionId ? `/api/review/sessions/${selectedSessionId}/thumbnails/${candidate.candidate_id}${projectLocation ? `?pl=${encodeURIComponent(projectLocation)}` : ""}` : null}
             />
           ))}
         </div>

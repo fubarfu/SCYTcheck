@@ -45,7 +45,7 @@ describe("CandidateRow feature 010", () => {
       />,
     );
 
-    expect(screen.getByText("Selection saved")).toBeTruthy();
+    expect(screen.getByText("Confirmed")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Accept" })).toBeTruthy();
   });
 
@@ -64,8 +64,7 @@ describe("CandidateRow feature 010", () => {
       />,
     );
 
-    expect(screen.getByRole("alert")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain("Rejected");
+    expect(screen.getByText("Rejected")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Reject" }));
 
     expect(onAction).toHaveBeenCalledWith({

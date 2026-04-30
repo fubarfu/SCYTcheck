@@ -58,3 +58,32 @@ class ReviewHandler:
             return 400, {"error": "invalid_action", "message": str(exc)}
 
         return 200, result
+
+    def put_review_grouping(self, payload: dict[str, object]) -> tuple[int, dict]:
+        """Persist grouping settings and recalculate merged groups for video-context review."""
+        video_id = str(payload.get("video_id", "")).strip()
+        if not video_id:
+            return 400, {"error": "validation_error", "message": "video_id is required"}
+
+        thresholds = {
+            "similarity_threshold": payload.get("similarity_threshold", 80),
+            "recommendation_threshold": payload.get("recommendation_threshold", 70),
+            "spelling_influence": payload.get("spelling_influence", 50),
+            "temporal_influence": payload.get("temporal_influence", 50),
+        }
+        reset_decisions = bool(payload.get("reset_decisions", False))
+
+        settings = self.settings_handler.get_settings()
+        project_location = str(settings.get("project_location", "")).strip()
+
+        try:
+            result = self.review_service.update_grouping_settings(
+                project_location=project_location,
+                video_id=video_id,
+                thresholds=thresholds,
+                reset_decisions=reset_decisions,
+            )
+        except FileNotFoundError:
+            return 404, {"error": "video_not_found", "message": f"Video with ID {video_id} not found."}
+
+        return 200, result

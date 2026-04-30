@@ -34,6 +34,15 @@ export function getProjects() {
   return requestJson<ProjectListResponse>("/api/projects");
 }
 
+export function deleteProject(projectId: string) {
+  return requestJson<{ project_id: string; deleted: boolean }>(
+    `/api/projects/${encodeURIComponent(projectId)}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
 export function getSettings() {
   return requestJson<AppSettings>("/api/settings");
 }
