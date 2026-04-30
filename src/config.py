@@ -170,6 +170,46 @@ def history_index_path(base_dir: str | None = None) -> Path:
     return settings_path.with_name(HISTORY_INDEX_FILE)
 
 
+def _merge_context_patterns_with_defaults(
+    persisted_patterns: object,
+    default_patterns: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Return persisted context patterns with any missing defaults appended.
+
+    This keeps user/custom patterns intact while backfilling newly introduced
+    default patterns for users with older settings files.
+    """
+    if not isinstance(persisted_patterns, list):
+        return [dict(pattern) for pattern in default_patterns]
+
+    merged_patterns: list[dict[str, object]] = [
+        dict(pattern) for pattern in persisted_patterns if isinstance(pattern, dict)
+    ]
+    existing_ids = {
+        str(pattern.get("id", "")).strip()
+        for pattern in merged_patterns
+        if str(pattern.get("id", "")).strip()
+    }
+    existing_pairs = {
+        (pattern.get("before_text"), pattern.get("after_text"))
+        for pattern in merged_patterns
+    }
+
+    for default_pattern in default_patterns:
+        default_id = str(default_pattern.get("id", "")).strip()
+        pattern_pair = (
+            default_pattern.get("before_text"),
+            default_pattern.get("after_text"),
+        )
+        if default_id and default_id in existing_ids:
+            continue
+        if pattern_pair in existing_pairs:
+            continue
+        merged_patterns.append(dict(default_pattern))
+
+    return merged_patterns
+
+
 def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
     """Load persisted advanced settings or initialize defaults on first run."""
     path = _settings_path(base_dir)
@@ -189,8 +229,12 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
         payload = {}
 
     defaults = default_advanced_settings()
+    merged_patterns = _merge_context_patterns_with_defaults(
+        payload.get("context_patterns"),
+        defaults.context_patterns,
+    )
     return AdvancedSettings(
-        context_patterns=list(payload.get("context_patterns", defaults.context_patterns)),
+        context_patterns=merged_patterns,
         filter_non_matching=bool(payload.get("filter_non_matching", defaults.filter_non_matching)),
         event_gap_threshold_sec=float(
             payload.get("event_gap_threshold_sec", defaults.event_gap_threshold_sec)

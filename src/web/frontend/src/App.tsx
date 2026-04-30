@@ -5,6 +5,7 @@ import { MainLayout } from "./pages/MainLayout";
 import { ReviewPage } from "./pages/ReviewPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { VideosPage } from "./pages/VideosPage";
+import { reopenHistory } from "./state/historyStore";
 import { hydrateFromReopen, initialReviewStoreState } from "./state/reviewStore";
 import type { ReopenResponse } from "./state/historyStore";
 
@@ -56,6 +57,16 @@ function normalizeReviewHash(hash: string | null | undefined): string {
   return trimmed.startsWith("#/review") ? trimmed : "#/review";
 }
 
+function getVideoIdFromReviewHash(hash: string | null | undefined): string {
+  const normalized = normalizeReviewHash(hash);
+  const queryIndex = normalized.indexOf("?");
+  if (queryIndex < 0) {
+    return "";
+  }
+  const params = new URLSearchParams(normalized.slice(queryIndex + 1));
+  return (params.get("video_id") ?? "").trim();
+}
+
 function readLastReviewHash(): string {
   if (typeof window === "undefined") {
     return "#/review";
@@ -77,6 +88,32 @@ export function App() {
   const [reviewStore, setReviewStore] = useState(initialReviewStoreState);
   const [lastReopenPayload, setLastReopenPayload] = useState<ReopenResponse | null>(null);
   const [lastReviewCsvPath, setLastReviewCsvPath] = useState<string>("");
+  const activeReviewVideoId = getVideoIdFromReviewHash(lastReviewHash);
+
+  const applyReopenPayload = (payload: ReopenResponse) => {
+    setLastReopenPayload(payload);
+    setReviewStore((prev) => hydrateFromReopen(prev, payload));
+
+    const primaryCsvPath = String(payload.derived_results?.primary_csv_path ?? "").trim();
+    if (primaryCsvPath) {
+      setLastReviewCsvPath(primaryCsvPath);
+    }
+
+    const route = String(payload.review_route ?? "").trim();
+    const nextHash = route.startsWith("/") ? `#${route}` : "#/review";
+    const normalized = normalizeReviewHash(nextHash);
+    writeLastReviewHash(normalized);
+    setLastReviewHash(normalized);
+    if (window.location.hash !== normalized) {
+      window.location.hash = normalized;
+    }
+    setView("review");
+  };
+
+  const handleOpenProjectFromVideos = async (projectId: string) => {
+    const payload = await reopenHistory(projectId);
+    applyReopenPayload(payload);
+  };
 
   useEffect(() => {
     const syncViewFromHash = () => {
@@ -138,11 +175,20 @@ export function App() {
       onOpenSettings={() => handleViewChange("settings")}
       rightSlot={<ThemeToggle />}
     >
-      {view === "analysis" && <AnalysisPage reopenPayload={lastReopenPayload} />}
-      {view === "review" && (
-        <ReviewPage reopenContext={reviewStore.reopenContext} autoCsvPath={lastReviewCsvPath} />
+      {view === "analysis" && (
+        <AnalysisPage
+          reopenPayload={lastReopenPayload}
+          activeReviewVideoId={activeReviewVideoId || undefined}
+        />
       )}
-      {view === "videos" && <VideosPage />}
+      {view === "review" && (
+        <ReviewPage
+          reopenContext={reviewStore.reopenContext}
+          autoCsvPath={lastReviewCsvPath}
+          activeReviewVideoId={activeReviewVideoId || null}
+        />
+      )}
+      {view === "videos" && <VideosPage onOpenProject={handleOpenProjectFromVideos} />}
       {view === "settings" && <SettingsPage />}
     </MainLayout>
   );

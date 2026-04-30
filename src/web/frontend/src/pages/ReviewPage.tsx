@@ -46,6 +46,7 @@ interface ReviewSessionPayload {
     video_id?: string;
     display_title?: string;
     reviewed_names?: string[];
+    run_count?: number;
   };
   candidates?: Candidate[];
   thresholds?: {
@@ -80,6 +81,7 @@ interface ReviewPageProps {
     hydratedAt: string;
   } | null;
   autoCsvPath?: string | null;
+  activeReviewVideoId?: string | null;
 }
 
 function parseCandidateFallbackPayload(raw: string): { candidate_id?: string; source_group_id?: string | null } | null {
@@ -112,7 +114,7 @@ function getVideoIdFromUrl(): string | null {
   return reviewMatch ? decodeURIComponent(reviewMatch[1]) : null;
 }
 
-export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewPageProps) {
+export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeReviewVideoId = null }: ReviewPageProps) {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
   const [projectLocation, setProjectLocation] = useState<string | null>(null);
@@ -140,8 +142,10 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [reopenWarning, setReopenWarning] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [videoContextRunCount, setVideoContextRunCount] = useState<number | null>(null);
   const autoLoadedHistoryCsvPathRef = useRef<string | null>(null);
   const latestSessionFetchTokenRef = useRef(0);
+  const autoLoadedVideoIdRef = useRef<string | null>(null);
 
   const sourceType = selectedSession?.source_type ?? "local_file";
   const sourceValue = selectedSession?.source_value ?? "";
@@ -195,8 +199,14 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const runCount = useMemo(() => {
     const raw = (selectedSession as { workspace?: { run_count?: unknown } } | null)?.workspace?.run_count;
     const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null;
-  }, [selectedSession]);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return Math.floor(parsed);
+    }
+    if (videoContextRunCount && videoContextRunCount > 0) {
+      return Math.floor(videoContextRunCount);
+    }
+    return null;
+  }, [selectedSession, videoContextRunCount]);
 
 
 
@@ -212,6 +222,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       const context = await resp.json() as {
         video_id: string;
         video_url: string;
+        run_count?: unknown;
         merged_timestamp: string;
         project_location?: string;
         thresholds?: {
@@ -262,6 +273,10 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
           accepted_name_summary: group.decision === "confirmed" ? group.name ?? null : null,
         };
       });
+      const contextRunCount = Number(context.run_count);
+      const parsedContextRunCount = Number.isFinite(contextRunCount) && contextRunCount > 0
+        ? Math.floor(contextRunCount)
+        : null;
 
       const session: ReviewSessionPayload = {
         session_id: videoId,
@@ -272,6 +287,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
           video_id: context.video_id,
           display_title: `Review: ${context.video_url}`,
           reviewed_names: [],
+          run_count: parsedContextRunCount ?? undefined,
         },
         candidates,
         groups,
@@ -284,6 +300,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
       };
       
       setSelectedSession(session);
+      setVideoContextRunCount(parsedContextRunCount);
       setSelectedSessionId(videoId);
       setProjectLocation(context.project_location ?? null);
       syncGroupingSettingsDraft(session);
@@ -328,12 +345,40 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     if (!reopenContext || !value) {
       return;
     }
-    if (autoLoadedHistoryCsvPathRef.current === value) {
+    const activeVideoId = activeReviewVideoId?.trim() ?? "";
+    if (activeVideoId) {
+      // Project-open flows should hydrate via video context, not CSV session loading.
       return;
     }
-    autoLoadedHistoryCsvPathRef.current = value;
-    void loadSessionFromCsv(value);
-  }, [autoCsvPath, reopenContext]);
+    const scheduleId = window.setTimeout(() => {
+      const videoIdFromUrl = getVideoIdFromUrl();
+      if (videoIdFromUrl) {
+        // When opening a project through #/review?video_id=..., prefer project context
+        // and avoid overriding it with a CSV session auto-load.
+        return;
+      }
+      if (autoLoadedHistoryCsvPathRef.current === value) {
+        return;
+      }
+      autoLoadedHistoryCsvPathRef.current = value;
+      void loadSessionFromCsv(value);
+    }, 150);
+    return () => {
+      window.clearTimeout(scheduleId);
+    };
+  }, [autoCsvPath, reopenContext, activeReviewVideoId]);
+
+  useEffect(() => {
+    const activeVideoId = activeReviewVideoId?.trim() ?? "";
+    if (!activeVideoId) {
+      return;
+    }
+    if (autoLoadedVideoIdRef.current === activeVideoId) {
+      return;
+    }
+    autoLoadedVideoIdRef.current = activeVideoId;
+    void loadReviewContext(activeVideoId);
+  }, [activeReviewVideoId]);
 
   useEffect(() => {
     if (!reopenContext) {
@@ -347,12 +392,25 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
     setReopenWarning(null);
   }, [reopenContext]);
 
-  // Auto-load review context when navigated with video_id URL parameter
+  // Auto-load review context whenever the review hash carries a video_id.
   useEffect(() => {
-    const videoIdFromUrl = getVideoIdFromUrl();
-    if (videoIdFromUrl) {
+    const syncReviewContextFromHash = () => {
+      const videoIdFromUrl = getVideoIdFromUrl();
+      if (!videoIdFromUrl) {
+        return;
+      }
+      if (autoLoadedVideoIdRef.current === videoIdFromUrl) {
+        return;
+      }
+      autoLoadedVideoIdRef.current = videoIdFromUrl;
       void loadReviewContext(videoIdFromUrl);
-    }
+    };
+
+    syncReviewContextFromHash();
+    window.addEventListener("hashchange", syncReviewContextFromHash);
+    return () => {
+      window.removeEventListener("hashchange", syncReviewContextFromHash);
+    };
   }, []);
 
 
@@ -442,6 +500,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
   const loadSessionFromCsv = async (csvPathOverride?: string) => {
     setLoadingError(null);
     setExportMessage(null);
+    setVideoContextRunCount(null);
     const targetPath = (csvPathOverride ?? csvPathInput).trim();
     if (!targetPath) {
       setLoadingError("csv_path is required");
@@ -876,7 +935,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null }: ReviewP
             <div className="review-summary-block">
               <div className="review-quick-stats" aria-label="Session quick stats">
                 <div className="review-quick-stat">
-                  <span className="review-quick-stat-label">Run count</span>
+                  <span className="review-quick-stat-label">Analysis runs</span>
                   <strong>{runCount ?? "--"}</strong>
                 </div>
                 <div className="review-quick-stat">

@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { deleteProject, getProjects } from "../services/api";
 import type { ProjectListResponse, VideoProject } from "../types";
 
-export function VideosPage() {
+interface VideosPageProps {
+  onOpenProject?: (projectId: string) => Promise<void> | void;
+}
+
+export function VideosPage({ onOpenProject }: VideosPageProps) {
   const [projects, setProjects] = useState<VideoProject[]>([]);
   const [projectLocation, setProjectLocation] = useState("");
   const [locationStatus, setLocationStatus] = useState<ProjectListResponse["location_status"]>("unknown");
@@ -32,7 +36,11 @@ export function VideosPage() {
     void refresh();
   }, []);
 
-  const openProject = (projectId: string) => {
+  const openProject = async (projectId: string) => {
+    if (onOpenProject) {
+      await onOpenProject(projectId);
+      return;
+    }
     window.location.hash = `#/review?video_id=${encodeURIComponent(projectId)}`;
   };
 
@@ -116,7 +124,16 @@ export function VideosPage() {
                   <p className="history-entry-subtitle">Project ID: {project.project_id}</p>
                 </div>
                 <div className="history-entry-actions">
-                  <button type="button" className="primary-action" onClick={() => openProject(project.project_id)}>
+                  <button
+                    type="button"
+                    className="primary-action"
+                    onClick={() => {
+                      void openProject(project.project_id).catch((openError) => {
+                        const message = openError instanceof Error ? openError.message : "Unable to open project";
+                        setError(message);
+                      });
+                    }}
+                  >
                     Open Project
                   </button>
                   <button

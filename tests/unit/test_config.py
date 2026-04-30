@@ -126,3 +126,44 @@ def test_advanced_settings_roundtrip_persists_gating_threshold(tmp_path: Path) -
     loaded = load_advanced_settings(base_dir=str(tmp_path))
 
     assert loaded.gating_threshold == 0.33
+
+
+def test_load_advanced_settings_backfills_new_default_context_pattern(tmp_path: Path) -> None:
+    legacy_patterns = [
+        {
+            "id": "default-has-joined",
+            "before_text": None,
+            "after_text": "has joined",
+            "enabled": True,
+        },
+        {
+            "id": "default-party-connected",
+            "before_text": "Party",
+            "after_text": "connected",
+            "enabled": True,
+        },
+        {
+            "id": "default-party-disconnected",
+            "before_text": "Party",
+            "after_text": "disconnected",
+            "enabled": True,
+        },
+        {
+            "id": "default-started-by",
+            "before_text": "started by",
+            "after_text": None,
+            "enabled": True,
+        },
+    ]
+    settings_file = tmp_path / "scytcheck_settings.json"
+    settings_file.write_text(json.dumps({"context_patterns": legacy_patterns}), encoding="utf-8")
+
+    loaded = load_advanced_settings(base_dir=str(tmp_path))
+
+    assert len(loaded.context_patterns) == 5
+    assert any(
+        pattern.get("id") == "default-party-bracket-colon"
+        and pattern.get("before_text") == "Party]"
+        and pattern.get("after_text") == ":"
+        for pattern in loaded.context_patterns
+    )

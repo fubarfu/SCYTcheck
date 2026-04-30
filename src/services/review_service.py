@@ -34,6 +34,12 @@ class ReviewService:
             if isinstance(payload, dict):
                 runs.append(payload)
 
+        sidecar_run_count = len(runs)
+        metadata_run_count = self._read_workspace_metadata_run_count(workspace_root)
+        effective_run_count = sidecar_run_count
+        if metadata_run_count is not None:
+            effective_run_count = max(effective_run_count, metadata_run_count)
+
         prior_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
         prior_state = self._load_prior_state(prior_state_path)
         prior_decisions = self._extract_prior_decisions(prior_state)
@@ -92,12 +98,29 @@ class ReviewService:
             "video_id": video_id,
             "video_url": self._resolve_video_url(runs, video_id),
             "project_location": str(workspace_root),
-            "run_count": len(runs),
-            "latest_run_id": str(len(runs) - 1) if runs else "0",
+            "run_count": effective_run_count,
+            "latest_run_id": str(max(effective_run_count - 1, 0)),
             "candidates": merged_candidates,
             "groups": groups,
             "thresholds": dict(grouped_payload.get("thresholds") or thresholds),
         }
+
+    @staticmethod
+    def _read_workspace_metadata_run_count(workspace_root: Path) -> int | None:
+        metadata_path = workspace_root / "metadata.json"
+        if not metadata_path.exists():
+            return None
+        try:
+            payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        try:
+            value = int(payload.get("run_count"))
+        except (TypeError, ValueError):
+            return None
+        return max(0, value)
 
     @staticmethod
     def _derive_group_decision(statuses: list[str]) -> str:

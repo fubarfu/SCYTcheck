@@ -167,6 +167,9 @@ class HistoryService:
     def reopen(self, history_id: str) -> dict[str, Any]:
         entry = self.store.get_entry(history_id)
         if entry is None:
+            fallback_payload = self._reopen_from_project(history_id)
+            if fallback_payload is not None:
+                return fallback_payload
             raise FileNotFoundError(f"history_id {history_id} not found")
 
         contexts = list(entry.get("contexts", []))
@@ -216,6 +219,58 @@ class HistoryService:
             },
             "derived_results": derived,
             "review_route": f"/review?history_id={entry['history_id']}",
+        }
+
+    def _reopen_from_project(self, project_id: str) -> dict[str, Any] | None:
+        try:
+            settings = self.settings_loader()
+        except Exception:
+            return None
+
+        project_location = str(getattr(settings, "project_location", "") or "").strip()
+        if not project_location:
+            return None
+
+        project = self.project_service.get_project_detail(project_location, project_id)
+        if project is None:
+            return None
+
+        source_value = str(project.get("video_url") or "").strip()
+        if not source_value:
+            source_value = str(project.get("project_id") or project_id)
+
+        source_type = (
+            "youtube_url"
+            if source_value.lower().startswith("http") or "youtube.com" in source_value.lower() or "youtu.be" in source_value.lower()
+            else "local_file"
+        )
+
+        output_folder = str(project.get("project_location") or project_location)
+        derived = derive_review_artifacts(Path(output_folder))
+
+        analysis_settings = {
+            "video_quality": getattr(settings, "video_quality", "best"),
+            "ocr_confidence_threshold": getattr(settings, "ocr_confidence_threshold", 40),
+            "tolerance_value": getattr(settings, "tolerance_value", 0.75),
+            "event_gap_threshold_sec": getattr(settings, "event_gap_threshold_sec", 1.0),
+            "gating_enabled": getattr(settings, "gating_enabled", False),
+            "gating_threshold": getattr(settings, "gating_threshold", 0.02),
+            "filter_non_matching": getattr(settings, "filter_non_matching", True),
+            "logging_enabled": getattr(settings, "logging_enabled", False),
+        }
+
+        return {
+            "history_id": str(project.get("project_id") or project_id),
+            "analysis_context": {
+                "source_type": source_type,
+                "source_value": source_value,
+                "scan_region": {"x": 120, "y": 40, "width": 480, "height": 60},
+                "output_folder": output_folder,
+                "context_patterns": list(getattr(settings, "context_patterns", [])),
+                "analysis_settings": analysis_settings,
+            },
+            "derived_results": derived,
+            "review_route": f"/review?video_id={str(project.get('project_id') or project_id)}",
         }
 
     @staticmethod

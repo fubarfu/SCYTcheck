@@ -35,6 +35,10 @@ class SettingsStore:
             if not isinstance(data, dict):
                 return defaults
             merged = self._deep_merge(defaults, data)
+            merged["context_patterns"] = self._merge_context_patterns_with_defaults(
+                merged.get("context_patterns"),
+                defaults.get("context_patterns", []),
+            )
             self._ensure_default_project_location(merged)
             return merged
 
@@ -54,6 +58,46 @@ class SettingsStore:
             else:
                 merged[key] = value
         return merged
+
+    @staticmethod
+    def _merge_context_patterns_with_defaults(
+        current_patterns: Any,
+        default_patterns: Any,
+    ) -> list[dict[str, Any]]:
+        if not isinstance(default_patterns, list):
+            return []
+
+        if not isinstance(current_patterns, list):
+            return [dict(pattern) for pattern in default_patterns if isinstance(pattern, dict)]
+
+        merged_patterns: list[dict[str, Any]] = [
+            dict(pattern) for pattern in current_patterns if isinstance(pattern, dict)
+        ]
+        existing_ids = {
+            str(pattern.get("id", "")).strip()
+            for pattern in merged_patterns
+            if str(pattern.get("id", "")).strip()
+        }
+        existing_pairs = {
+            (pattern.get("before_text"), pattern.get("after_text"))
+            for pattern in merged_patterns
+        }
+
+        for default_pattern in default_patterns:
+            if not isinstance(default_pattern, dict):
+                continue
+            default_id = str(default_pattern.get("id", "")).strip()
+            default_pair = (
+                default_pattern.get("before_text"),
+                default_pattern.get("after_text"),
+            )
+            if default_id and default_id in existing_ids:
+                continue
+            if default_pair in existing_pairs:
+                continue
+            merged_patterns.append(dict(default_pattern))
+
+        return merged_patterns
 
     @staticmethod
     def _ensure_default_project_location(settings: dict[str, Any]) -> None:

@@ -52,6 +52,7 @@ interface DragState {
 
 interface AnalysisPageProps {
   reopenPayload?: ReopenResponse | null;
+  activeReviewVideoId?: string;
 }
 
 function formatTime(seconds: number): string {
@@ -68,7 +69,23 @@ function computeScrubberMax(durationSeconds: number | null | undefined): number 
   return Math.max(0, Math.floor(durationSeconds) - 1);
 }
 
-export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
+function readLastReviewVideoIdFromSession(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  const reviewHash = (window.sessionStorage.getItem("scyt:last-review-hash") ?? "").trim();
+  if (!reviewHash.startsWith("#/review")) {
+    return "";
+  }
+  const queryIndex = reviewHash.indexOf("?");
+  if (queryIndex < 0) {
+    return "";
+  }
+  const params = new URLSearchParams(reviewHash.slice(queryIndex + 1));
+  return (params.get("video_id") ?? "").trim();
+}
+
+export function AnalysisPage({ reopenPayload = null, activeReviewVideoId = "" }: AnalysisPageProps) {
   const [sourceType, setSourceType] = useState<SourceType>("youtube_url");
   const [sourceValue, setSourceValue] = useState("");
   const [outputFolder, setOutputFolder] = useState("");
@@ -153,6 +170,42 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
     applyReopenPayload(reopenPayload);
     appliedHistoryIdRef.current = reopenPayload.history_id;
   }, [reopenPayload]);
+
+  useEffect(() => {
+    const videoId = activeReviewVideoId.trim() || readLastReviewVideoIdFromSession();
+    if (!videoId || reopenPayload || sourceValue.trim()) {
+      return;
+    }
+
+    let isCancelled = false;
+    const hydrateFromReviewContext = async () => {
+      try {
+        const response = await fetch(`/api/review/context?video_id=${encodeURIComponent(videoId)}`);
+        if (!response.ok) {
+          return;
+        }
+        const payload = await response.json() as { video_url?: string };
+        const nextSource = String(payload.video_url ?? "").trim();
+        if (!nextSource || isCancelled) {
+          return;
+        }
+
+        const inferredSourceType: SourceType =
+          /^https?:\/\//i.test(nextSource) || /youtube\.com|youtu\.be/i.test(nextSource)
+            ? "youtube_url"
+            : "local_file";
+        setSourceType(inferredSourceType);
+        setSourceValue(nextSource);
+      } catch {
+        // No-op: keep analysis view usable even if review context lookup fails.
+      }
+    };
+
+    void hydrateFromReviewContext();
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeReviewVideoId, reopenPayload, sourceValue]);
 
   useEffect(() => {
     activeRegionRef.current = activeRegionIndex;
@@ -251,7 +304,7 @@ export function AnalysisPage({ reopenPayload = null }: AnalysisPageProps) {
     setPreviewError(null);
     setScrubTime(0);
 
-    if (sourceType !== "youtube_url" || !sourceValue.trim()) {
+    if (!sourceValue.trim()) {
       return;
     }
 

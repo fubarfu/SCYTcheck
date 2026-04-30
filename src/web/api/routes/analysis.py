@@ -4,6 +4,7 @@ import base64
 import csv
 import json
 import re
+import shutil
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -259,11 +260,14 @@ class AnalysisHandler:
                         existing_metadata = loaded
                 except Exception:
                     existing_metadata = {}
+            prior_run_count = int(existing_metadata.get("run_count") or 0)
+            run_index = self._next_run_index(workspace_root, prior_run_count)
+            next_run_count = run_index + 1
             metadata_payload = {
                 "project_id": video_id,
                 "video_url": dto.source_value,
                 "created_date": existing_metadata.get("created_date") or datetime.now(UTC).isoformat(),
-                "run_count": int(existing_metadata.get("run_count") or 0) + 1,
+                "run_count": next_run_count,
                 "last_analyzed": datetime.now(UTC).isoformat(),
                 "candidate_count_total": int(existing_metadata.get("candidate_count_total") or 0),
                 "candidate_count_reviewed": int(existing_metadata.get("candidate_count_reviewed") or 0),
@@ -342,6 +346,7 @@ class AnalysisHandler:
                         ),
                     },
                 )
+                self._persist_run_snapshot(exported, workspace_root, run_index)
                 merge_result = self.history_service.merge_run(
                     source_type=dto.source_type,
                     source_value=dto.source_value,
@@ -506,6 +511,37 @@ class AnalysisHandler:
             "action_history": [],
         }
         self._sidecar_store.save(csv_path, payload)
+
+    @staticmethod
+    def _next_run_index(workspace_root: Path, prior_run_count: int) -> int:
+        highest_existing = -1
+        for path in workspace_root.glob("result_*.review.json"):
+            match = re.fullmatch(r"result_(\d+)\.review\.json", path.name)
+            if not match:
+                continue
+            highest_existing = max(highest_existing, int(match.group(1)))
+        sidecar_count = highest_existing + 1
+        baseline = max(int(prior_run_count or 0), sidecar_count)
+        return baseline
+
+    @staticmethod
+    def _persist_run_snapshot(exported_csv: Path, workspace_root: Path, run_index: int) -> None:
+        run_csv = workspace_root / f"result_{run_index}.csv"
+        if exported_csv.resolve(strict=False) != run_csv.resolve(strict=False):
+            shutil.copy2(exported_csv, run_csv)
+
+        review_state_path = ReviewSidecarStore.workspace_review_state_path(workspace_root)
+        if not review_state_path.exists():
+            return
+        run_sidecar = workspace_root / f"result_{run_index}.review.json"
+        try:
+            payload = json.loads(review_state_path.read_text(encoding="utf-8"))
+        except Exception:
+            return
+        if not isinstance(payload, dict):
+            return
+        payload["result_csv_path"] = str(run_csv)
+        run_sidecar.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
 
     def _create_analysis_service(
         self,
