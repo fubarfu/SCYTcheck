@@ -662,8 +662,9 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
     setExportMessage(null);
     const actionGroupId = String(action.payload?.group_id ?? "").trim();
     const actionCandidateId = action.target_ids[0] ?? null;
+    const isManualGroupAction = actionGroupId.startsWith("grp_manual_");
 
-    if (isVideoContextSession && videoId) {
+    if (isVideoContextSession && videoId && !isManualGroupAction) {
       const mappedAction = action.action_type === "confirm"
         ? "confirmed"
         : action.action_type === "reject"
@@ -713,9 +714,8 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
         await fetchEditHistory(videoId, videoId);
         return;
       }
-
-      setLoadingError(`Action ${action.action_type} is not available in project review mode.`);
-      return;
+      // For group-level mutations (move/merge/reorder/collapse), use the
+      // session action endpoint so drag-and-drop works in video-context review.
     }
 
     if (action.action_type === "toggle_collapse") {

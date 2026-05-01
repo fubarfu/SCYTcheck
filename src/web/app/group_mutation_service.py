@@ -6,11 +6,18 @@ import uuid
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 
 
+def _normalize_name_value(raw: Any) -> str:
+  if raw is None:
+    return ""
+  value = str(raw).strip()
+  return "" if value.lower() in {"none", "null"} else value
+
+
 def _candidate_name(candidate: dict[str, Any]) -> str:
-  corrected = str(candidate.get("corrected_text", "")).strip()
+  corrected = _normalize_name_value(candidate.get("corrected_text"))
   if corrected:
     return corrected
-  return str(candidate.get("extracted_name", "")).strip()
+  return _normalize_name_value(candidate.get("extracted_name"))
 
 
 def _set_candidate_status(candidates: list[dict[str, Any]], candidate_id: str, status: str) -> list[dict[str, Any]]:

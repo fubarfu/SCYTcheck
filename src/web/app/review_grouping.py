@@ -152,11 +152,25 @@ def _hydrate_group_state(payload: dict[str, Any], groups: list[dict[str, Any]]) 
     return hydrated
 
 
+def _normalize_name_value(raw: Any) -> str:
+    if raw is None:
+        return ""
+    value = str(raw).strip()
+    return "" if value.lower() in {"none", "null"} else value
+
+
 def _candidate_name(candidate: dict[str, Any]) -> str:
-    corrected = str(candidate.get("corrected_text", "")).strip()
+    corrected = _normalize_name_value(candidate.get("corrected_text"))
     if corrected:
         return corrected
-    return str(candidate.get("extracted_name", "")).strip()
+    return _normalize_name_value(candidate.get("extracted_name"))
+
+
+def _sanitize_group_display_name(raw_value: Any, fallback: str) -> str:
+    value = "" if raw_value is None else str(raw_value).strip()
+    if not value or value.lower() in {"none", "null"}:
+        return fallback
+    return value
 
 
 def _apply_candidate_group_overrides(
@@ -201,7 +215,7 @@ def _apply_candidate_group_overrides(
         display_name = _candidate_name(candidates[0])
         anchor_timestamp = _parse_timestamp_seconds(candidates[0].get("start_timestamp"))
         if base_group is not None:
-            display_name = str(base_group.get("display_name", display_name))
+            display_name = _sanitize_group_display_name(base_group.get("display_name"), display_name)
             anchor_timestamp = float(base_group.get("anchor_timestamp", anchor_timestamp))
 
         rebuilt.append(
