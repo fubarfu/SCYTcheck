@@ -83,3 +83,27 @@ def test_discover_projects_sorts_newest_first(tmp_path: Path) -> None:
 
     projects = ProjectService().discover_projects(str(root))
     assert [p["project_id"] for p in projects] == ["new", "old"]
+
+
+def test_discover_projects_in_legacy_hidden_workspace_root(tmp_path: Path) -> None:
+    root = tmp_path / "projects"
+    legacy_root = root / ".scyt_review_workspaces"
+    legacy_root.mkdir(parents=True)
+
+    project_dir = legacy_root / "video-hidden"
+    project_dir.mkdir()
+    _write_metadata(
+        project_dir / "metadata.json",
+        {
+            "project_id": "video-hidden",
+            "video_url": "https://www.youtube.com/watch?v=hidden",
+            "created_date": "2026-04-28T15:00:00Z",
+            "run_count": 2,
+        },
+    )
+
+    projects = ProjectService().discover_projects(str(root))
+
+    assert len(projects) == 1
+    assert projects[0]["project_id"] == "video-hidden"
+    assert Path(projects[0]["project_location"]) == project_dir

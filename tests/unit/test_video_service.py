@@ -108,6 +108,199 @@ def test_validate_youtube_url_handles_unreachable_video() -> None:
     assert "could not be accessed" in error
 
 
+def test_validate_youtube_url_strips_ansi_escape_codes_from_errors() -> None:
+    service = VideoService()
+    ansi_error = (
+        "\x1b[0;31mERROR:\x1b[0m [youtube] oQPM_59R7Uc: "
+        "Sign in to confirm you're not a bot."
+    )
+
+    with patch.object(service, "_extract_media_url", side_effect=RuntimeError(ansi_error)):
+        is_valid, error = service.validate_youtube_url("https://youtu.be/oQPM_59R7Uc")
+
+    assert not is_valid
+    assert "\x1b" not in error
+    assert "Sign in to confirm you're not a bot" in error
+
+
+def test_extract_media_url_uses_cookie_fallback_for_bot_challenge() -> None:
+    service = VideoService()
+    calls: list[dict[str, object]] = []
+
+    class _FakeYDL:
+        def __init__(self, opts: dict[str, object]) -> None:
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def extract_info(self, url: str, download: bool = False):
+            del url, download
+            calls.append(self.opts)
+            if "cookiesfrombrowser" in self.opts:
+                return {"url": "https://example.invalid/stream.mp4", "title": "ok"}
+            raise RuntimeError(
+                "ERROR: [youtube] abc: Sign in to confirm you're not a bot. "
+                "Use --cookies-from-browser"
+            )
+
+    with patch("src.services.video_service.YoutubeDL", _FakeYDL):
+        stream_url, info = service._extract_media_url("https://youtube.com/watch?v=abc")
+
+    assert stream_url == "https://example.invalid/stream.mp4"
+    assert info["title"] == "ok"
+    assert any("cookiesfrombrowser" in opts for opts in calls)
+
+
+def test_extract_media_url_preserves_bot_challenge_when_cookie_db_missing() -> None:
+    service = VideoService()
+
+    class _FakeYDL:
+        def __init__(self, opts: dict[str, object]) -> None:
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def extract_info(self, url: str, download: bool = False):
+            del url, download
+            if "cookiesfrombrowser" in self.opts:
+                raise RuntimeError(
+                    "ERROR: could not find firefox cookies database in 'C:/Users/.../Profiles'"
+                )
+            raise RuntimeError(
+                "ERROR: [youtube] abc: Sign in to confirm you're not a bot. "
+                "Use --cookies-from-browser"
+            )
+
+    with (
+        patch("src.services.video_service.YoutubeDL", _FakeYDL),
+        patch.object(VideoService, "_available_cookie_browsers", return_value=["firefox"]),
+    ):
+        try:
+            service._extract_media_url("https://youtube.com/watch?v=abc")
+            assert False, "Expected VideoAccessError"
+        except Exception as exc:  # noqa: PERF203 - explicit assertion on message
+            message = str(exc)
+
+    assert "Sign in to confirm you're not a bot" in message
+    assert "could not find firefox cookies database" not in message
+
+
+def test_extract_media_url_adds_edge_cookie_guidance_when_cookie_access_fails() -> None:
+    service = VideoService()
+
+    class _FakeYDL:
+        def __init__(self, opts: dict[str, object]) -> None:
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def extract_info(self, url: str, download: bool = False):
+            del url, download
+            browser_tuple = self.opts.get("cookiesfrombrowser")
+            if browser_tuple:
+                raise RuntimeError("ERROR: Could not copy Chrome cookie database.")
+            raise RuntimeError(
+                "ERROR: [youtube] abc: Sign in to confirm you're not a bot. "
+                "Use --cookies-from-browser"
+            )
+
+    with (
+        patch("src.services.video_service.YoutubeDL", _FakeYDL),
+        patch.object(VideoService, "_available_cookie_browsers", return_value=["edge"]),
+    ):
+        try:
+            service._extract_media_url("https://youtube.com/watch?v=abc")
+            assert False, "Expected VideoAccessError"
+        except Exception as exc:  # noqa: PERF203 - explicit assertion on message
+            message = str(exc)
+
+    assert "Sign in to confirm you're not a bot" in message
+    assert "Edge cookies could not be read" in message
+
+
+def test_extract_media_url_skips_cookie_fallback_when_no_browser_profiles_present() -> None:
+    service = VideoService()
+    calls: list[dict[str, object]] = []
+
+    class _FakeYDL:
+        def __init__(self, opts: dict[str, object]) -> None:
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def extract_info(self, url: str, download: bool = False):
+            del url, download
+            calls.append(self.opts)
+            raise RuntimeError(
+                "ERROR: [youtube] abc: Sign in to confirm you're not a bot. "
+                "Use --cookies-from-browser"
+            )
+
+    with (
+        patch("src.services.video_service.YoutubeDL", _FakeYDL),
+        patch.object(VideoService, "_available_cookie_browsers", return_value=[]),
+    ):
+        try:
+            service._extract_media_url("https://youtube.com/watch?v=abc")
+            assert False, "Expected VideoAccessError"
+        except Exception:
+            pass
+
+    assert calls
+    assert all("cookiesfrombrowser" not in opts for opts in calls)
+
+
+def test_extract_media_url_prefers_edge_cookie_attempt_before_chrome() -> None:
+    service = VideoService()
+    calls: list[dict[str, object]] = []
+
+    class _FakeYDL:
+        def __init__(self, opts: dict[str, object]) -> None:
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def extract_info(self, url: str, download: bool = False):
+            del url, download
+            calls.append(self.opts)
+            browser_tuple = self.opts.get("cookiesfrombrowser")
+            if browser_tuple and browser_tuple[0] == "edge":
+                return {"url": "https://example.invalid/edge-stream.mp4", "title": "ok"}
+            raise RuntimeError("ERROR: [youtube] abc: Sign in to confirm you're not a bot.")
+
+    with (
+        patch("src.services.video_service.YoutubeDL", _FakeYDL),
+        patch.object(VideoService, "_available_cookie_browsers", return_value=["edge", "chrome"]),
+    ):
+        stream_url, info = service._extract_media_url("https://youtube.com/watch?v=abc")
+
+    assert stream_url == "https://example.invalid/edge-stream.mp4"
+    assert info["title"] == "ok"
+    cookie_calls = [opts for opts in calls if "cookiesfrombrowser" in opts]
+    assert cookie_calls
+    assert cookie_calls[0]["cookiesfrombrowser"] == ("edge",)
+
+
 def test_build_ydl_opts_selects_format_based_on_quality() -> None:
     opts_best = VideoService._build_ydl_opts("best")
     assert "height" not in opts_best["format"]

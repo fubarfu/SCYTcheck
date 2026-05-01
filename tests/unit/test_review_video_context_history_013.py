@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,52 @@ from src.web.api.routes.review_sessions import ReviewSessionHandler
 from src.web.app.review_history_store import ReviewHistoryStore
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 from src.web.app.session_manager import SessionManager
+
+
+def test_review_service_loads_hidden_workspace_project(tmp_path: Path) -> None:
+    from src.services.review_service import ReviewService
+
+    project_root = tmp_path / "projects"
+    workspace_root = project_root / ".scyt_review_workspaces" / "vid_hidden"
+    workspace_root.mkdir(parents=True)
+    (workspace_root / "metadata.json").write_text(
+        json.dumps(
+            {
+                "project_id": "vid_hidden",
+                "video_url": "https://www.youtube.com/watch?v=hidden",
+                "created_date": "2026-05-01T10:00:00Z",
+                "run_count": 1,
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (workspace_root / "result_0.review.json").write_text(
+        json.dumps(
+            {
+                "video_url": "https://www.youtube.com/watch?v=hidden",
+                "candidates": [
+                    {
+                        "id": "cand-1",
+                        "extracted_name": "Player One",
+                        "spelling": "Player One",
+                        "decision": "unreviewed",
+                        "start_timestamp": "00:01",
+                    }
+                ],
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    context = ReviewService().merge_review_context(str(project_root), "vid_hidden")
+
+    assert context["video_id"] == "vid_hidden"
+    assert Path(context["project_location"]) == workspace_root
+    assert len(context["candidates"]) == 1
 
 
 class _FakeSettingsHandler:

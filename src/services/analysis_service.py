@@ -386,10 +386,11 @@ class AnalysisService:
                                         "_",
                                         f"{normalized_name}_{int(frame_time * 1000)}_{region_id}",
                                     )
-                                    cv2.imwrite(
-                                        str(resolved_frames_output_dir / f"{candidate_key}.png"),
-                                        crop,
-                                    )
+                                    _ok, _buf = cv2.imencode(".png", crop)
+                                    if _ok:
+                                        (resolved_frames_output_dir / f"{candidate_key}.png").write_bytes(
+                                            _buf.tobytes()
+                                        )
 
                 if detailed_logging_enabled and decision_rows is not None:
                     for decision in decision_rows:

@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any
 
 
+LEGACY_WORKSPACE_DIRNAME = ".scyt_review_workspaces"
+
+
 class ProjectService:
     """Filesystem project discovery for video-primary navigation."""
 
@@ -23,26 +26,28 @@ class ProjectService:
         if cached and (now - cached[0]) <= self._cache_ttl_seconds:
             return list(cached[1])
 
-        root = Path(project_location)
-        if not root.exists():
+        if not any(root.exists() for root in self._workspace_roots(project_location)):
             self._cache[cache_key] = (now, [])
             return []
 
-        projects: list[dict[str, Any]] = []
-        for child in root.iterdir():
-            if not child.is_dir():
+        discovered_by_id: dict[str, dict[str, Any]] = {}
+        for root in self._workspace_roots(project_location):
+            if not root.exists() or not root.is_dir():
                 continue
 
-            metadata_path = child / "metadata.json"
-            if not metadata_path.exists():
-                continue
+            for child in root.iterdir():
+                if not child.is_dir():
+                    continue
 
-            metadata = self._load_metadata(metadata_path)
-            if metadata is None:
-                continue
+                metadata_path = child / "metadata.json"
+                if not metadata_path.exists():
+                    continue
 
-            projects.append(
-                {
+                metadata = self._load_metadata(metadata_path)
+                if metadata is None:
+                    continue
+
+                project = {
                     "project_id": str(metadata.get("project_id") or child.name),
                     "video_url": str(metadata.get("video_url") or child.name),
                     "project_location": str(child),
@@ -52,11 +57,35 @@ class ProjectService:
                     "candidate_count_total": int(metadata.get("candidate_count_total") or 0),
                     "candidate_count_reviewed": int(metadata.get("candidate_count_reviewed") or 0),
                 }
-            )
+                project_id = str(project.get("project_id") or "")
+                existing = discovered_by_id.get(project_id)
+                if existing is None or str(project.get("created_date") or "") >= str(existing.get("created_date") or ""):
+                    discovered_by_id[project_id] = project
 
-        results = sorted(projects, key=lambda item: item.get("created_date", ""), reverse=True)
+        results = sorted(discovered_by_id.values(), key=lambda item: item.get("created_date", ""), reverse=True)
         self._cache[cache_key] = (now, results)
         return list(results)
+
+    @staticmethod
+    def _workspace_roots(project_location: str) -> list[Path]:
+        root = Path(project_location)
+        roots = [root]
+        legacy_root = root / LEGACY_WORKSPACE_DIRNAME
+        if legacy_root not in roots:
+            roots.append(legacy_root)
+        return roots
+
+    @classmethod
+    def resolve_workspace_root(cls, project_location: str, project_id: str) -> Path | None:
+        normalized_project_id = str(project_id).strip()
+        if not normalized_project_id:
+            return None
+
+        for root in cls._workspace_roots(project_location):
+            candidate = root / normalized_project_id
+            if candidate.exists() and candidate.is_dir():
+                return candidate
+        return None
 
     def get_project_detail(self, project_location: str, project_id: str) -> dict[str, Any] | None:
         for project in self.discover_projects(project_location):

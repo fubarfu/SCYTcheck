@@ -150,3 +150,34 @@ def test_project_discovery_ignores_legacy_app_history_data(tmp_path: Path) -> No
     status, body = handler.get_projects()
     assert status == 200
     assert [project["project_id"] for project in body["projects"]] == ["video-current"]
+
+
+def test_projects_endpoint_discovers_hidden_workspace_projects(tmp_path: Path) -> None:
+    projects_root = tmp_path / "projects"
+    hidden_root = projects_root / ".scyt_review_workspaces"
+    hidden_root.mkdir(parents=True)
+
+    project_dir = hidden_root / "video-hidden"
+    project_dir.mkdir(parents=True)
+    (project_dir / "metadata.json").write_text(
+        json.dumps(
+            {
+                "project_id": "video-hidden",
+                "video_url": "https://www.youtube.com/watch?v=hidden",
+                "created_date": "2026-04-28T16:00:00Z",
+                "run_count": 1,
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    handler = ProjectsHandler(
+        project_service=ProjectService(),
+        settings_handler=_settings_handler(tmp_path, projects_root),
+    )
+
+    status, body = handler.get_projects()
+    assert status == 200
+    assert [project["project_id"] for project in body["projects"]] == ["video-hidden"]

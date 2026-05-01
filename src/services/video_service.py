@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 from collections.abc import Iterator
 
@@ -17,6 +18,20 @@ class InvalidURLError(ValueError):
     pass
 
 
+class _YDLQuietLogger:
+    def debug(self, msg: str) -> None:
+        del msg
+
+    def info(self, msg: str) -> None:
+        del msg
+
+    def warning(self, msg: str) -> None:
+        del msg
+
+    def error(self, msg: str) -> None:
+        del msg
+
+
 class VideoService:
     _ITERATION_MODE_SEQUENTIAL = "sequential"
     _ITERATION_MODE_LEGACY_SEEK = "legacy_seek"
@@ -25,6 +40,13 @@ class VideoService:
     _FALLBACK_REASON_PERFORMANCE_PROBE = "performance_probe"
     _PROBE_FRAME_BUDGET = 30
     _PROBE_SLOWDOWN_FACTOR = 1.6
+    _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
+    _COOKIE_DB_ERROR_MARKERS = (
+        "could not copy chrome cookie database",
+        "could not find chrome cookies database",
+        "could not find firefox cookies database",
+        "could not find edge cookies database",
+    )
 
     def __init__(self) -> None:
         # Cache extracted (stream_url, info) per YouTube URL to avoid repeated network lookups.
@@ -71,16 +93,78 @@ class VideoService:
         ),
     }
 
+    @classmethod
+    def _sanitize_error_message(cls, message: str) -> str:
+        cleaned = cls._ANSI_ESCAPE_RE.sub("", message or "")
+        return " ".join(cleaned.split())
+
     @staticmethod
-    def _build_ydl_opts(quality: str = "best") -> dict[str, object]:
+    def _is_bot_challenge_error(message: str) -> bool:
+        lowered = message.lower()
+        markers = (
+            "sign in to confirm you're not a bot",
+            "sign in to confirm you\u2019re not a bot",
+            "use --cookies-from-browser",
+            "http error 429",
+        )
+        return any(marker in lowered for marker in markers)
+
+    @classmethod
+    def _is_cookie_db_error(cls, message: str) -> bool:
+        lowered = message.lower()
+        return any(marker in lowered for marker in cls._COOKIE_DB_ERROR_MARKERS)
+
+    @staticmethod
+    def _available_cookie_browsers() -> list[str]:
+        user_profile = os.getenv("USERPROFILE") or ""
+        if not user_profile:
+            return []
+
+        candidates = {
+            "edge": [os.path.join(user_profile, "AppData", "Local", "Microsoft", "Edge", "User Data")],
+            "chrome": [
+                os.path.join(user_profile, "AppData", "Local", "Google", "Chrome", "User Data")
+            ],
+            "firefox": [
+                os.path.join(user_profile, "AppData", "Roaming", "Mozilla", "Firefox", "Profiles"),
+                os.path.join(
+                    user_profile,
+                    "AppData",
+                    "Local",
+                    "Packages",
+                    "Mozilla.Firefox_n80bbvh6b1yt2",
+                    "LocalCache",
+                    "Roaming",
+                    "Mozilla",
+                    "Firefox",
+                    "Profiles",
+                ),
+            ],
+        }
+
+        available: list[str] = []
+        for browser, paths in candidates.items():
+            if any(os.path.exists(path) for path in paths):
+                available.append(browser)
+        return available
+
+    @staticmethod
+    def _build_ydl_opts(
+        quality: str = "best",
+        *,
+        youtube_client: str | None = None,
+        cookies_from_browser: str | tuple[str, ...] | None = None,
+    ) -> dict[str, object]:
         fmt = VideoService._QUALITY_FORMAT_MAP.get(
             quality, VideoService._QUALITY_FORMAT_MAP["best"]
         )
         ydl_opts: dict[str, object] = {
             "quiet": True,
+            "no_warnings": True,
             "skip_download": True,
             "format": fmt,
             "remote_components": ["ejs:github"],
+            "logger": _YDLQuietLogger(),
         }
 
         # yt-dlp >= 2026 expects js_runtimes as {runtime: {config}} dict
@@ -101,6 +185,17 @@ class VideoService:
                     js_runtimes["deno"] = {"path": scoop_deno}
 
         ydl_opts["js_runtimes"] = js_runtimes
+        if youtube_client:
+            ydl_opts["extractor_args"] = {
+                "youtube": {
+                    "player_client": [youtube_client],
+                }
+            }
+        if cookies_from_browser:
+            if isinstance(cookies_from_browser, tuple):
+                ydl_opts["cookiesfrombrowser"] = cookies_from_browser
+            else:
+                ydl_opts["cookiesfrombrowser"] = (cookies_from_browser,)
         return ydl_opts
 
     def validate_youtube_url(self, url: str) -> tuple[bool, str]:
@@ -113,7 +208,7 @@ class VideoService:
         except InvalidURLError as exc:
             return False, str(exc)
         except Exception as exc:
-            return False, f"Video could not be accessed: {exc}"
+            return False, f"Video could not be accessed: {self._sanitize_error_message(str(exc))}"
 
         return True, ""
 
@@ -125,8 +220,91 @@ class VideoService:
         if cache_key in self._stream_cache:
             return self._stream_cache[cache_key]
 
-        with YoutubeDL(self._build_ydl_opts(quality)) as ydl:
-            info = ydl.extract_info(url, download=False)
+        attempts: list[tuple[str, dict[str, object]]] = [
+            ("default", self._build_ydl_opts(quality)),
+            ("android", self._build_ydl_opts(quality, youtube_client="android")),
+            ("ios", self._build_ydl_opts(quality, youtube_client="ios")),
+        ]
+        info: dict | None = None
+        last_error: Exception | None = None
+        bot_challenge_detected = False
+        primary_bot_error: str | None = None
+        cookie_access_error: str | None = None
+
+        for _attempt_name, opts in attempts:
+            try:
+                with YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                break
+            except Exception as exc:  # pragma: no cover - defensive fallback path
+                last_error = exc
+                cleaned_error = self._sanitize_error_message(str(exc))
+                if self._is_bot_challenge_error(cleaned_error):
+                    bot_challenge_detected = True
+                    primary_bot_error = cleaned_error
+
+        available_cookie_browsers = self._available_cookie_browsers()
+
+        edge_cookie_variants: list[tuple[str, ...]] = [
+            ("edge",),
+            ("edge", "Default"),
+            ("edge", "Profile 1"),
+            ("edge", "Profile 2"),
+        ]
+
+        # Prefer authenticated Edge session first, including common profile names.
+        if info is None and "edge" in available_cookie_browsers:
+            for edge_cookie_variant in edge_cookie_variants:
+                try:
+                    with YoutubeDL(
+                        self._build_ydl_opts(
+                            quality,
+                            youtube_client="android",
+                            cookies_from_browser=edge_cookie_variant,
+                        )
+                    ) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                    break
+                except Exception as exc:  # pragma: no cover - defensive fallback path
+                    last_error = exc
+                    cleaned_error = self._sanitize_error_message(str(exc))
+                    if self._is_cookie_db_error(cleaned_error):
+                        cookie_access_error = cleaned_error
+                    if self._is_bot_challenge_error(cleaned_error):
+                        bot_challenge_detected = True
+                        primary_bot_error = cleaned_error
+
+        if info is None and bot_challenge_detected:
+            for browser in available_cookie_browsers:
+                if browser == "edge":
+                    continue
+                try:
+                    with YoutubeDL(
+                        self._build_ydl_opts(
+                            quality,
+                            youtube_client="android",
+                            cookies_from_browser=browser,
+                        )
+                    ) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                    break
+                except Exception as exc:  # pragma: no cover - defensive fallback path
+                    last_error = exc
+                    cleaned_error = self._sanitize_error_message(str(exc))
+                    if not self._is_cookie_db_error(cleaned_error):
+                        primary_bot_error = cleaned_error
+
+        if info is None:
+            if primary_bot_error is not None and cookie_access_error is not None:
+                raise VideoAccessError(
+                    f"{primary_bot_error} Edge cookies could not be read. "
+                    "Please close all Edge windows and try again, or export cookies to a file."
+                )
+            if primary_bot_error is not None:
+                raise VideoAccessError(primary_bot_error)
+            if last_error is None:
+                raise VideoAccessError("Video could not be accessed.")
+            raise VideoAccessError(self._sanitize_error_message(str(last_error)))
 
         stream_url = info.get("url")
         if not stream_url:

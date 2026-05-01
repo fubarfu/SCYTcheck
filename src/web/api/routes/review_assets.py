@@ -47,6 +47,18 @@ class ReviewAssetsHandler:
                 "thumbnail_url": f"/api/assets/cache/{session_id}/{candidate_id}.png",
             }
 
+        # Fallback: search legacy frame folders in the project location
+        fallback_pl = project_location or workspace_path
+        if fallback_pl:
+            path = self._find_frame_in_project(str(fallback_pl), candidate_id)
+            if path is not None:
+                from urllib.parse import urlencode
+                qs = urlencode({"pl": str(fallback_pl)})
+                return 200, {
+                    "candidate_id": candidate_id,
+                    "thumbnail_url": f"/api/assets/video/{session_id}/{candidate_id}.png?{qs}",
+                }
+
         return 404, {
             "error": "not_found",
             "message": f"No thumbnail available for candidate {candidate_id}",
@@ -73,7 +85,13 @@ class ReviewAssetsHandler:
         cache_path = self.frame_store.cache_thumbnail_path(session_id, candidate_id)
 
         if asset_kind == "frames":
-            return persisted if persisted.exists() else None
+            if persisted.exists():
+                return persisted
+            # Fallback: legacy frame folder layout when session is found but frames moved/missing
+            fallback_pl = project_location or workspace_path
+            if fallback_pl:
+                return self._find_frame_in_project(str(fallback_pl), candidate_id)
+            return None
         if asset_kind == "cache":
             return cache_path if cache_path.exists() else None
 
@@ -81,6 +99,10 @@ class ReviewAssetsHandler:
             return persisted
         if cache_path.exists():
             return cache_path
+        # Fallback: legacy frame folder layout
+        fallback_pl = project_location or workspace_path
+        if fallback_pl:
+            return self._find_frame_in_project(str(fallback_pl), candidate_id)
         return None
 
     @staticmethod

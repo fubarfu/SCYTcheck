@@ -54,10 +54,21 @@ class ReviewHistoryStore:
 
     @staticmethod
     def _write_container(path: Path, payload: dict[str, Any]) -> None:
+        import os
+        import tempfile
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
-        tmp.replace(path)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            delete=False,
+            dir=path.parent,
+            suffix=".tmp",
+            encoding="utf-8",
+        ) as tmp_file:
+            json.dump(payload, tmp_file, ensure_ascii=True, indent=2)
+            tmp_file.flush()
+            os.fsync(tmp_file.fileno())
+            tmp_path = Path(tmp_file.name)
+        tmp_path.replace(path)
 
     @staticmethod
     def _build_snapshot(session_payload: dict[str, Any]) -> dict[str, Any]:

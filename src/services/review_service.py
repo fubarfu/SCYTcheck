@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.services.project_service import ProjectService
 from src.web.app.review_grouping import recompute_groups
 from src.web.app.review_sidecar_store import ReviewSidecarStore
 
@@ -15,8 +16,8 @@ class ReviewService:
         self.sidecar_store = sidecar_store or ReviewSidecarStore()
 
     def merge_review_context(self, project_location: str, video_id: str) -> dict[str, Any]:
-        workspace_root = Path(project_location) / video_id
-        if not workspace_root.exists():
+        workspace_root = ProjectService.resolve_workspace_root(project_location, video_id)
+        if workspace_root is None:
             raise FileNotFoundError(f"video_id {video_id} not found")
 
         run_sidecars = sorted(workspace_root.glob("result_*.review.json"), key=lambda p: p.name)
@@ -264,7 +265,9 @@ class ReviewService:
         if action not in {"confirmed", "rejected", "edited", "clear_new", "unreviewed"}:
             raise ValueError("Action must be one of: confirmed, rejected, edited, clear_new, unreviewed")
 
-        workspace_root = Path(project_location) / video_id
+        workspace_root = ProjectService.resolve_workspace_root(project_location, video_id)
+        if workspace_root is None:
+            workspace_root = Path(project_location) / video_id
         workspace_root.mkdir(parents=True, exist_ok=True)
         review_state_path = workspace_root / "review_state.json"
         legacy_review_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
@@ -390,7 +393,9 @@ class ReviewService:
         *,
         reset_decisions: bool,
     ) -> dict[str, Any]:
-        workspace_root = Path(project_location) / video_id
+        workspace_root = ProjectService.resolve_workspace_root(project_location, video_id)
+        if workspace_root is None:
+            workspace_root = Path(project_location) / video_id
         workspace_root.mkdir(parents=True, exist_ok=True)
         review_state_path = workspace_root / "review_state.json"
         legacy_review_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
