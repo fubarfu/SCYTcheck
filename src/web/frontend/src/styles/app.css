@@ -573,18 +573,36 @@ select,
 }
 
 .settings-grid {
-  padding: 12px 16px 14px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  padding: 10px 14px 12px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.settings-grid label {
+  gap: 4px;
+  font-size: var(--text-sm);
+}
+
+.settings-grid select,
+.settings-grid input[type="number"] {
+  padding: 0.56rem 0.72rem;
 }
 
 .settings-grid input[type="range"] {
   padding: 0;
 }
 
+.settings-grid label > span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.1;
+}
+
 .checkbox-label {
   align-items: center;
   grid-template-columns: auto 1fr;
+  grid-column: 1;
+  column-gap: 6px;
 }
 
 .checkbox-label input {
@@ -2060,7 +2078,6 @@ select,
   }
 
   .region-fields,
-  .settings-grid,
   .review-load-row,
   .candidate-edit-row {
     grid-template-columns: 1fr;
