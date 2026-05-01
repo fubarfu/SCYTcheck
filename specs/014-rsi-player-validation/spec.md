@@ -21,7 +21,7 @@ As an analyst, I want detected player-name candidates to be verified against the
 
 **Acceptance Scenarios**:
 
-1. **Given** analysis validation is enabled and analysis detects candidate spellings, **When** the run completes, **Then** each unique candidate spelling includes a registry-check outcome of found or not found.
+1. **Given** analysis validation is enabled and analysis detects candidate spellings, **When** the scan completes, **Then** results are immediately available; each candidate shows its current validation state (found, not found, checking, or failed), with pending validations updating in real-time as queue requests complete.
 2. **Given** analysis validation is enabled and the same spelling appears multiple times, **When** analysis runs, **Then** that spelling is checked at most once during that run and reused for all matching candidates.
 3. **Given** both found and not-found candidate outcomes exist, **When** recommendations are calculated, **Then** found outcomes receive a substantially stronger recommendation signal than not-found outcomes.
 
@@ -60,28 +60,30 @@ As a reviewer, I want to trigger a one-off validation check for an individual ca
 
 ### Edge Cases
 
-- What happens when the external citizen page is temporarily unavailable or returns an unexpected response format?
-- How does the system handle special characters, whitespace variants, and mixed-case spellings when determining whether two candidates are the same spelling for one-time checks?
-- What happens if many unique candidate spellings are discovered quickly in one run?
+- **Site unavailable / unexpected response**: HTTP 200 = found; HTTP 404 = not found; any other status code (5xx, timeout, network error, unexpected redirect) = failed/unavailable state. A request that does not complete within 10 seconds is treated as a timeout failure. The system does not inspect response body content.
+- **How does the system handle special characters, whitespace variants, and mixed-case spellings?**: Deduplication normalizes by lowercasing and stripping leading/trailing whitespace only. Internal whitespace variants and special characters are preserved as-is and treated as distinct spellings.
+- **Many unique spellings discovered quickly**: New candidates are enqueued for validation immediately upon discovery; the queue dispatches at a maximum rate of one request per second. If the scan completes while requests are still in-flight or queued, those requests continue until the queue drains. Results are accessible immediately after scan completion; pending candidates show a "checking" state and update live.
 - How does review behave when a user triggers repeated individual checks for the same candidate in a short period?
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST support optional candidate validation against `https://robertsspaceindustries.com/en/citizens/<PlayerName>`.
+- **FR-001**: The system MUST support optional candidate validation against `https://robertsspaceindustries.com/en/citizens/<PlayerName>`. Detection is HTTP-status-based: HTTP 200 = found, HTTP 404 = not found, any other status = failed/unavailable. Response body content is not inspected.
 - **FR-002**: When validation is enabled, the system MUST determine and store a found/not-found outcome for each unique candidate spelling detected during an analysis run.
 - **FR-003**: During a single analysis run, the system MUST check each unique candidate spelling no more than once.
+- **FR-003a**: Validation requests MUST be dispatched concurrently with video scanning and OCR — a new unique spelling MUST be enqueued for validation as soon as it is first discovered, without waiting for the full scan to complete.
+- **FR-003b**: When the video scan completes, results MUST be immediately accessible. Candidates with in-flight or queued validation requests MUST show a "checking" state and update their icon in real-time as each request resolves, without requiring the user to wait.
 - **FR-004**: Validation outcomes MUST strongly influence recommendation strength, with found outcomes weighted substantially higher than not-found outcomes.
 - **FR-005**: Analysis settings MUST provide a user-controlled toggle to enable or disable external validation.
 - **FR-006**: When validation is disabled, the system MUST perform zero external validation requests during analysis.
-- **FR-007**: The system MUST avoid request patterns that resemble abusive traffic and MUST pace validation checks to remain respectful to the external website.
-- **FR-008**: The review view MUST display an icon on each candidate card that reflects validation state (found, not found, unavailable, or failed).
+- **FR-007**: The system MUST avoid request patterns that resemble abusive traffic and MUST pace consecutive outbound validation requests to a minimum of 1 second apart. Requests are dispatched from a queue as candidates are discovered during scanning; pacing applies to the queue dispatch rate, not to when candidates are discovered. Each individual request MUST have a timeout of 10 seconds; exceeding this timeout results in a failed/unavailable state for that candidate.
+- **FR-008**: The review view MUST display an icon on each candidate card that reflects validation state (found, not found, checking/pending, unavailable, or failed).
 - **FR-009**: The review view MUST allow a reviewer to trigger an individual validation check for a specific candidate.
 - **FR-010**: Individual validation checks in review MUST use the candidate spelling currently shown in the card, including manual edits.
 - **FR-011**: An individual validation check MUST update only the targeted candidate card state and must not block review of other candidates.
 - **FR-012**: If a validation attempt fails, the system MUST preserve reviewer progress and present a clear non-blocking status.
-- **FR-013**: Validation outcomes MUST persist with analysis/review state so users can reopen and continue review without losing prior results.
+- **FR-013**: Validation outcomes MUST persist with the analysis/review state for the current result so users can reopen and continue review without losing prior results. Outcomes are NOT shared or reused across separate analysis runs.
 - **FR-014**: The system MUST clearly distinguish between not-found results and unattempted/disabled validation states.
 
 ### Key Entities *(include if feature involves data)*
@@ -97,7 +99,7 @@ As a reviewer, I want to trigger a one-off validation check for an individual ca
 - **SC-001**: With validation enabled, 100% of unique candidate spellings detected in a run receive either a found or not-found outcome unless an external failure occurs.
 - **SC-002**: Duplicate spelling checks are eliminated within each run, resulting in at most one external check per unique spelling.
 - **SC-003**: With validation disabled, analysis performs zero external validation requests.
-- **SC-004**: External validation traffic remains bounded so that request pacing stays within configured safe limits for the entire run.
+- **SC-004**: External validation traffic remains bounded so that consecutive outbound requests are spaced at least 1 second apart for the entire run.
 - **SC-005**: In review, 95% of individual manual checks update the candidate icon to a terminal state (found/not-found/failed) within 5 seconds under normal connectivity.
 - **SC-006**: Recommendation ordering reflects validation signal such that found candidates are consistently ranked above otherwise equivalent not-found candidates.
 - **SC-007**: Reviewers can identify validation state directly from candidate cards without opening additional detail views.
@@ -107,5 +109,18 @@ As a reviewer, I want to trigger a one-off validation check for an individual ca
 - The citizen profile page can be accessed publicly without user authentication.
 - Website availability and response consistency are outside user control, so transient failures are expected and must be handled gracefully.
 - Existing recommendation logic can accept an additional weighted signal without changing the broader review workflow.
-- Candidate spelling comparison for one-time checks uses a consistent normalization rule within a run.
+- Candidate spelling comparison for one-time checks uses lowercase + strip leading/trailing whitespace normalization within a run (e.g., `PlayerName` and `playername` are treated as the same spelling).
+- Validation outcomes are scoped to a single analysis run and its associated review state; results from prior runs are not reused as a cache for subsequent runs.
 - This feature does not require bulk historical backfill; validation applies to newly analyzed or manually rechecked candidates.
+
+## Clarifications
+
+### Session 2026-05-01
+
+- Q: How does the system determine whether a citizen profile exists (found vs not-found)? → A: HTTP status only — 200 = found, 404 = not found, any other status = failed/unavailable; response body is not inspected.
+- Q: What is the minimum delay between consecutive outbound validation requests during a batch analysis run? → A: 1 second between requests.
+- Q: Do validation outcomes persist across sessions for reuse in subsequent runs? → A: Run-scoped only; each analysis run checks fresh, no result is reused across runs.
+- Q: What normalization is applied to candidate spellings for within-run deduplication? → A: Lowercase + strip leading/trailing whitespace only.
+- Q: What HTTP request timeout triggers the failed/unavailable state? → A: 10 seconds.
+- Constraint: Validation checks MUST start concurrently with video scanning and OCR; spellings are enqueued for checking as discovered, queue dispatches at 1 req/sec, continues draining after scan completes.
+- Q: When scan completes with validation still pending, can user access results? → A: Yes — results available immediately; pending candidates show "checking" state and update live as requests complete.

@@ -1,6 +1,6 @@
 ﻿# SCYTcheck Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-28
+Auto-generated from all feature plans. Last updated: 2026-05-01
 
 ## Active Technologies
 - Python 3.11 + opencv-python (video processing), pytesseract (OCR), yt-dlp (YouTube streaming), tkinter (UI) (001-youtube-text-analyzer)
@@ -38,6 +38,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-28
 - CSV outputs + per-result sidecar JSON + per-video append-only history container in selected output location (012-from-3c6f0ff)
 - Python 3.11 (backend), TypeScript/React (Vite, frontend) + Backend: `opencv-python`, `paddleocr`, `yt-dlp`, `thefuzz`, `numpy`; Frontend: React, Vite, Material Symbols, TypeScript (013-create-spec-branch)
 - CSV outputs + JSON sidecar per video; local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, fallback to local) (013-create-spec-branch)
+- Python 3.11 (backend), TypeScript/React Vite (frontend) + `opencv-python`, `paddleocr`, `yt-dlp`, `thefuzz`, `numpy`; Python stdlib `urllib.request`, `threading`, `queue` for validation; React, Vite, Material Symbols (frontend) (014-add-rsi-player-validation)
+- Per-run review sidecar JSON (`result_<n>.review.json`) extended with `validation_outcomes` dict; local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`) (014-add-rsi-player-validation)
 
 - Python 3.11 + opencv-python (video processing), pytesseract (OCR), tkinter (UI) (001-youtube-text-analyzer)
 - Python 3.11 (backend), TypeScript/React (Vite) frontend + Existing `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`; frontend React stack already in `src/web/frontend`; Google Stitch as UI design authority (010-collapse-player-groups)
@@ -59,9 +61,9 @@ cd src; pytest; ruff check .
 Python 3.11: Follow standard conventions
 
 ## Recent Changes
+- 014-add-rsi-player-validation: Added Python 3.11 (backend), TypeScript/React Vite (frontend) + `opencv-python`, `paddleocr`, `yt-dlp`, `thefuzz`, `numpy`; Python stdlib `urllib.request`, `threading`, `queue` for validation; React, Vite, Material Symbols (frontend)
 - 013-create-spec-branch: Added Python 3.11 (backend), TypeScript/React (Vite, frontend) + Backend: `opencv-python`, `paddleocr`, `yt-dlp`, `thefuzz`, `numpy`; Frontend: React, Vite, Material Symbols, TypeScript
 - 012-from-3c6f0ff: Added Python 3.11 (backend), TypeScript/React (Vite) frontend + Existing `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`; existing web stack in `src/web/frontend`
-- 010-collapse-player-groups: Added Python 3.11 (backend), TypeScript/React (Vite) frontend; Google Stitch UI design authority; sidecar JSON consensus state (`<result>.review.json`); zero new dependencies (Phase 0-1 complete: research, data model, API contracts, UI screens)
 
 
 <!-- MANUAL ADDITIONS START -->
