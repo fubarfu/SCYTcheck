@@ -261,6 +261,7 @@ class AnalysisHandler:
                 except Exception:
                     existing_metadata = {}
             prior_run_count = int(existing_metadata.get("run_count") or 0)
+            self._backfill_latest_snapshot_if_missing(workspace_root, prior_run_count)
             run_index = self._next_run_index(workspace_root, prior_run_count)
             next_run_count = run_index + 1
             metadata_payload = {
@@ -542,6 +543,38 @@ class AnalysisHandler:
             return
         payload["result_csv_path"] = str(run_csv)
         run_sidecar.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+
+    @staticmethod
+    def _backfill_latest_snapshot_if_missing(workspace_root: Path, prior_run_count: int) -> None:
+        if prior_run_count <= 0:
+            return
+
+        prior_index = max(0, prior_run_count - 1)
+        prior_sidecar = workspace_root / f"result_{prior_index}.review.json"
+        if prior_sidecar.exists():
+            return
+
+        review_state_path = ReviewSidecarStore.workspace_review_state_path(workspace_root)
+        if not review_state_path.exists():
+            legacy_review_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
+            if legacy_review_state_path.exists():
+                review_state_path = legacy_review_state_path
+        latest_csv = workspace_root / "result_latest.csv"
+        if not review_state_path.exists() or not latest_csv.exists():
+            return
+
+        prior_csv = workspace_root / f"result_{prior_index}.csv"
+        if latest_csv.resolve(strict=False) != prior_csv.resolve(strict=False):
+            shutil.copy2(latest_csv, prior_csv)
+
+        try:
+            payload = json.loads(review_state_path.read_text(encoding="utf-8"))
+        except Exception:
+            return
+        if not isinstance(payload, dict):
+            return
+        payload["result_csv_path"] = str(prior_csv)
+        prior_sidecar.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
 
     def _create_analysis_service(
         self,
