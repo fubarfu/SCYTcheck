@@ -53,6 +53,7 @@ class ReviewService:
                 "candidates": [
                     {
                         "candidate_id": str(candidate.get("id") or ""),
+                        # Group naming should stay anchored to OCR spelling; corrected_text is a card-level override.
                         "extracted_name": str(candidate.get("spelling") or ""),
                         "status": str(candidate.get("decision") or "unreviewed"),
                         "marked_new": bool(candidate.get("marked_new")),
@@ -72,11 +73,39 @@ class ReviewService:
             for candidate in grouped_candidates
             if str(candidate.get("candidate_id") or "").strip()
         }
+        merged_candidate_by_id = {
+            str(candidate.get("id") or ""): candidate
+            for candidate in merged_candidates
+            if str(candidate.get("id") or "").strip()
+        }
+
+        def _resolve_group_name(group_payload: dict[str, Any]) -> str:
+            group_candidates = list(group_payload.get("candidates") or [])
+            for group_candidate in group_candidates:
+                candidate_id = str(group_candidate.get("candidate_id") or "").strip()
+                if not candidate_id:
+                    continue
+                if candidate_status_by_id.get(candidate_id, "unreviewed") != "confirmed":
+                    continue
+                candidate = merged_candidate_by_id.get(candidate_id, {})
+                corrected = str(candidate.get("corrected_text") or "").strip()
+                if corrected:
+                    return corrected
+                spelling = str(candidate.get("spelling") or "").strip()
+                if spelling:
+                    return spelling
+
+            return str(
+                group_payload.get("accepted_name")
+                or group_payload.get("display_name")
+                or group_payload.get("group_id")
+                or ""
+            )
 
         groups = [
             {
                 "id": str(group.get("group_id") or ""),
-                "name": str(group.get("accepted_name") or group.get("display_name") or group.get("group_id") or ""),
+                "name": _resolve_group_name(group),
                 "candidate_ids": [
                     str(candidate.get("candidate_id") or "")
                     for candidate in list(group.get("candidates") or [])
@@ -129,8 +158,14 @@ class ReviewService:
             return "unreviewed"
         if all(status in {"rejected"} for status in normalized):
             return "rejected"
-        if all(status in {"confirmed", "edited"} for status in normalized):
-            return "confirmed"
+        # A group is confirmed if all candidates have been explicitly reviewed
+        # (confirmed/edited or rejected) and at least one is confirmed/edited.
+        # This is the normal state after a user selects a name from a group:
+        # the chosen spelling is "confirmed" and alternates are "rejected".
+        reviewed_statuses = {"confirmed", "edited", "rejected"}
+        if all(status in reviewed_statuses for status in normalized):
+            if any(status in {"confirmed", "edited"} for status in normalized):
+                return "confirmed"
         return "unreviewed"
 
     def mark_new_candidates(
@@ -216,6 +251,12 @@ class ReviewService:
         if not isinstance(previous, dict):
             previous = {}
 
+        previous_decision_raw = str(previous.get("decision") or "").strip().lower()
+        if previous_decision_raw == "edited":
+            previous_decision_raw = "unreviewed"
+        if previous_decision_raw not in {"unreviewed", "confirmed", "rejected"}:
+            previous_decision_raw = "unreviewed"
+
         candidate = candidate_by_id.get(candidate_id)
         group = group_by_candidate_id.get(candidate_id)
 
@@ -231,12 +272,14 @@ class ReviewService:
                 member = candidate_by_id.get(member_id, {})
                 member_spelling = str(member.get("spelling") or "").strip().lower()
                 member_decision = "confirmed" if member_spelling == selected_spelling else "rejected"
+                member_corrected_text = str(member_previous.get("corrected_text") or "").strip()
                 decisions[member_id] = {
                     "decision": member_decision,
                     "marked_new": False,
                     "user_note": (user_note or "").strip()
                     if member_id == candidate_id and (user_note or "").strip()
                     else member_previous.get("user_note", ""),
+                    "corrected_text": member_corrected_text,
                 }
         elif action == "rejected" and candidate is not None and group is not None:
             selected_spelling = str(candidate.get("spelling") or "").strip().lower()
@@ -251,22 +294,36 @@ class ReviewService:
                 member_previous = decisions.get(member_id)
                 if not isinstance(member_previous, dict):
                     member_previous = {}
+                member_corrected_text = str(member_previous.get("corrected_text") or "").strip()
                 decisions[member_id] = {
                     "decision": "rejected",
                     "marked_new": False,
                     "user_note": (user_note or "").strip()
                     if member_id == candidate_id and (user_note or "").strip()
                     else member_previous.get("user_note", ""),
+                    "corrected_text": member_corrected_text,
                 }
         else:
-            decision = previous.get("decision") if action == "clear_new" else action
-            if action == "clear_new" and not decision:
+            if action == "clear_new":
+                decision = previous_decision_raw
+            elif action == "edited":
+                # Editing candidate text should not change review status.
+                decision = previous_decision_raw
+            else:
+                decision = action
+
+            if not decision:
                 decision = "unreviewed"
+
+            corrected_text = str(previous.get("corrected_text") or "").strip()
+            if action == "edited":
+                corrected_text = (user_note or "").strip() or corrected_text
 
             decisions[candidate_id] = {
                 "decision": decision,
                 "marked_new": False,
                 "user_note": (user_note or "").strip() or previous.get("user_note", ""),
+                "corrected_text": corrected_text,
             }
         payload["candidate_decisions"] = decisions
 
@@ -316,7 +373,22 @@ class ReviewService:
         normalized: dict[str, dict[str, Any]] = {}
         for candidate_id, item in decisions.items():
             if isinstance(item, dict):
-                normalized[str(candidate_id)] = item
+                decision_raw = str(item.get("decision") or "").strip().lower()
+                if decision_raw == "edited":
+                    decision_raw = "unreviewed"
+                if decision_raw not in {"unreviewed", "confirmed", "rejected"}:
+                    decision_raw = "unreviewed"
+
+                corrected_text = str(item.get("corrected_text") or "").strip()
+                # Backward compatibility for legacy payloads that stored edits in user_note.
+                if not corrected_text and str(item.get("decision") or "").strip().lower() == "edited":
+                    corrected_text = str(item.get("user_note") or "").strip()
+
+                normalized[str(candidate_id)] = {
+                    **item,
+                    "decision": decision_raw,
+                    "corrected_text": corrected_text,
+                }
         return normalized
 
     @staticmethod
@@ -363,6 +435,7 @@ class ReviewService:
                     merged[spelling] = {
                         "id": candidate_id,
                         "spelling": spelling,
+                        "corrected_text": None,
                         "discovered_in_run": run_id,
                         "marked_new": False,
                         "decision": "unreviewed",
@@ -373,8 +446,12 @@ class ReviewService:
 
                 prior = prior_decisions.get(candidate_id)
                 if isinstance(prior, dict):
-                    decision = str(prior.get("decision") or "unreviewed")
+                    decision = str(prior.get("decision") or "unreviewed").strip().lower()
+                    if decision not in {"unreviewed", "confirmed", "rejected"}:
+                        decision = "unreviewed"
                     merged[spelling]["decision"] = decision
+                    edited_text = str(prior.get("corrected_text") or "").strip()
+                    merged[spelling]["corrected_text"] = edited_text or None
                     if prior.get("marked_new") is False:
                         merged[spelling]["marked_new"] = False
 

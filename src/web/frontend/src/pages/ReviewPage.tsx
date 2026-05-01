@@ -234,6 +234,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
         candidates: Array<{
           id: string;
           spelling: string;
+          corrected_text?: string;
           discovered_in_run?: string;
           marked_new?: boolean;
           decision?: "unreviewed" | "confirmed" | "rejected" | "edited";
@@ -250,6 +251,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
       const candidates: Candidate[] = context.candidates.map((candidate) => ({
         candidate_id: candidate.id,
         extracted_name: candidate.spelling,
+        corrected_text: candidate.corrected_text,
         status: candidate.decision === "unreviewed" || !candidate.decision ? "pending" : candidate.decision,
         marked_new: Boolean(candidate.marked_new),
         start_timestamp: candidate.start_timestamp ?? "",
