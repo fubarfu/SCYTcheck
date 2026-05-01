@@ -19,7 +19,7 @@
 - [ ] T001 Add `ValidationState` literal and `ValidationOutcome` dataclass to new `src/services/validation_service.py` (stub file — class body filled in Phase 2)
 - [ ] T002 Add `validation_enabled: bool = True` field to `AdvancedSettings` in `src/config.py`
 - [ ] T003 [P] Add `ValidationState` type alias and extend `Candidate` interface with optional `validation_state` field in `src/web/frontend/src/types/index.ts`
-- [ ] T004 [P] Extend `AnalysisProgress` TypeScript interface with `validation_queue_size`, `validation_outcomes`, and `review_ready` fields in `src/web/frontend/src/types/index.ts`
+- [ ] T004 Extend `AnalysisProgress` TypeScript interface with `validation_queue_size`, `validation_outcomes`, and `review_ready` fields in `src/web/frontend/src/types/index.ts` (sequential after T003 — same file)
 
 **Checkpoint**: Shared types and config ready — all phases can proceed
 
@@ -34,7 +34,7 @@
 - [ ] T005 Implement full `ValidationService` class body in `src/services/validation_service.py` — `start()`, `stop()`, `wait()`, `enqueue()`, `get_outcomes()`, `queue_size()`; rate-limited worker thread (1 req/sec), `urllib.request` HTTP check, `threading.Lock`-protected outcomes dict
 - [ ] T006 Add `on_candidate_discovered: Callable[[str], None] | None = None` parameter to `AnalysisService.analyze()` in `src/services/analysis_service.py`; maintain `seen_normalized: set[str]` locally; fire callback on first occurrence of each unique normalized spelling
 - [ ] T007 [P] Extend `AnalysisRunState` dataclass in `src/web/app/analysis_adapter.py` with `validation_outcomes: dict[str, dict] | None = None`, `validation_queue_size: int = 0`, `review_ready: bool = False`; add `set_validation_state()` method
-- [ ] T008 [P] Write unit tests for `ValidationService` in `tests/unit/test_validation_service.py` — cover: queue deduplication (same spelling enqueued twice → one HTTP call), rate limiting (≥1 sec between dispatches), outcome mapping (200→found, 404→not_found, 5xx→failed, timeout→failed), `stop()`+`wait()` drain behaviour
+- [ ] T008 [P] Write unit tests for `ValidationService` in `tests/unit/test_validation_service.py` — cover: queue deduplication (same spelling enqueued twice → one HTTP call), rate limiting (≥1 sec between dispatches), outcome mapping (200→found, 404→not_found, 5xx→failed, timeout→failed), `stop()`+`wait()` drain behaviour, **drain completeness** (enqueue N spellings, call `stop()`+`wait()`, assert `len(get_outcomes()) == N` — covers SC-001)
 
 **Checkpoint**: `ValidationService` fully tested; analysis pipeline ready for wiring
 
@@ -72,7 +72,7 @@
 - [ ] T017 [US2] Add `validation_enabled` toggle to `AnalysisSettingsPanel.tsx` in `src/web/frontend/src/components/AnalysisSettingsPanel.tsx` — primary label "Validate player names", subtitle "Checks detected names against robertsspaceindustries.com during analysis (1 req/sec)", toggle ON by default; follow `specs/014-rsi-player-validation/stitch/analysis-view-validation-toggle.html`
 - [ ] T018 [US2] Pass `validation_enabled` value from `AnalysisSettingsPanel` through to the `POST /api/analysis/start` request body in `src/web/frontend/src/pages/AnalysisPage.tsx` (or api client layer)
 - [ ] T019 [US2] Persist `validation_enabled` preference in `AdvancedSettings` (`src/config.py`) and load it into the settings panel on page load
-- [ ] T020 [US2] Guard `ValidationService` instantiation in `work()` (`src/web/api/routes/analysis.py`) so the service is not created and `on_candidate_discovered` is not wired when `validation_enabled=False`; confirm `validation_queue_size=0` is returned in progress responses
+- [ ] T020 [US2] Guard `ValidationService` instantiation in `work()` (`src/web/api/routes/analysis.py`) so the service is not created and `on_candidate_discovered` is not wired when `validation_enabled=False`; confirm `validation_queue_size=0` is returned in progress responses (depends on T009)
 
 **Checkpoint**: US2 functional — toggle appears in settings, disabling it produces zero RSI requests and neutral candidate icons
 
@@ -86,7 +86,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Implement `POST /api/review/candidates/{candidate_id}/validate` endpoint in `src/web/api/routes/review_actions.py` — resolve current spelling from sidecar, synchronous `urllib.request` HTTP check (10-sec timeout), write updated `ValidationOutcome` to sidecar, return outcome; per contracts/api.md
+- [ ] T021 [US3] Implement `POST /api/review/candidates/{candidate_id}/validate` endpoint in `src/web/api/routes/review_actions.py` — use `spelling` from request body (required; client sends current displayed spelling per FR-010), synchronous `urllib.request` HTTP check (10-sec timeout), write updated `ValidationOutcome` to sidecar, return outcome; per contracts/api.md
 - [ ] T022 [US3] Register the new recheck route in `src/web/api/router.py`
 - [ ] T023 [US3] Add "Re-check" text button to `CandidateRow.tsx` in `src/web/frontend/src/components/CandidateRow.tsx` — visible for `found`/`not_found`/`failed` states, hidden during `checking`; clicking calls the validate endpoint and updates only that card's icon; follow Stitch design
 - [ ] T024 [US3] Add integration test for the recheck endpoint in `tests/integration/test_validation_api.py` — happy path (found, not-found), timeout (failed), invalid candidate_id (404)
@@ -100,7 +100,7 @@
 **Purpose**: Wiring correctness, edge cases, and final integration checks across all stories
 
 - [ ] T025 [P] Verify recommendation call sites in `src/web/api/routes/` pass `validation_state` from sidecar into `score_candidate()` when recommendations are computed at review-ready time
-- [ ] T026 [P] Add `reviewed_at` / `source` fields when writing `ValidationOutcome` to sidecar (ensure `analysis_batch` vs `manual_review` source is recorded correctly per data-model.md)
+- [ ] T026 [P] Add `checked_at` / `source` fields when writing `ValidationOutcome` to sidecar (ensure `analysis_batch` vs `manual_review` source is recorded correctly per data-model.md)
 - [ ] T027 Handle polling teardown in `ReviewPage.tsx` — stop polling the progress endpoint once `validation_queue_size == 0` and `status == completed` to avoid unnecessary requests
 - [ ] T028 [P] Validate settings round-trip: `validation_enabled` persists to `scytcheck_settings.json` and reloads correctly on app restart
 - [ ] T029 Run full quickstart validation per `specs/014-rsi-player-validation/quickstart.md` — confirm all three user stories pass their independent tests end-to-end

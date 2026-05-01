@@ -79,7 +79,8 @@ Trigger an immediate, synchronous single-candidate validation check.
 **Request body**:
 ```jsonc
 {
-  "video_id": "sha256_..."    // required; identifies the workspace containing the sidecar
+  "video_id": "sha256_...",   // required; identifies the workspace containing the sidecar
+  "spelling": "PlayerName"   // required; the current displayed spelling to validate (from the client UI, not the sidecar). This is the authoritative source for the check and what gets persisted.
 }
 ```
 
@@ -110,7 +111,7 @@ Trigger an immediate, synchronous single-candidate validation check.
 
 | Status | Error key | Condition |
 |--------|-----------|-----------|
-| 400 | `validation_error` | `video_id` missing or malformed, workspace not found, candidate not found in sidecar |
+| 400 | `validation_error` | `video_id` or `spelling` missing or malformed, workspace not found, candidate not found in sidecar |
 | 409 | `conflict` | Another validation for this candidate is already in-flight (future guard) |
 
 **Handler**: `ReviewActionsHandler.post_validate_candidate(candidate_id, payload)` in `src/web/api/routes/review_actions.py`
