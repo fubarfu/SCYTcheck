@@ -48,14 +48,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Wire `ValidationService` into `work()` in `src/web/api/routes/analysis.py` — instantiate service when `validation_enabled`, pass `on_candidate_discovered=service.enqueue` to `analyze()`, call `service.stop()` after scan, periodically call `adapter.set_validation_state()` until queue drains
-- [ ] T010 [US1] Extend `GET /api/analysis/progress/{run_id}` response in `src/web/api/routes/analysis.py` to include `review_ready`, `validation_queue_size`, and `validation_outcomes` fields per contracts/api.md
-- [ ] T011 [US1] Extend `score_candidate()` in `src/web/app/recommendation_service.py` to accept optional `validation_state` and apply +20 (found) / −10 (not_found) signal; guard with `min(100.0, ...)` and `max(0.0, ...)`
-- [ ] T012 [US1] Add `update_validation_outcomes()` to `ReviewSidecarStore` (or equivalent sidecar writer) so validation outcomes are persisted to `result_<n>.review.json` under the `validation_outcomes` key; load on reopen
-- [ ] T013 [US1] Update `AnalysisPage.tsx` in `src/web/frontend/src/pages/AnalysisPage.tsx` to handle `review_ready: true` (enable "View Results" button / navigate to review page) and display validation queue progress while `validation_queue_size > 0`
-- [ ] T014 [US1] Update `ReviewPage.tsx` in `src/web/frontend/src/pages/ReviewPage.tsx` to continue polling the progress endpoint while `validation_queue_size > 0` and apply live outcome updates to candidate cards
-- [ ] T015 [US1] Update `CandidateRow.tsx` in `src/web/frontend/src/components/CandidateRow.tsx` to render the validation state icon (Material Symbol) per the Stitch design — `check_circle` green, `person_off` amber, `progress_activity` grey animated, `error_outline` red, no icon for `unchecked`; follow `specs/014-rsi-player-validation/stitch/review-expanded-candidate-group-validation-states.html`
-- [ ] T016 [US1] Add unit tests for `score_candidate()` validation signal in `tests/unit/test_recommendation_service.py` — found/not_found/unchecked/None inputs, cap behaviour
+- [X] T009 [US1] Wire `ValidationService` into `work()` in `src/web/api/routes/analysis.py` — instantiate service when `validation_enabled`, pass `on_candidate_discovered=service.enqueue` to `analyze()`, call `service.stop()` after scan, periodically call `adapter.set_validation_state()` until queue drains
+- [X] T010 [US1] Extend `GET /api/analysis/progress/{run_id}` response in `src/web/api/routes/analysis.py` to include `review_ready`, `validation_queue_size`, and `validation_outcomes` fields per contracts/api.md
+- [X] T011 [US1] Extend `score_candidate()` in `src/web/app/recommendation_service.py` to accept optional `validation_state` and apply +20 (found) / −10 (not_found) signal; guard with `min(100.0, ...)` and `max(0.0, ...)`
+- [X] T012 [US1] Add `update_validation_outcomes()` to `ReviewSidecarStore` (or equivalent sidecar writer) so validation outcomes are persisted to `result_<n>.review.json` under the `validation_outcomes` key; load on reopen
+- [X] T013 [US1] Update `AnalysisPage.tsx` in `src/web/frontend/src/pages/AnalysisPage.tsx` to handle `review_ready: true` (enable "View Results" button / navigate to review page) and display validation queue progress while `validation_queue_size > 0`
+- [X] T014 [US1] Update `ReviewPage.tsx` in `src/web/frontend/src/pages/ReviewPage.tsx` to continue polling the progress endpoint while `validation_queue_size > 0` and apply live outcome updates to candidate cards
+- [X] T015 [US1] Update `CandidateRow.tsx` in `src/web/frontend/src/components/CandidateRow.tsx` to render the validation state icon (Material Symbol) per the Stitch design — `check_circle` green, `person_off` amber, `progress_activity` grey animated, `error_outline` red, no icon for `unchecked`; follow `specs/014-rsi-player-validation/stitch/review-expanded-candidate-group-validation-states.html`
+- [X] T016 [US1] Add unit tests for `score_candidate()` validation signal in `tests/unit/test_recommendation_service.py` — found/not_found/unchecked/None inputs, cap behaviour
 
 **Checkpoint**: US1 fully functional — analysis validates candidates, scores reflect outcomes, review shows live icons, sidecar persists results
 
@@ -69,10 +69,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Add `validation_enabled` toggle to `AnalysisSettingsPanel.tsx` in `src/web/frontend/src/components/AnalysisSettingsPanel.tsx` — primary label "Validate player names", subtitle "Checks detected names against robertsspaceindustries.com during analysis (1 req/sec)", toggle ON by default; follow `specs/014-rsi-player-validation/stitch/analysis-view-validation-toggle.html`
-- [ ] T018 [US2] Pass `validation_enabled` value from `AnalysisSettingsPanel` through to the `POST /api/analysis/start` request body in `src/web/frontend/src/pages/AnalysisPage.tsx` (or api client layer)
-- [ ] T019 [US2] Persist `validation_enabled` preference in `AdvancedSettings` (`src/config.py`) and load it into the settings panel on page load
-- [ ] T020 [US2] Guard `ValidationService` instantiation in `work()` (`src/web/api/routes/analysis.py`) so the service is not created and `on_candidate_discovered` is not wired when `validation_enabled=False`; confirm `validation_queue_size=0` is returned in progress responses (depends on T009)
+- [X] T017 [US2] Add `validation_enabled` toggle to `AnalysisSettingsPanel.tsx` in `src/web/frontend/src/components/AnalysisSettingsPanel.tsx` — primary label "Validate player names", subtitle "Checks detected names against robertsspaceindustries.com during analysis (1 req/sec)", toggle ON by default; follow `specs/014-rsi-player-validation/stitch/analysis-view-validation-toggle.html`
+- [X] T018 [US2] Pass `validation_enabled` value from `AnalysisSettingsPanel` through to the `POST /api/analysis/start` request body in `src/web/frontend/src/pages/AnalysisPage.tsx` (or api client layer)
+- [X] T019 [US2] Persist `validation_enabled` preference in `AdvancedSettings` (`src/config.py`) and load it into the settings panel on page load
+- [X] T020 [US2] Guard `ValidationService` instantiation in `work()` (`src/web/api/routes/analysis.py`) so the service is not created and `on_candidate_discovered` is not wired when `validation_enabled=False`; confirm `validation_queue_size=0` is returned in progress responses (depends on T009)
 
 **Checkpoint**: US2 functional — toggle appears in settings, disabling it produces zero RSI requests and neutral candidate icons
 
