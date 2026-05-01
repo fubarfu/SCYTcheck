@@ -118,6 +118,9 @@ class ReviewSessionHandler:
             "candidates": candidates,
             "candidates_original": existing.get("candidates_original", [dict(item) for item in candidates]),
             "action_history": existing.get("action_history", []),
+            "validation_outcomes": existing.get("validation_outcomes", {}),
+            "validation_queue_size": existing.get("validation_queue_size", 0),
+            "review_ready": existing.get("review_ready", False),
             "thresholds": existing.get(
                 "thresholds",
                 {

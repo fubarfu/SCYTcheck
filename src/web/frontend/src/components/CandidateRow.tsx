@@ -249,6 +249,28 @@ function CandidateRowComponent({
   const handleRemove = useCallback(() => {
     onAction({ action_type: "remove", target_ids: [candidate.candidate_id] });
   }, [onAction, candidate.candidate_id]);
+
+  const validationState = candidate.validation_state ?? "unchecked";
+  const validationIcon =
+    validationState === "found"
+      ? "check_circle"
+      : validationState === "not_found"
+        ? "person_off"
+        : validationState === "checking"
+          ? "progress_activity"
+          : validationState === "failed"
+            ? "error_outline"
+            : "help";
+  const validationTitle =
+    validationState === "found"
+      ? "RSI profile found"
+      : validationState === "not_found"
+        ? "RSI profile not found"
+        : validationState === "checking"
+          ? "Checking RSI profile"
+          : validationState === "failed"
+            ? "RSI validation failed"
+            : "RSI profile not checked";
   return (
     <div
       className="candidate-row"
@@ -263,18 +285,6 @@ function CandidateRowComponent({
           <div>
           <div className="candidate-radio-row">
             <strong>{currentText}</strong>
-            {candidate.validation_state === "found" && (
-              <span className="material-symbols-outlined validation-icon validation-found" title="RSI profile found">check_circle</span>
-            )}
-            {candidate.validation_state === "not_found" && (
-              <span className="material-symbols-outlined validation-icon validation-not-found" title="RSI profile not found">person_off</span>
-            )}
-            {candidate.validation_state === "checking" && (
-              <span className="material-symbols-outlined validation-icon validation-checking" title="Checking RSI profile…">progress_activity</span>
-            )}
-            {candidate.validation_state === "failed" && (
-              <span className="material-symbols-outlined validation-icon validation-failed" title="RSI validation failed">error_outline</span>
-            )}
           </div>
           <div className="candidate-meta-inline">
             <span>{candidate.start_timestamp ?? "-"}</span>
@@ -359,6 +369,26 @@ function CandidateRowComponent({
           <div className="candidate-secondary-actions" role="group" aria-label="Candidate tools">
             <button
               type="button"
+              className={`ghost-action icon-tool-button validation-state-button validation-state-${validationState}`}
+              aria-label={validationTitle}
+              title={validationTitle}
+              disabled
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">{validationIcon}</span>
+            </button>
+            {onRecheck && (
+              <button
+                type="button"
+                className="ghost-action icon-tool-button"
+                aria-label="Retry RSI check"
+                title="Retry RSI check"
+                onClick={() => onRecheck(candidate.candidate_id, candidate.corrected_text ?? candidate.extracted_name)}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">refresh</span>
+              </button>
+            )}
+            <button
+              type="button"
               className="ghost-action icon-tool-button"
               aria-label="Edit candidate"
               title="Edit candidate"
@@ -375,17 +405,6 @@ function CandidateRowComponent({
             >
               <span className="material-symbols-outlined" aria-hidden="true">delete</span>
             </button>
-            {onRecheck && (
-              <button
-                type="button"
-                className="ghost-action icon-tool-button"
-                aria-label="Re-check RSI profile"
-                title="Re-check RSI player profile"
-                onClick={() => onRecheck(candidate.candidate_id, candidate.corrected_text ?? candidate.extracted_name)}
-              >
-                <span className="material-symbols-outlined" aria-hidden="true">manage_accounts</span>
-              </button>
-            )}
           </div>
         </div>
       )}

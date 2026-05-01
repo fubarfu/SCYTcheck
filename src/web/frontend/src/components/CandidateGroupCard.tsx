@@ -77,6 +77,7 @@ interface Props {
     payload?: Record<string, unknown>;
   }) => void;
   onOpenThumbnail: (candidateId: string) => void;
+  onRecheck?: (candidateId: string, spelling: string) => void;
 }
 
 export function CandidateGroupCard({
@@ -90,6 +91,7 @@ export function CandidateGroupCard({
   hideCollapseControl = false,
   onAction,
   onOpenThumbnail,
+  onRecheck,
 }: Props) {
   const [dragOver, setDragOver] = useState(false);
   const [draggingGroup, setDraggingGroup] = useState(false);
@@ -327,6 +329,7 @@ export function CandidateGroupCard({
               }
               onAction={onAction}
               onOpenThumbnail={onOpenThumbnail}
+              onRecheck={onRecheck}
               thumbnailCheckUrl={selectedSessionId ? `/api/review/sessions/${selectedSessionId}/thumbnails/${candidate.candidate_id}${projectLocation ? `?pl=${encodeURIComponent(projectLocation)}` : ""}` : null}
             />
           ))}

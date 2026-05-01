@@ -1977,6 +1977,35 @@ select,
   line-height: 1;
 }
 
+.validation-state-button {
+  opacity: 1;
+}
+
+.validation-state-button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.validation-state-found {
+  color: #1d6d3a;
+  border-color: color-mix(in srgb, #1d6d3a 50%, var(--border) 50%);
+}
+
+.validation-state-not_found,
+.validation-state-failed {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border) 45%);
+}
+
+.validation-state-checking {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border) 40%);
+}
+
+.validation-state-unchecked {
+  color: var(--muted);
+}
+
 .decision-action {
   min-height: 28px;
   padding: 3px 8px;

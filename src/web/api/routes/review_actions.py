@@ -214,9 +214,12 @@ class ReviewActionsHandler:
 
         outcome = ValidationService.check_single(spelling, source="manual_review")
 
-        # Persist outcome into the sidecar
+        # Persist outcome into the sidecar while preserving any existing outcomes.
         session_payload = dict(state.payload or {})
-        validation_outcomes: dict[str, Any] = dict(session_payload.get("validation_outcomes") or {})
+        persisted_payload = self._sidecar.load(Path(state.csv_path)) or {}
+        validation_outcomes: dict[str, Any] = {}
+        validation_outcomes.update(dict(persisted_payload.get("validation_outcomes") or {}))
+        validation_outcomes.update(dict(session_payload.get("validation_outcomes") or {}))
         key = spelling.lower()
         validation_outcomes[key] = {
             "state": outcome.state,

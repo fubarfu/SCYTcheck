@@ -246,9 +246,17 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
           candidate_ids?: string[];
           decision?: "unreviewed" | "confirmed" | "rejected";
         }>;
+        validation_outcomes?: Record<string, { state: string; spelling?: string; checked_at?: string | null; source?: string }>;
       };
 
       const candidates: Candidate[] = context.candidates.map((candidate) => ({
+        ...(context.validation_outcomes?.[(candidate.corrected_text ?? candidate.spelling).toLowerCase().trim()]
+          ? {
+              validation_state: context.validation_outcomes[
+                (candidate.corrected_text ?? candidate.spelling).toLowerCase().trim()
+              ]!.state as Candidate["validation_state"],
+            }
+          : {}),
         candidate_id: candidate.id,
         extracted_name: candidate.spelling,
         corrected_text: candidate.corrected_text,
@@ -529,6 +537,20 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
         }
         return c;
       });
+      // Also enrich candidates inside groups (used by CandidateGroupCard for rendering)
+      if (Array.isArray(session.groups)) {
+        session.groups = session.groups.map((g) => ({
+          ...g,
+          candidates: (g.candidates ?? []).map((c: Candidate) => {
+            const key = (c.corrected_text ?? c.extracted_name).toLowerCase().trim();
+            const outcome = session.validation_outcomes![key];
+            if (outcome && !c.validation_state) {
+              return { ...c, validation_state: outcome.state as Candidate["validation_state"] };
+            }
+            return c;
+          }),
+        }));
+      }
     }
     if (fetchToken !== latestSessionFetchTokenRef.current) {
       return;
@@ -811,6 +833,66 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
     setThumbnailCandidateId(candidateId);
   };
 
+  const recheckCandidateValidation = async (candidateId: string, spelling: string) => {
+    if (!selectedSessionId) {
+      return;
+    }
+
+    const normalizedSpelling = spelling.trim();
+    if (!normalizedSpelling) {
+      setLoadingError("Cannot validate an empty candidate spelling.");
+      return;
+    }
+
+    setSelectedSession((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      const markChecking = (candidate: Candidate) =>
+        candidate.candidate_id === candidateId
+          ? { ...candidate, validation_state: "checking" as Candidate["validation_state"] }
+          : candidate;
+      return {
+        ...prev,
+        candidates: (prev.candidates ?? []).map(markChecking),
+        groups: (prev.groups ?? []).map((group) => ({
+          ...group,
+          candidates: (group.candidates ?? []).map(markChecking),
+        })),
+      };
+    });
+
+    const resp = await fetch(
+      `/api/review/sessions/${encodeURIComponent(selectedSessionId)}/candidates/${encodeURIComponent(candidateId)}/validate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spelling: normalizedSpelling }),
+      },
+    );
+
+    if (!resp.ok) {
+      const errorBody = await resp.json().catch(() => ({ message: "Validation retry failed" })) as { message?: string };
+      setLoadingError(errorBody.message ?? "Validation retry failed");
+      await fetchSession(selectedSessionId);
+      return;
+    }
+
+    setLoadingError(null);
+    if (isVideoContextSession && videoId) {
+      await loadReviewContext(videoId);
+      if (selectedSessionId) {
+        await fetchEditHistory(videoId, selectedSessionId);
+      }
+      return;
+    }
+
+    await fetchSession(selectedSessionId);
+    if (videoId) {
+      await fetchEditHistory(videoId, selectedSessionId);
+    }
+  };
+
   const exportSession = async () => {
     if (!selectedSessionId) return;
     setExportMessage(null);
@@ -1084,6 +1166,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
                       void postAction(action);
                     }}
                     onOpenThumbnail={(id) => { void openThumbnail(id); }}
+                    onRecheck={(candidateId, spelling) => { void recheckCandidateValidation(candidateId, spelling); }}
                   />
                 );
               })()
@@ -1103,6 +1186,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
                       void postAction(action);
                     }}
                     onOpenThumbnail={(id) => { void openThumbnail(id); }}
+                    onRecheck={(candidateId, spelling) => { void recheckCandidateValidation(candidateId, spelling); }}
                   />
                 ))}
               </div>

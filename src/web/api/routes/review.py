@@ -125,6 +125,7 @@ class ReviewHandler:
             "candidates": normalized_candidates,
             "groups": normalized_groups,
             "accepted_names": accepted_names,
+            "validation_outcomes": dict(context.get("validation_outcomes") or {}),
             "action_history": [],
             "workspace": {
                 "video_id": str(context.get("video_id") or "").strip(),

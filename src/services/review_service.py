@@ -40,13 +40,24 @@ class ReviewService:
         if metadata_run_count is not None:
             effective_run_count = max(effective_run_count, metadata_run_count)
 
-        prior_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
+        prior_state_path = workspace_root / "review_state.json"
         prior_state = self._load_prior_state(prior_state_path)
         prior_decisions = self._extract_prior_decisions(prior_state)
         thresholds = self._extract_thresholds(prior_state)
+        validation_outcomes = self._extract_validation_outcomes(runs, prior_state)
 
         merged_candidates = self._merge_candidates(runs, prior_decisions)
         merged_candidates = self.mark_new_candidates(merged_candidates, runs, prior_decisions)
+        for candidate in merged_candidates:
+            key = str(candidate.get("corrected_text") or candidate.get("spelling") or "").strip().lower()
+            if not key:
+                continue
+            outcome = validation_outcomes.get(key)
+            if not isinstance(outcome, dict):
+                continue
+            state = str(outcome.get("state") or "").strip().lower()
+            if state in {"found", "not_found", "checking", "failed"}:
+                candidate["validation_state"] = state
 
         grouped_payload = recompute_groups(
             {
@@ -132,7 +143,39 @@ class ReviewService:
             "candidates": merged_candidates,
             "groups": groups,
             "thresholds": dict(grouped_payload.get("thresholds") or thresholds),
+            "validation_outcomes": validation_outcomes,
         }
+
+    @staticmethod
+    def _extract_validation_outcomes(
+        runs: list[dict[str, Any]],
+        prior_state: dict[str, Any],
+    ) -> dict[str, dict[str, Any]]:
+        merged: dict[str, dict[str, Any]] = {}
+        for run in runs:
+            raw = run.get("validation_outcomes")
+            if not isinstance(raw, dict):
+                continue
+            for name, outcome in raw.items():
+                key = str(name or "").strip().lower()
+                if not key or not isinstance(outcome, dict):
+                    continue
+                merged[key] = dict(outcome)
+
+        if merged:
+            return merged
+
+        fallback = prior_state.get("validation_outcomes") if isinstance(prior_state, dict) else None
+        if not isinstance(fallback, dict):
+            return {}
+
+        normalized: dict[str, dict[str, Any]] = {}
+        for name, outcome in fallback.items():
+            key = str(name or "").strip().lower()
+            if not key or not isinstance(outcome, dict):
+                continue
+            normalized[key] = dict(outcome)
+        return normalized
 
     @staticmethod
     def _read_workspace_metadata_run_count(workspace_root: Path) -> int | None:
