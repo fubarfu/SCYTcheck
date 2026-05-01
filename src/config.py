@@ -7,6 +7,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SETTINGS_FILE = "scytcheck_settings.json"
+HISTORY_INDEX_FILE = "video_history.json"
+
+
+def default_project_location() -> Path:
+    """Return the default per-user project location for video-primary workspaces."""
+    appdata = os.getenv("APPDATA")
+    if appdata:
+        return Path(appdata) / "SCYTcheck" / "projects"
+
+    home = Path.home()
+    if sys.platform == "darwin":
+        return home / "Library" / "Application Support" / "SCYTcheck" / "projects"
+    return home / ".local" / "share" / "scytcheck" / "projects"
 
 
 @dataclass(frozen=True)
@@ -67,9 +80,9 @@ class AdvancedSettings:
     tolerance_value: float = 0.75
     gating_enabled: bool = False
     gating_threshold: float = 0.02
+    project_location: str = ""
 
-
-def _default_advanced_settings() -> AdvancedSettings:
+def default_advanced_settings() -> AdvancedSettings:
     return AdvancedSettings(
         context_patterns=[
             {
@@ -91,6 +104,12 @@ def _default_advanced_settings() -> AdvancedSettings:
                 "enabled": True,
             },
             {
+                "id": "default-party-bracket-colon",
+                "before_text": "Party]",
+                "after_text": ":",
+                "enabled": True,
+            },
+            {
                 "id": "default-started-by",
                 "before_text": "started by",
                 "after_text": None,
@@ -106,8 +125,8 @@ def _default_advanced_settings() -> AdvancedSettings:
         tolerance_value=0.75,
         gating_enabled=False,
         gating_threshold=0.02,
+        project_location=str(default_project_location()),
     )
-
 
 def load_config() -> AppConfig:
     sample_fps = int(os.getenv("SCYTCHECK_SAMPLE_FPS", "1"))
@@ -142,27 +161,80 @@ def _settings_path(base_dir: str | None = None) -> Path:
     return Path.cwd() / SETTINGS_FILE
 
 
+def history_index_path(base_dir: str | None = None) -> Path:
+    """Return persistent path for video history index.
+
+    Uses the same APPDATA/fallback strategy as settings persistence.
+    """
+    settings_path = _settings_path(base_dir)
+    return settings_path.with_name(HISTORY_INDEX_FILE)
+
+
+def _merge_context_patterns_with_defaults(
+    persisted_patterns: object,
+    default_patterns: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Return persisted context patterns with any missing defaults appended.
+
+    This keeps user/custom patterns intact while backfilling newly introduced
+    default patterns for users with older settings files.
+    """
+    if not isinstance(persisted_patterns, list):
+        return [dict(pattern) for pattern in default_patterns]
+
+    merged_patterns: list[dict[str, object]] = [
+        dict(pattern) for pattern in persisted_patterns if isinstance(pattern, dict)
+    ]
+    existing_ids = {
+        str(pattern.get("id", "")).strip()
+        for pattern in merged_patterns
+        if str(pattern.get("id", "")).strip()
+    }
+    existing_pairs = {
+        (pattern.get("before_text"), pattern.get("after_text"))
+        for pattern in merged_patterns
+    }
+
+    for default_pattern in default_patterns:
+        default_id = str(default_pattern.get("id", "")).strip()
+        pattern_pair = (
+            default_pattern.get("before_text"),
+            default_pattern.get("after_text"),
+        )
+        if default_id and default_id in existing_ids:
+            continue
+        if pattern_pair in existing_pairs:
+            continue
+        merged_patterns.append(dict(default_pattern))
+
+    return merged_patterns
+
+
 def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
     """Load persisted advanced settings or initialize defaults on first run."""
     path = _settings_path(base_dir)
     if not path.exists():
-        defaults = _default_advanced_settings()
+        defaults = default_advanced_settings()
         save_advanced_settings(defaults, base_dir)
         return defaults
 
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        defaults = _default_advanced_settings()
+        defaults = default_advanced_settings()
         save_advanced_settings(defaults, base_dir)
         return defaults
 
     if not isinstance(payload, dict):
         payload = {}
 
-    defaults = _default_advanced_settings()
+    defaults = default_advanced_settings()
+    merged_patterns = _merge_context_patterns_with_defaults(
+        payload.get("context_patterns"),
+        defaults.context_patterns,
+    )
     return AdvancedSettings(
-        context_patterns=list(payload.get("context_patterns", defaults.context_patterns)),
+        context_patterns=merged_patterns,
         filter_non_matching=bool(payload.get("filter_non_matching", defaults.filter_non_matching)),
         event_gap_threshold_sec=float(
             payload.get("event_gap_threshold_sec", defaults.event_gap_threshold_sec)
@@ -193,8 +265,8 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
                 min(float(payload.get("gating_threshold", defaults.gating_threshold)), 1.0),
             )
         ),
+        project_location=str(payload.get("project_location", defaults.project_location) or defaults.project_location),
     )
-
 
 def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = None) -> None:
     """Persist advanced settings for next app startup."""
@@ -214,8 +286,8 @@ def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = No
                 "tolerance_value": float(max(0.60, min(settings.tolerance_value, 0.95))),
                 "gating_enabled": settings.gating_enabled,
                 "gating_threshold": float(max(0.0, min(settings.gating_threshold, 1.0))),
-            },
-            indent=2,
+                "project_location": settings.project_location,
+            },            indent=2,
         ),
         encoding="utf-8",
     )

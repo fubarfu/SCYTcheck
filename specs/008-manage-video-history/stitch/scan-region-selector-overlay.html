@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SCYTcheck - Select Scan Region</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#000000",
+                        "surface-container": "#171a20",
+                        "on-tertiary-container": "#54436b",
+                        "secondary-container": "#333b4d",
+                        "on-surface": "#e2e5f0",
+                        "surface-dim": "#0c0e12",
+                        "surface-container-low": "#111318",
+                        "surface-container-lowest": "#000000",
+                        "on-tertiary-fixed-variant": "#5e4c75",
+                        "error-container": "#871f21",
+                        "primary": "#adc6ff",
+                        "surface-tint": "#adc6ff",
+                        "outline-variant": "#444851",
+                        "inverse-primary": "#005bc4",
+                        "tertiary-container": "#e5ceff",
+                        "on-secondary-fixed": "#373f51",
+                        "secondary-fixed": "#dae2f9",
+                        "on-primary-fixed-variant": "#001435",
+                        "tertiary-fixed-dim": "#d6c0f0",
+                        "error": "#fa746f",
+                        "secondary": "#bec6dd",
+                        "secondary-dim": "#b1b9ce",
+                        "on-primary": "#003d88",
+                        "tertiary-dim": "#d6c0f0",
+                        "primary-fixed": "#4388fd",
+                        "surface-container-highest": "#22262e",
+                        "primary-container": "#0e69dc",
+                        "tertiary": "#f0dfff",
+                        "on-surface-variant": "#a8abb5",
+                        "background": "#0c0e12",
+                        "on-secondary-fixed-variant": "#535b6e",
+                        "surface": "#0c0e12",
+                        "outline": "#72757f",
+                        "primary-dim": "#699cff",
+                        "on-secondary": "#384052",
+                        "inverse-on-surface": "#53555a",
+                        "on-error": "#490006",
+                        "surface-container-high": "#1c2026",
+                        "secondary-fixed-dim": "#ccd4eb",
+                        "on-error-container": "#ff9993",
+                        "primary-fixed-dim": "#317bef",
+                        "on-tertiary-fixed": "#413057",
+                        "on-background": "#e2e5f0",
+                        "on-secondary-container": "#b7bfd5",
+                        "tertiary-fixed": "#e5ceff",
+                        "error-dim": "#c54d4a",
+                        "surface-bright": "#282c34",
+                        "on-tertiary": "#5d4c74",
+                        "on-primary-container": "#ffffff",
+                        "surface-variant": "#22262e",
+                        "inverse-surface": "#f9f9fe"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": [
+                            "Plus Jakarta Sans"
+                        ],
+                        "body": [
+                            "Inter"
+                        ],
+                        "label": [
+                            "Inter"
+                        ],
+                        "mono": [
+                            "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"
+                        ]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex flex-col antialiased selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full rounded-none bg-gray-950/80 backdrop-blur-xl border-b border-gray-800 shadow-2xl flex justify-between items-center px-8 h-16 z-[100]">
+<div class="flex items-center gap-8">
+<div class="text-xl font-bold tracking-tighter text-blue-500 font-['Geist']">
+                SCYTcheck
+            </div>
+<div class="hidden md:flex gap-6">
+<a class="text-blue-500 dark:text-blue-400 border-b-2 border-blue-500 dark:border-blue-400 pb-1 font-bold" href="#">Analysis</a>
+<a class="text-gray-400 hover:text-gray-100 transition-colors" href="#">Review</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-gray-800/50 rounded-md px-3 py-2 transition-all text-gray-400 hover:text-gray-100 active:scale-95 duration-150 cursor-pointer flex items-center justify-center">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+</div>
+</nav>
+<!-- Main Content Background (Mock Analysis View behind modal) -->
+<main class="flex-1 mt-16 p-8 filter blur-[2px] opacity-60">
+<div class="grid grid-cols-12 gap-6 h-full">
+<div class="col-span-8 bg-surface-container rounded-xl border border-outline-variant p-6 flex flex-col">
+<h2 class="font-headline font-semibold text-lg mb-4">Video Analysis</h2>
+<div class="flex-1 bg-surface-dim rounded-lg border border-outline-variant overflow-hidden relative">
+<img alt="Video feed" class="w-full h-full object-cover opacity-50" data-alt="Cinematic wide shot of an esports tournament stage with glowing blue lights, dark silhouettes of players, and large screens in the background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXs-RpfJaX6xMwfF0f3OIT5ToCqpqRBbMxP23MoYcwzJHc3EhWZYyAa-c5eDTvqFS5gaWJIFXDt6uIuaxe7zehdmEHwoXWTske3HwaxAiAPsIJN7aRtaxFPsHGBfsuxscCT3YQljX8_dqfNGoD6Xkg91JQ3_VlKh5_fhdEcO1U1RlThqUvS7KMPTg5x8HDjVFwGU-1WSLsj6LRAASDjzyxu79qE1n7OVQfjxAiAd4KWwXK4tAV3LPyndxqyiAaFSLRYJZYnuJsv5g"/>
+</div>
+</div>
+<div class="col-span-4 bg-surface-container rounded-xl border border-outline-variant p-6 flex flex-col gap-4">
+<h2 class="font-headline font-semibold text-lg">Results Log</h2>
+<div class="flex-1 bg-surface-dim rounded-lg border border-outline-variant p-4">
+<p class="text-on-surface-variant text-sm">Processing video stream...</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Full-screen Modal Backdrop -->
+<div class="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+<!-- Modal Dialog -->
+<div class="bg-surface-container-high w-full max-w-[900px] rounded-xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden">
+<!-- Modal Header -->
+<div class="flex items-start justify-between px-6 py-5 border-b border-outline-variant bg-surface-container/50">
+<div>
+<h2 class="font-headline text-xl font-bold text-on-surface">Select Scan Region</h2>
+<p class="text-sm text-on-surface-variant mt-1">Click and drag on the video frame to define the area to scan for player names.</p>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded-lg hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-2xl group-active:scale-90 transition-transform">close</span>
+</button>
+</div>
+<!-- Modal Content (Interactive Area) -->
+<div class="p-6 flex flex-col gap-4 bg-surface">
+<!-- Video Frame Container -->
+<div class="relative w-full aspect-video bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden shadow-inner group">
+<!-- Background Image (Simulated Video Frame) -->
+<img alt="Current video frame" class="w-full h-full object-cover" data-alt="High contrast dark gaming screen capturing a chaotic teamfight in a MOBA game with vibrant particle effects and character health bars visible" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuh7-7Aqn1d0O3KX8U_Wo0Baj8StS4aHEBY6C9vG00I9N9-5zDxrTpTssjA6bowRpYNxyJK_nLkh62_QjfWx2e7yIxbbIlqIW_HwLYtQhvdhCoxrbfvdOI04YbWg46z7-nkM7z-Vfn7c0RcasmF0Qgcg_9nhaWHdk-sz4z3NUzRbC1L4diUwfo362hwTKg0_L14n_cglGr8YURX-TMWIubq8Lw5WM3FXHLGrlOv8uWWhX72ObPdsmoL0jAHhjePhB9pU3vYJpUsh8"/>
+<!-- Dark overlay to make selection pop -->
+<div class="absolute inset-0 bg-black/40"></div>
+<!-- The Selection Rectangle -->
+<div class="absolute border-2 border-primary border-dashed bg-primary/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] cursor-move" style="top: 20%; left: 15%; width: 55%; height: 12%;">
+<!-- Resize Handles -->
+<!-- Top Left -->
+<div class="absolute w-2 h-2 bg-primary border border-white -top-1 -left-1 cursor-nwse-resize"></div>
+<!-- Top Center -->
+<div class="absolute w-2 h-2 bg-primary border border-white -top-1 left-1/2 -translate-x-1/2 cursor-ns-resize"></div>
+<!-- Top Right -->
+<div class="absolute w-2 h-2 bg-primary border border-white -top-1 -right-1 cursor-nesw-resize"></div>
+<!-- Right Center -->
+<div class="absolute w-2 h-2 bg-primary border border-white top-1/2 -translate-y-1/2 -right-1 cursor-ew-resize"></div>
+<!-- Bottom Right -->
+<div class="absolute w-2 h-2 bg-primary border border-white -bottom-1 -right-1 cursor-nwse-resize"></div>
+<!-- Bottom Center -->
+<div class="absolute w-2 h-2 bg-primary border border-white -bottom-1 left-1/2 -translate-x-1/2 cursor-ns-resize"></div>
+<!-- Bottom Left -->
+<div class="absolute w-2 h-2 bg-primary border border-white -bottom-1 -left-1 cursor-nesw-resize"></div>
+<!-- Left Center -->
+<div class="absolute w-2 h-2 bg-primary border border-white top-1/2 -translate-y-1/2 -left-1 cursor-ew-resize"></div>
+<!-- Inside Label (Optional, for clarity) -->
+<div class="absolute top-0 right-0 bg-primary text-on-primary text-[10px] px-1 font-mono uppercase tracking-wider hidden group-hover:block">
+                            Scan Area
+                        </div>
+</div>
+</div>
+<!-- Info and Coordinates -->
+<div class="flex items-center justify-between px-2">
+<p class="text-sm text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">info</span>
+                        Drag the rectangle or handles to adjust. Double-click to reset.
+                    </p>
+<div class="bg-surface-container font-mono text-sm text-primary px-3 py-1.5 rounded border border-outline-variant flex gap-4">
+<span>x: 120</span>
+<span>y: 40</span>
+<span>w: 480</span>
+<span>h: 60</span>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="px-6 py-4 border-t border-outline-variant bg-surface-container/50 flex justify-end gap-3">
+<button class="px-5 py-2.5 rounded-lg border border-outline text-on-surface hover:bg-surface-variant hover:border-outline-variant transition-colors font-medium text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    Cancel
+                </button>
+<button class="px-5 py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary-dim transition-colors font-semibold text-sm shadow-lg shadow-primary/20 focus:outline-none focus:ring-2 focus:ring-primary/50 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">crop</span>
+                    Confirm Region
+                </button>
+</div>
+</div>
+</div>
+</body></html>

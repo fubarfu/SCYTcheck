@@ -16,9 +16,18 @@ datas += collect_data_files("paddle", include_py_files=True)
 # which requires Cython utility/include assets (e.g. Utility/CppSupport.cpp).
 datas += collect_data_files("Cython", include_py_files=True)
 datas.append((str(Path(decorator.__file__).resolve()), "."))
+frontend_dist = repo_root / "src" / "web" / "frontend" / "dist"
+if not frontend_dist.exists():
+    raise RuntimeError(
+        "Missing web frontend build: src/web/frontend/dist. "
+        "Run: cd src/web/frontend && npm run build"
+    )
+datas.append((str(frontend_dist), "src/web/frontend/dist"))
 hiddenimports = [
     "cv2",
     "tkinter",
+    "tkinter.filedialog",
+    "webbrowser",
     "decorator",
     *collect_submodules("paddleocr"),
     *collect_submodules("paddle"),
@@ -74,7 +83,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
 )
 

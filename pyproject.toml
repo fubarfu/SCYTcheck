@@ -1,7 +1,7 @@
 [project]
 name = "scytcheck"
 version = "0.1.0"
-description = "Windows desktop tool for YouTube gameplay text extraction and deduplicated player summaries"
+description = "YouTube gameplay text extraction tool with web-based UI for player summaries"
 requires-python = ">=3.11"
 dependencies = [
 	"opencv-python>=4.9.0,<5.0.0",

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SCYTcheck - Frame Thumbnail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#f9f9fe",
+                        "on-primary-fixed": "#000000",
+                        "primary": "#adc6ff",
+                        "error-container": "#871f21",
+                        "on-secondary-container": "#b7bfd5",
+                        "on-surface-variant": "#a8abb5",
+                        "error": "#fa746f",
+                        "secondary-dim": "#b1b9ce",
+                        "tertiary": "#f0dfff",
+                        "outline": "#72757f",
+                        "tertiary-container": "#e5ceff",
+                        "surface-container-highest": "#22262e",
+                        "secondary-fixed": "#dae2f9",
+                        "on-primary-container": "#ffffff",
+                        "tertiary-fixed-dim": "#d6c0f0",
+                        "background": "#0c0e12",
+                        "on-secondary-fixed-variant": "#535b6e",
+                        "secondary-fixed-dim": "#ccd4eb",
+                        "secondary": "#bec6dd",
+                        "on-secondary-fixed": "#373f51",
+                        "on-tertiary-fixed": "#413057",
+                        "on-error": "#490006",
+                        "surface-container-high": "#1c2026",
+                        "surface-bright": "#282c34",
+                        "on-secondary": "#384052",
+                        "on-primary": "#003d88",
+                        "inverse-on-surface": "#53555a",
+                        "surface-variant": "#22262e",
+                        "on-surface": "#e2e5f0",
+                        "surface-container": "#171a20",
+                        "on-primary-fixed-variant": "#001435",
+                        "primary-fixed": "#4388fd",
+                        "on-background": "#e2e5f0",
+                        "primary-fixed-dim": "#317bef",
+                        "on-tertiary-fixed-variant": "#5e4c75",
+                        "primary-container": "#0e69dc",
+                        "on-error-container": "#ff9993",
+                        "secondary-container": "#333b4d",
+                        "primary-dim": "#699cff",
+                        "surface-container-lowest": "#000000",
+                        "tertiary-fixed": "#e5ceff",
+                        "error-dim": "#c54d4a",
+                        "surface": "#0c0e12",
+                        "on-tertiary-container": "#54436b",
+                        "inverse-primary": "#005bc4",
+                        "surface-tint": "#adc6ff",
+                        "on-tertiary": "#5d4c74",
+                        "tertiary-dim": "#d6c0f0",
+                        "surface-dim": "#0c0e12",
+                        "surface-container-low": "#111318",
+                        "outline-variant": "#444851"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen relative font-body antialiased selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- Background Content (Dimmed Review View) -->
+<div class="absolute inset-0 z-0 opacity-40 pointer-events-none filter blur-sm">
+<!-- TopNavBar Component Anchor -->
+<header class="fixed top-0 w-full z-50 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800 shadow-xl font-['Plus_Jakarta_Sans'] font-medium">
+<div class="flex justify-between items-center h-16 px-8 max-w-[1920px] mx-auto">
+<div class="text-xl font-black text-blue-500 tracking-tighter">
+                    SCYTcheck
+                </div>
+<nav class="flex gap-4">
+<a class="text-zinc-400 font-medium px-2 py-4 hover:text-zinc-100 hover:bg-zinc-900/50 transition-all duration-200 active:scale-95 transition-transform" href="#">Analysis</a>
+<a class="text-blue-500 border-b-2 border-blue-500 font-bold px-2 py-4 hover:text-zinc-100 hover:bg-zinc-900/50 transition-all duration-200 active:scale-95 transition-transform" href="#">Review</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-zinc-400 hover:text-zinc-100 transition-colors">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<button class="text-zinc-400 hover:text-zinc-100 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Dummy Review Content for Background Context -->
+<main class="pt-24 px-8 max-w-[1920px] mx-auto grid grid-cols-12 gap-8">
+<div class="col-span-3 bg-surface-container rounded-xl p-4 border border-outline-variant/30">
+<div class="h-8 bg-surface-variant rounded mb-4"></div>
+<div class="space-y-2">
+<div class="h-12 bg-surface-variant rounded"></div>
+<div class="h-12 bg-surface-variant rounded"></div>
+<div class="h-12 bg-surface-variant rounded"></div>
+</div>
+</div>
+<div class="col-span-9 bg-surface-container rounded-xl p-6 border border-outline-variant/30 min-h-[600px] flex flex-col">
+<div class="h-10 w-1/3 bg-surface-variant rounded mb-6"></div>
+<div class="flex-grow grid grid-cols-3 gap-4">
+<div class="bg-surface-variant rounded-lg"></div>
+<div class="bg-surface-variant rounded-lg"></div>
+<div class="bg-surface-variant rounded-lg"></div>
+<div class="bg-surface-variant rounded-lg"></div>
+<div class="bg-surface-variant rounded-lg"></div>
+<div class="bg-surface-variant rounded-lg"></div>
+</div>
+</div>
+</main>
+</div>
+<!-- Modal Overlay Backdrop -->
+<div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6">
+<!-- Modal Dialog -->
+<div class="bg-surface-container-high w-full max-w-[800px] rounded-xl shadow-2xl border border-outline-variant/40 flex flex-col overflow-hidden max-h-[921px]">
+<!-- Modal Header -->
+<div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30 bg-surface-container-highest">
+<h2 class="text-xl font-headline font-semibold text-on-surface">Frame at 00:02:14</h2>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-1 hover:bg-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Body -->
+<div class="p-6 overflow-y-auto flex-grow flex flex-col gap-6">
+<!-- Video Frame Placeholder -->
+<div class="w-full aspect-video bg-black rounded-lg border border-outline-variant/50 relative overflow-hidden flex items-center justify-center group">
+<img alt="Video frame" class="w-full h-full object-cover opacity-80" data-alt="high quality screenshot of an esports video game match showing player names above characters in a dynamic action sequence with vibrant lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGvQWxHHhw5QG0_Eq6_vLQtSDFOLgI5L8fhRNrEXtdpiQWHW8HMkkBGgw61H_KAxN8sI_XFOdtFRrNQjDfv0Ga8USYzy9yTn68Zb62FZ-UEF7zeTiI8QDMALUSe6oBo7ae1OxICE-TjBYoT5lrOXX4pWxgDdjWra-J7TCPNg8-N7lPGxUj6FHcgxOPfaXXMr3VBd8aR5HRk1kJVDj55VGGBxMtiy3ZkDSx9ZUwTrBEWJmCoQDjUhVtCzDlgNBg1es3RjN3fkI11bs"/>
+<div class="absolute inset-0 border border-primary/20 pointer-events-none mix-blend-overlay"></div>
+<!-- OCR Bounding Box Mockup -->
+<div class="absolute top-[30%] left-[45%] border-2 border-primary/80 bg-primary/10 px-2 py-1 rounded-DEFAULT text-xs font-mono text-primary font-bold shadow-[0_0_10px_rgba(173,198,255,0.3)] pointer-events-none">
+                        PlayerAlpha
+                    </div>
+</div>
+<!-- Info Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-container rounded-lg p-5 border border-outline-variant/20">
+<!-- Detected Text -->
+<div class="md:col-span-2 flex items-center justify-between mb-2 pb-3 border-b border-outline-variant/20">
+<div>
+<span class="text-sm text-on-surface-variant font-label block mb-1">Detected text</span>
+<div class="flex items-center gap-2 group cursor-pointer">
+<span class="font-mono text-lg text-on-surface bg-surface-variant px-2 py-1 rounded">PlayerAlpha</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+</div>
+</div>
+</div>
+<!-- Metadata -->
+<div class="space-y-3">
+<div>
+<span class="text-xs text-on-surface-variant font-label block mb-0.5">Source</span>
+<span class="text-sm text-on-surface font-mono break-all text-secondary-dim">dQw4w9WgXcQ_2026-04-21.csv</span>
+</div>
+<div>
+<span class="text-xs text-on-surface-variant font-label block mb-0.5">Timestamp</span>
+<span class="text-sm text-on-surface font-mono">00:02:14</span>
+</div>
+</div>
+<!-- External Link -->
+<div class="flex flex-col justify-end">
+<div>
+<span class="text-xs text-on-surface-variant font-label block mb-0.5">YouTube link</span>
+<a class="inline-flex items-center gap-1 text-sm text-primary hover:text-primary-fixed-dim transition-colors group" href="#">
+                                Watch on YouTube 
+                                <span class="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Footer Action Row -->
+<div class="px-6 py-4 border-t border-outline-variant/30 bg-surface-container flex items-center justify-between">
+<!-- Secondary Action -->
+<button class="px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-lg transition-colors">
+                    Close
+                </button>
+<!-- Primary Actions -->
+<div class="flex items-center gap-3">
+<button class="px-6 py-2 text-sm font-medium text-error border border-error/50 hover:bg-error/10 hover:border-error rounded-lg transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">close</span>
+                        Reject
+                    </button>
+<button class="px-6 py-2 text-sm font-medium bg-[#10B981] text-white hover:bg-[#059669] rounded-lg shadow-lg shadow-[#10B981]/20 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">check</span>
+                        Confirm
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

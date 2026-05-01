@@ -203,3 +203,215 @@ class VideoAnalysis:
     def set_player_summaries(self, summaries: Iterable[PlayerSummary]) -> None:
         """Replace deduplicated summaries with latest aggregation output."""
         self.player_summaries = list(summaries)
+
+
+@dataclass
+class PersistedAnalysisContext:
+    """Restorable analysis context snapshot for history reopen."""
+
+    context_id: str
+    history_id: str
+    scan_region: dict[str, int]
+    output_folder: str
+    context_patterns: list[dict[str, object]]
+    analysis_settings: dict[str, object]
+    saved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class AnalysisRunRecord:
+    """One completed analysis run associated with a history entry."""
+
+    run_id: str
+    history_id: str
+    completed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    result_csv_path: str = ""
+    sidecar_review_path: str | None = None
+    frame_count_processed: int | None = None
+    settings_snapshot_id: str = ""
+
+
+@dataclass
+class VideoHistoryEntry:
+    """Persistent canonical entry representing one analyzed video identity."""
+
+    history_id: str
+    canonical_source: str
+    source_type: str
+    display_name: str
+    output_folder: str
+    duration_seconds: int | None = None
+    merge_key: str | None = None
+    potential_duplicate: bool = False
+    last_result_csv: str | None = None
+    run_count: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    deleted: bool = False
+    runs: list[AnalysisRunRecord] = field(default_factory=list)
+    contexts: list[PersistedAnalysisContext] = field(default_factory=list)
+
+
+@dataclass
+class DerivedReviewResultSet:
+    """Derived review artifacts discovered from persisted output folder."""
+
+    history_id: str
+    resolved_csv_paths: list[str]
+    resolution_status: str
+    resolution_messages: list[str]
+    resolved_sidecar_paths: list[str] = field(default_factory=list)
+    primary_csv_path: str | None = None
+    resolved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass
+class ReviewGroupSessionState:
+    """Persisted review-group controls and resolution state per group."""
+
+    accepted_names: dict[str, str] = field(default_factory=dict)
+    rejected_candidates: dict[str, list[str]] = field(default_factory=dict)
+    collapsed_groups: dict[str, bool] = field(default_factory=dict)
+    resolution_status: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class ReviewGroupCandidate:
+    """Typed view of one candidate in a review group payload."""
+
+    candidate_id: str
+    extracted_name: str
+    corrected_text: str = ""
+    status: str = "pending"
+
+    @property
+    def display_name(self) -> str:
+        text = (self.corrected_text or "").strip()
+        if text:
+            return text
+        return self.extracted_name.strip()
+
+
+@dataclass
+class ReviewGroupPayload:
+    """Typed representation of one API review group."""
+
+    group_id: str
+    accepted_name: str | None = None
+    rejected_candidate_ids: list[str] = field(default_factory=list)
+    is_collapsed: bool = False
+    resolution_status: str = "UNRESOLVED"
+    candidates: list[ReviewGroupCandidate] = field(default_factory=list)
+
+    @property
+    def active_spellings(self) -> set[str]:
+        rejected = set(self.rejected_candidate_ids)
+        values = {
+            candidate.display_name
+            for candidate in self.candidates
+            if candidate.candidate_id not in rejected and candidate.display_name
+        }
+        return values
+
+
+@dataclass
+class ReviewStateSnapshot:
+    """Restorable full review state snapshot persisted in append-only history."""
+
+    groups: list[dict[str, object]] = field(default_factory=list)
+    resolved_count: int = 0
+    unresolved_count: int = 0
+    group_count: int = 0
+    reviewed_names: list[str] = field(default_factory=list)
+
+
+@dataclass
+class EditHistoryEntry:
+    """One append-only history entry for a video review workspace."""
+
+    entry_id: str
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    trigger_type: str = "mutation"
+    summary: dict[str, int] = field(default_factory=dict)
+    snapshot: ReviewStateSnapshot = field(default_factory=ReviewStateSnapshot)
+    compressed: bool = False
+
+
+@dataclass
+class WorkspaceLock:
+    """Single writer lock state for one workspace video_id."""
+
+    lock_id: str
+    video_id: str
+    owner_session_id: str
+    acquired_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    expires_at: datetime | None = None
+    mode: str = "writer"
+
+
+@dataclass
+class Candidate:
+    """Merged review candidate scoped to a video project."""
+
+    id: str
+    spelling: str
+    discovered_in_run: str
+    marked_new: bool = False
+    decision: str = "unreviewed"
+
+
+@dataclass
+class CandidateGroup:
+    """Grouping of related candidates in review context."""
+
+    id: str
+    name: str = ""
+    candidate_ids: list[str] = field(default_factory=list)
+    decision: str = "unreviewed"
+
+
+@dataclass
+class ReviewContext:
+    """Combined review payload for one video across all runs."""
+
+    video_id: str
+    video_url: str = ""
+    project_location: str = ""
+    run_count: int = 0
+    latest_run_id: str = "0"
+    merged_timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    candidates: list[Candidate] = field(default_factory=list)
+    groups: list[CandidateGroup] = field(default_factory=list)
+
+
+@dataclass
+class AnalysisRun:
+    """Analysis run metadata used by video-primary review workflows."""
+
+    run_id: str
+    run_timestamp: datetime | str = field(default_factory=lambda: datetime.now(UTC))
+    candidate_count: int = 0
+    output_filepath: str = ""
+    run_order: int = 0
+
+
+@dataclass
+class VideoProject:
+    """Primary persistent unit for all runs and review state of one video."""
+
+    project_id: str
+    video_url: str
+    project_location: str
+    created_date: datetime | str = field(default_factory=lambda: datetime.now(UTC))
+    runs: list[AnalysisRun] = field(default_factory=list)
+    merged_review_state: ReviewContext | None = None
+
+
+@dataclass
+class ProjectLocationSetting:
+    """App-level project location configuration."""
+
+    project_location_path: str
+    is_default: bool = True
+    validation_status: str = "unknown"
+    last_validated: datetime | None = None

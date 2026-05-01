@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import logging
 import re
 import ctypes
 import os
 from importlib import import_module
 from pathlib import Path
-from tkinter import messagebox
 
 import cv2
 import numpy as np
@@ -164,11 +164,7 @@ class OCRService:
         return entries
 
     def _notify_ocr_initialization_failure(self, message: str) -> None:
-        try:
-            messagebox.showerror("OCR Initialization Error", message)
-        except Exception:
-            # UI may not be initialized in tests or CLI execution paths.
-            return
+        logging.getLogger(__name__).error("OCR Initialization Error: %s", message)
 
     @staticmethod
     def _to_windows_short_path(path_value: str | None) -> str | None:

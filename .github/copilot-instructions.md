@@ -1,6 +1,6 @@
 ﻿# SCYTcheck Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-18
+Auto-generated from all feature plans. Last updated: 2026-04-28
 
 ## Active Technologies
 - Python 3.11 + opencv-python (video processing), pytesseract (OCR), yt-dlp (YouTube streaming), tkinter (UI) (001-youtube-text-analyzer)
@@ -30,8 +30,18 @@ Auto-generated from all feature plans. Last updated: 2026-04-18
 - N/A — no persistence changes (008-improve-analysis-speed)
 - Python 3.11 + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`, `tkinter` (stdlib) (feature/008-improve-analysis-speed)
 - CSV outputs + local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, fallback local) + optional sidecar CSV (feature/008-improve-analysis-speed)
+- Python 3.11 (backend), JavaScript/HTML/CSS (frontend) + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`, local HTTP API layer under `src/web/api`, browser UI assets under `src/web/frontend` (feature/007-web-based-player-ui)
+- CSV outputs, sidecar JSON session state (`<result>.review.json`), thumbnail/frame image files in sibling folder, existing `scytcheck_settings.json` for settings/theme (feature/007-web-based-player-ui)
+- Python 3.11 (backend), TypeScript/React (Vite) frontend + Existing `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`; frontend React stack already in `src/web/frontend`; no new third-party dependency required for planning (009-prepare-spec-branch)
+- CSV result files, sidecar review JSON (`<result>.review.json`), persistent app settings in `%APPDATA%/SCYTcheck/scytcheck_settings.json` (with local fallback), new persistent video-history index file under app data (009-prepare-spec-branch)
+- Python 3.11 (backend), TypeScript/React (Vite) frontend + Existing `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`; existing web stack in `src/web/frontend` (012-from-3c6f0ff)
+- CSV outputs + per-result sidecar JSON + per-video append-only history container in selected output location (012-from-3c6f0ff)
+- Python 3.11 (backend), TypeScript/React (Vite, frontend) + Backend: `opencv-python`, `paddleocr`, `yt-dlp`, `thefuzz`, `numpy`; Frontend: React, Vite, Material Symbols, TypeScript (013-create-spec-branch)
+- CSV outputs + JSON sidecar per video; local JSON settings (`%APPDATA%/SCYTcheck/scytcheck_settings.json`, fallback to local) (013-create-spec-branch)
 
 - Python 3.11 + opencv-python (video processing), pytesseract (OCR), tkinter (UI) (001-youtube-text-analyzer)
+- Python 3.11 (backend), TypeScript/React (Vite) frontend + Existing `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`; frontend React stack already in `src/web/frontend`; Google Stitch as UI design authority (010-collapse-player-groups)
+- CSV outputs + sidecar JSON (`<result>.review.json`) for group consensus state, local file system persistence, zero new dependencies (010-collapse-player-groups)
 
 ## Project Structure
 
@@ -49,9 +59,9 @@ cd src; pytest; ruff check .
 Python 3.11: Follow standard conventions
 
 ## Recent Changes
-- feature/008-improve-analysis-speed: Added Python 3.11 + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`, `tkinter` (stdlib)
-- 008-improve-analysis-speed: Added Python 3.11 + `opencv-python` (cv2), `numpy`, `re` (stdlib), `pytest` (tests)
-- 007-improve-analysis-robustness: Added Python 3.11 + `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `tkinter` (stdlib)
+- 013-create-spec-branch: Added Python 3.11 (backend), TypeScript/React (Vite, frontend) + Backend: `opencv-python`, `paddleocr`, `yt-dlp`, `thefuzz`, `numpy`; Frontend: React, Vite, Material Symbols, TypeScript
+- 012-from-3c6f0ff: Added Python 3.11 (backend), TypeScript/React (Vite) frontend + Existing `opencv-python`, `numpy`, `paddleocr`/`paddlepaddle`, `thefuzz`, `yt-dlp`; existing web stack in `src/web/frontend`
+- 010-collapse-player-groups: Added Python 3.11 (backend), TypeScript/React (Vite) frontend; Google Stitch UI design authority; sidecar JSON consensus state (`<result>.review.json`); zero new dependencies (Phase 0-1 complete: research, data model, API contracts, UI screens)
 
 
 <!-- MANUAL ADDITIONS START -->

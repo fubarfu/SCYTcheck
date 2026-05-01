@@ -31,13 +31,28 @@ Settings are saved between runs in `%APPDATA%/SCYTcheck/scytcheck_settings.json`
 ## First Run Workflow
 
 1. Enter a valid YouTube URL.
-2. Choose an output folder. The filename is generated automatically.
+2. Choose an output folder.
 3. Optional: open **Advanced Settings** to adjust video quality, OCR confidence, context patterns, event-gap threshold, and detailed logging.
 4. Click **Select Regions + Analyze**.
 5. In the region selector, choose one or more regions and confirm.
-6. Wait for analysis to complete.
-7. Open the exported summary CSV.
-8. If logging is enabled, review the matching `_log.csv` sidecar file.
+6. Watch progress messaging that tells you whether SCYTcheck is creating a new project or merging into an existing video project.
+7. When analysis completes, the app automatically opens Review for that video.
+8. In Review, newly discovered spellings are highlighted as new until you confirm/reject/edit/clear them.
+
+## Video-Primary Workflow
+
+SCYTcheck now treats a video as the primary review unit instead of individual CSV files.
+
+- Analysis automatically resolves whether a run creates a new project or merges with prior runs for the same video.
+- Review auto-loads merged context by `video_id` and preserves prior human decisions.
+- Videos view discovers projects directly from the configured project location (filesystem source of truth).
+- Settings view (gear icon) controls project location and validates writability.
+
+## User Story Summary
+
+- US1: Auto-load merged review context after analysis without manual file picking.
+- US2: Emphasize newly found candidates and clear the marker on user action.
+- US3: Move project controls to Videos and Settings for video-centric navigation.
 
 ## Robustness and Speed Controls
 
@@ -107,6 +122,11 @@ YouTube URL rejected or inaccessible:
 ## For Developers (Source Run)
 
 Use this path only if you are developing SCYTcheck.
+
+For web UI features, Google Stitch is the authoritative source for UI design decisions.
+Feature specs define behavior and acceptance criteria, but developers should consult the
+active Stitch project/screens/design system whenever making UI decisions and document any
+necessary implementation deviation.
 
 Requirements:
 - Python 3.11+

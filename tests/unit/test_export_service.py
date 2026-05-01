@@ -157,7 +157,7 @@ def test_sidecar_log_writer_enter_creates_file_with_header(tmp_path: Path) -> No
     lines = content.strip().split("\n")
     assert len(lines) == 1
     assert "TimestampSec" in lines[0]
-    assert "RawString" in lines[0]
+    assert "TestedStringNormalized" in lines[0]
 
     writer.__exit__(None, None, None)
 

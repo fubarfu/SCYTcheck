@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SCYTcheck - Review State</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-fixed": "#373f51",
+            "on-tertiary-fixed-variant": "#5e4c75",
+            "tertiary": "#f0dfff",
+            "inverse-on-surface": "#53555a",
+            "tertiary-fixed": "#e5ceff",
+            "secondary": "#bec6dd",
+            "background": "#0c0e12",
+            "surface-bright": "#282c34",
+            "on-primary-fixed-variant": "#001435",
+            "primary": "#adc6ff",
+            "on-secondary-fixed-variant": "#535b6e",
+            "on-background": "#e2e5f0",
+            "surface-container-highest": "#22262e",
+            "on-tertiary": "#5d4c74",
+            "tertiary-dim": "#d6c0f0",
+            "on-secondary": "#384052",
+            "surface-tint": "#adc6ff",
+            "outline-variant": "#444851",
+            "tertiary-container": "#e5ceff",
+            "primary-fixed": "#4388fd",
+            "on-surface-variant": "#a8abb5",
+            "secondary-container": "#333b4d",
+            "secondary-dim": "#b1b9ce",
+            "surface-container-lowest": "#000000",
+            "on-primary": "#003d88",
+            "error-container": "#871f21",
+            "surface-container": "#171a20",
+            "surface-container-low": "#111318",
+            "inverse-primary": "#005bc4",
+            "error-dim": "#c54d4a",
+            "surface-dim": "#0c0e12",
+            "outline": "#72757f",
+            "error": "#fa746f",
+            "primary-dim": "#699cff",
+            "primary-container": "#0e69dc",
+            "on-primary-fixed": "#000000",
+            "on-primary-container": "#ffffff",
+            "secondary-fixed": "#dae2f9",
+            "on-secondary-container": "#b7bfd5",
+            "secondary-fixed-dim": "#ccd4eb",
+            "surface-container-high": "#1c2026",
+            "primary-fixed-dim": "#317bef",
+            "surface-variant": "#22262e",
+            "on-tertiary-container": "#54436b",
+            "inverse-surface": "#f9f9fe",
+            "on-error": "#490006",
+            "on-surface": "#e2e5f0",
+            "on-tertiary-fixed": "#413057",
+            "tertiary-fixed-dim": "#d6c0f0",
+            "on-error-container": "#ff9993",
+            "surface": "#0c0e12"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans"],
+            "display": ["Plus Jakarta Sans"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #0c0e12;
+      color: #e2e5f0;
+      font-family: 'Inter', sans-serif;
+    }
+    .headline-font {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar Section -->
+<header class="flex justify-between items-center h-14 px-6 w-full sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800 font-['Plus_Jakarta_Sans'] antialiased">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-white">SCYTcheck</span>
+<nav class="flex h-14">
+<a class="flex items-center px-4 text-zinc-400 hover:text-zinc-200 transition-colors" href="#">Analysis</a>
+<a class="flex items-center px-4 text-blue-500 border-b-2 border-blue-500 font-semibold" href="#">Review</a>
+</nav>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-zinc-400 hover:bg-zinc-900/50 rounded-md transition-transform active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+<button class="p-2 text-zinc-400 hover:bg-zinc-900/50 rounded-md transition-transform active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
+</button>
+<button class="p-2 text-zinc-400 hover:bg-zinc-900/50 rounded-md transition-transform active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="ml-2 w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="User avatar" data-alt="minimalist professional user avatar with abstract geometric patterns in shades of blue and charcoal" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_1oZXZ8gXP2zg7k2UYF9HXwvovJ3KkqEQL0XPTYN7m5QuMd2yDsWo-PN90lWQzXUxYdvX7ejRGB4VtLk53D-hP9L-1yWLwpJnATvev4MgKjX-HsrK8noH0W-158hXoJyu1b2xTagDsMfmuzy0gcxtultXspttMSBQvxEYHjYWG080NudIpOq8RCyzK4jyWgDPx9e937RNDve64RegQyjkWlzAHSXWdu6tFTutqTAWDw5GYwSa5UZE5RmrmzsREdqc2XLIUvVu1yo"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 border-r border-zinc-800 flex flex-col bg-surface-container-low">
+<div class="p-4 space-y-1">
+<div class="text-[10px] font-bold text-outline tracking-widest uppercase mb-4 px-3">Filter Views</div>
+<button class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium bg-secondary-container text-primary rounded-lg">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+          All Items
+          <span class="ml-auto text-[10px] bg-surface-container-highest px-1.5 rounded">124</span>
+</button>
+<button class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-on-surface-variant hover:bg-zinc-900/50 rounded-lg">
+<span class="material-symbols-outlined text-[20px]" data-icon="check_circle">check_circle</span>
+          Resolved
+          <span class="ml-auto text-[10px] bg-surface-container-highest px-1.5 rounded text-zinc-500">82</span>
+</button>
+<button class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-on-surface-variant hover:bg-zinc-900/50 rounded-lg">
+<span class="material-symbols-outlined text-[20px]" data-icon="error">error</span>
+          Unresolved
+          <span class="ml-auto text-[10px] bg-surface-container-highest px-1.5 rounded text-zinc-500">42</span>
+</button>
+</div>
+<div class="mt-auto p-4 border-t border-zinc-800">
+<div class="bg-surface-container p-3 rounded-xl border border-zinc-800/50">
+<div class="text-xs font-semibold mb-2">Analysis Health</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary w-[72%] h-full"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] text-on-surface-variant">
+<span>72% Confidence</span>
+<span>Batch #402</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col bg-surface overflow-hidden">
+<!-- Non-blocking Notification Banner -->
+<div class="m-4 p-3 bg-primary-container text-on-primary-container rounded-xl flex items-center justify-between shadow-lg shadow-black/20">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="restore">restore</span>
+<span class="text-sm font-medium">Restored snapshot from 2026-04-27 14:35</span>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 text-xs font-bold bg-white text-primary-container rounded hover:bg-zinc-100 transition-colors">Apply</button>
+<button class="px-3 py-1.5 text-xs font-bold bg-primary-container border border-white/20 rounded hover:bg-white/10 transition-colors">Dismiss</button>
+</div>
+</div>
+<!-- Candidate Groups List -->
+<div class="flex-1 overflow-y-auto px-6 pb-6">
+<div class="max-w-4xl mx-auto space-y-4">
+<!-- Resolved Group -->
+<div class="bg-surface-container border border-zinc-800 rounded-xl overflow-hidden group">
+<div class="p-4 flex items-center gap-4 cursor-pointer hover:bg-zinc-900/30 transition-colors">
+<span class="material-symbols-outlined text-zinc-500" data-icon="expand_more">expand_more</span>
+<div class="flex-1">
+<div class="flex items-center gap-2">
+<h3 class="font-bold headline-font">Candidate Group #042</h3>
+<span class="px-2 py-0.5 bg-zinc-900 text-zinc-400 text-[10px] font-bold rounded border border-zinc-800">4 ENTITIES</span>
+</div>
+<p class="text-xs text-on-surface-variant">OCR Confidence: 98.2%</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 bg-green-900/30 text-green-400 text-[10px] font-extrabold uppercase rounded tracking-wider">Resolved</span>
+</div>
+</div>
+</div>
+<!-- Expanded Group: John Smith -->
+<div class="bg-surface-container-high border-2 border-primary-container/30 rounded-xl overflow-hidden shadow-2xl shadow-primary/5">
+<div class="p-4 flex items-center gap-4 border-b border-zinc-800">
+<span class="material-symbols-outlined text-primary" data-icon="expand_less">expand_less</span>
+<div class="flex-1">
+<div class="flex items-center gap-2">
+<h3 class="font-bold headline-font">John Smith</h3>
+<div class="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded border border-primary/20">
+<span class="material-symbols-outlined text-[12px]" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+                    CONSENSUS
+                  </div>
+</div>
+<p class="text-xs text-on-surface-variant">Primary candidate from snapshot match</p>
+</div>
+<button class="p-2 rounded-lg hover:bg-zinc-800 text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="p-6 grid grid-cols-2 gap-6">
+<div class="space-y-4">
+<div class="text-[10px] font-bold text-zinc-500 tracking-widest uppercase">Evidence Frames</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="aspect-video bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
+<img alt="Player name detection" class="w-full h-full object-cover opacity-80" data-alt="close-up of a soccer player jersey nameplate in motion with high motion blur and cinematic dark lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8h0Fkr7EV7woWU1a0dHq-O2g_C30BckcvQufR8zNjBRyRVBus9usKgHCoFOF4-pm7zm031-Zz60045ckA27eekWBxyroeAZsw5iL7CfUfnyM8JWixFxGQj5IqRGXBFrtYrSu2e14ewf5scZV8GnQjktu0pSWxn2uu2AHSyocXPlja7a9wPLxWqc-3Vy1iIe_t7MgRVj7L-N9RyvgjeGdgab8ZXzfo17A_DxdgChBJxiTx8RyZg_Mf8Pg4NrXjWYFAST41o0IGUqc"/>
+</div>
+<div class="aspect-video bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
+<img alt="Player facial recognition" class="w-full h-full object-cover opacity-80" data-alt="grainy black and white stadium surveillance footage crop of a players profile face under intense stadium lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-TsJH7vGgbD5ZOD6WL7t4koDqhnYYfXP9voydhP2nRn1HZdka2P0S2lIERQtr7nO2JmZ9EpcuTnC4V34im2JxUcOw6VdYjkHKVWcjdt1cwDE6hVPiR5eUJUNIsYiH-bsQseMCEfzJU6EuY66AcT5AyNbTAHvikYi-b_GUJxfqI8nC5o9WLw5eAyp727_4ok9ZxEvXJJ96B5ExHEhP6CQdgnugQPrLbdKYoB8U8fmpVYOJwZTMOPkGGsLNnJe1E3yGleudp1rfZ2U"/>
+</div>
+<div class="aspect-video bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 flex items-center justify-center text-zinc-700">
+<span class="material-symbols-outlined" data-icon="add_a_photo">add_a_photo</span>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="text-[10px] font-bold text-zinc-500 tracking-widest uppercase">Verification Stats</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs py-2 border-b border-zinc-800/50">
+<span class="text-on-surface-variant">OCR Extraction</span>
+<span class="font-mono text-primary-dim">J. SMITH (94%)</span>
+</div>
+<div class="flex justify-between text-xs py-2 border-b border-zinc-800/50">
+<span class="text-on-surface-variant">Roster Cross-check</span>
+<span class="text-green-400">EXACT MATCH</span>
+</div>
+<div class="flex justify-between text-xs py-2">
+<span class="text-on-surface-variant">Last Modified</span>
+<span class="text-on-surface">2026-04-27 14:35</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Unresolved Group -->
+<div class="bg-surface-container border border-error/20 rounded-xl overflow-hidden">
+<div class="p-4 flex items-center gap-4 cursor-pointer hover:bg-zinc-900/30 transition-colors">
+<span class="material-symbols-outlined text-zinc-500" data-icon="expand_more">expand_more</span>
+<div class="flex-1">
+<div class="flex items-center gap-2">
+<h3 class="font-bold headline-font">Unknown Candidate #118</h3>
+<span class="px-2 py-0.5 bg-zinc-900 text-zinc-400 text-[10px] font-bold rounded border border-zinc-800">1 ENTITY</span>
+</div>
+<p class="text-xs text-on-surface-variant">OCR Confidence: 12.5% - Manual review required</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 bg-error/10 text-error text-[10px] font-extrabold uppercase rounded tracking-wider">Unresolved</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Panel: Edit History -->
+<footer class="h-64 border-t border-zinc-800 bg-surface-container-low flex flex-col">
+<div class="px-6 py-3 border-b border-zinc-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="history">history</span>
+<span class="text-xs font-bold headline-font tracking-tight">Edit History</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-2 py-1 bg-zinc-900 rounded-md">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="text-[10px] text-zinc-400 font-medium">Session Live</span>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto">
+<div class="relative px-6 py-4">
+<!-- Timeline Line -->
+<div class="absolute left-[33px] top-0 bottom-0 w-[1px] bg-zinc-800"></div>
+<div class="space-y-4">
+<!-- History Row 1 (Newer) -->
+<div class="relative flex items-start gap-6 group cursor-pointer">
+<div class="z-10 mt-1.5 w-4 h-4 rounded-full border-4 border-surface-container-low bg-zinc-700"></div>
+<div class="flex-1 p-3 rounded-lg hover:bg-zinc-900/40 transition-colors">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-on-surface">Auto-Analysis Updated</span>
+<span class="text-[10px] font-mono text-zinc-500">2026-04-27 16:12</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Batch processing completed for 12 new entities.</p>
+</div>
+</div>
+<!-- History Row 2 (Selected Snapshot) -->
+<div class="relative flex items-start gap-6 group cursor-pointer">
+<div class="z-10 mt-1.5 w-4 h-4 rounded-full border-4 border-surface-container-low bg-primary"></div>
+<div class="flex-1 p-3 rounded-lg bg-primary-container/10 border border-primary-container/30 ring-1 ring-primary-container/50">
+<div class="flex justify-between items-center mb-1">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-primary">Snapshot Created</span>
+<span class="px-1.5 py-0.5 bg-primary/20 text-primary text-[8px] font-black rounded uppercase">Active View</span>
+</div>
+<span class="text-[10px] font-mono text-primary-dim">2026-04-27 14:35</span>
+</div>
+<p class="text-[11px] text-primary-dim/80">User 'Admin_User' manually verified 12 resolved entities.</p>
+</div>
+</div>
+<!-- History Row 3 (Older) -->
+<div class="relative flex items-start gap-6 group cursor-pointer">
+<div class="z-10 mt-1.5 w-4 h-4 rounded-full border-4 border-surface-container-low bg-zinc-700"></div>
+<div class="flex-1 p-3 rounded-lg hover:bg-zinc-900/40 transition-colors">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-on-surface">Manual Override</span>
+<span class="text-[10px] font-mono text-zinc-500">2026-04-27 13:02</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Field name corrected for Group #042: 'J. Smith'</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</footer>
+</main>
+</div>
+</body></html>

@@ -5,6 +5,10 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
+> For web UI features, the feature specification defines required behavior and user outcomes.
+> Google Stitch remains authoritative for UI design decisions unless the spec explicitly
+> overrides a design point.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
