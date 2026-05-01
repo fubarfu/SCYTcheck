@@ -226,14 +226,6 @@ function CandidateRowComponent({
     });
   }, [onAction, candidate.candidate_id, isRejected, groupId]);
 
-  const handleClearNew = useCallback(() => {
-    onAction({
-      action_type: "clear_new",
-      target_ids: [candidate.candidate_id],
-      payload: groupId ? { group_id: groupId } : undefined,
-    });
-  }, [onAction, candidate.candidate_id, groupId]);
-
   const handleOpenThumbnail = useCallback(() => {
     onOpenThumbnail(candidate.candidate_id);
   }, [onOpenThumbnail, candidate.candidate_id]);
@@ -350,17 +342,6 @@ function CandidateRowComponent({
             </button>
           </div>
           <div className="candidate-secondary-actions" role="group" aria-label="Candidate tools">
-            {candidate.marked_new && (
-              <button
-                type="button"
-                className="ghost-action icon-tool-button"
-                aria-label="Clear new marker"
-                title="Clear new marker"
-                onClick={handleClearNew}
-              >
-                <span className="material-symbols-outlined" aria-hidden="true">new_releases</span>
-              </button>
-            )}
             <button
               type="button"
               className="ghost-action icon-tool-button"

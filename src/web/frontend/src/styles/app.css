@@ -354,6 +354,23 @@ button:disabled {
   gap: 8px;
 }
 
+.history-entry-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.history-entry-grid > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-label {
+  color: var(--muted);
+}
+
 .history-badge {
   border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--border) 30%);
   border-radius: var(--radius-pill);
@@ -2000,6 +2017,15 @@ select,
   object-fit: contain;
   border-radius: 8px;
   border: 1px solid var(--border);
+}
+
+.thumb-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  color: var(--muted);
+  font-size: var(--text-sm);
 }
 
 .chip {

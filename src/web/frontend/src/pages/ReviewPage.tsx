@@ -870,11 +870,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
   return (
     <section className="page-panel">
       <div className="page-heading-row">
-        <p className="eyebrow">Review</p>
         <h2>Review detected names</h2>
-        <p className="page-subtitle">
-          Review the merged video context, filter what matters, then confirm or reject candidates without the extra noise.
-        </p>
       </div>
 
       {loadingError && <SessionLoadErrorState message={loadingError} onRetry={() => setLoadingError(null)} />}
@@ -989,7 +985,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
         <div className="review-workspace">
           <aside className="review-group-rail" aria-label="Candidate groups">
             <div className="group-rail-header">
-              <span className="group-rail-header-title">Groups</span>
+              <span className="group-rail-header-title">Name groups</span>
               <span className="group-rail-header-count">{visibleGroups.length}</span>
             </div>
             <div

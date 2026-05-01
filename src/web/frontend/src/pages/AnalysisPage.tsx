@@ -802,7 +802,7 @@ export function AnalysisPage({ reopenPayload = null, activeReviewVideoId = "" }:
                   disabled={!sourceValue.trim() || !preview || scanRegions.length === 0}
                   onClick={() => { void handleStart(); }}
                 >
-                  Select regions + analyze
+                  Run analysis
                 </button>
                 <p className="analysis-start-note">Review opens automatically after project merge completes.</p>
               </div>
