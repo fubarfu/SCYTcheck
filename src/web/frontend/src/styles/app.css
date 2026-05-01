@@ -2042,6 +2042,7 @@ select,
   display: grid;
   place-items: center;
   padding: 16px;
+  z-index: 5000;
 }
 
 .modal-panel {
@@ -2052,10 +2053,28 @@ select,
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
+  position: relative;
+  z-index: 5001;
 }
 
 .restore-confirmation-modal {
   width: min(520px, 92vw);
+}
+
+.export-names-modal {
+  width: min(560px, 92vw);
+  display: grid;
+  gap: 10px;
+}
+
+.export-names-modal h3 {
+  margin: 0;
+}
+
+.export-names-modal-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
 }
 
 .thumbnail-image {

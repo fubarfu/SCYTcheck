@@ -115,6 +115,48 @@ function getVideoIdFromUrl(): string | null {
   return reviewMatch ? decodeURIComponent(reviewMatch[1]) : null;
 }
 
+function joinPath(baseDir: string, filename: string): string {
+  const normalized = baseDir.trim();
+  if (!normalized) {
+    return filename;
+  }
+  const separator = normalized.includes("\\") ? "\\" : "/";
+  const trimmedBase = normalized.replace(/[\\/]+$/, "");
+  return `${trimmedBase}${separator}${filename}`;
+}
+
+function buildDefaultGroupNamesExportPath(projectLocation: string | null, csvPath: string): string {
+  const projectDir = (projectLocation ?? "").trim();
+  if (projectDir) {
+    return joinPath(projectDir, "group-names.csv");
+  }
+
+  const source = csvPath.trim();
+  const isHttpSource = /^https?:\/\//i.test(source);
+  if (!source || isHttpSource) {
+    return "group-names.csv";
+  }
+
+  const normalized = source.replace(/\\/g, "/");
+  const lastSlash = normalized.lastIndexOf("/");
+  if (lastSlash <= 0) {
+    return source.toLowerCase().endsWith(".csv")
+      ? source.replace(/\.csv$/i, ".group-names.csv")
+      : `${source}.group-names.csv`;
+  }
+
+  const directory = source.slice(0, lastSlash);
+  return joinPath(directory, "group-names.csv");
+}
+
+function buildExportPathStorageKey(projectLocation: string | null): string | null {
+  const project = (projectLocation ?? "").trim();
+  if (!project) {
+    return null;
+  }
+  return `scyt:export-names-path:${project.toLowerCase()}`;
+}
+
 export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeReviewVideoId = null }: ReviewPageProps) {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<ReviewSessionPayload | null>(null);
@@ -125,6 +167,9 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
   const [hasPendingGroupingSettings, setHasPendingGroupingSettings] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [showRecalculateConfirm, setShowRecalculateConfirm] = useState(false);
+  const [showExportNamesModal, setShowExportNamesModal] = useState(false);
+  const [exportNamesPath, setExportNamesPath] = useState("");
+  const [isExportingNames, setIsExportingNames] = useState(false);
   const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
   const [groupValidationFeedback, setGroupValidationFeedback] = useState<Record<string, GroupValidationFeedbackState>>({});
   const [newGroupDropActive, setNewGroupDropActive] = useState(false);
@@ -893,18 +938,129 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
     }
   };
 
-  const exportSession = async () => {
-    if (!selectedSessionId) return;
-    setExportMessage(null);
-    const resp = await fetch(`/api/review/sessions/${selectedSessionId}/export`, { method: "POST" });
-    if (!resp.ok) {
-      setLoadingError("Export failed");
+  const openExportNamesModal = () => {
+    if (!selectedSessionId || !selectedSession) {
       return;
     }
-    const body = await resp.json() as { deduplicated_names_csv_path: string; occurrences_csv_path: string };
-    setExportMessage(
-      `Exported deduplicated names to ${body.deduplicated_names_csv_path} and occurrences to ${body.occurrences_csv_path}`,
+    setLoadingError(null);
+    setExportMessage(null);
+
+    const persistedPath = (() => {
+      const storageKey = buildExportPathStorageKey(projectLocation);
+      if (!storageKey || typeof window === "undefined") {
+        return "";
+      }
+      try {
+        return window.localStorage.getItem(storageKey) ?? "";
+      } catch {
+        return "";
+      }
+    })();
+
+    setExportNamesPath(
+      persistedPath.trim() || buildDefaultGroupNamesExportPath(projectLocation, selectedSession.csv_path ?? ""),
     );
+    setShowExportNamesModal(true);
+  };
+
+  const browseExportNamesPath = async () => {
+    const current = exportNamesPath.trim();
+    const normalized = current.replace(/\\/g, "/");
+    const lastSlash = normalized.lastIndexOf("/");
+    const initialDir = lastSlash > 0 ? normalized.slice(0, lastSlash) : "";
+    const defaultName = (lastSlash >= 0 ? normalized.slice(lastSlash + 1) : normalized) || "group-names.csv";
+    const query = new URLSearchParams({
+      initial_dir: initialDir,
+      default_name: defaultName,
+    });
+    const resp = await fetch(`/api/fs/pick-save-file?${query.toString()}`);
+    if (resp.ok) {
+      const body = await resp.json() as { path?: string };
+      if (body.path) {
+        setLoadingError(null);
+        setExportNamesPath(body.path);
+        const storageKey = buildExportPathStorageKey(projectLocation);
+        if (storageKey && typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(storageKey, body.path);
+          } catch {
+            // Ignore storage failures and continue with in-memory state.
+          }
+        }
+        return;
+      }
+    }
+
+    const folderQuery = new URLSearchParams({ initial_dir: initialDir });
+    const folderResp = await fetch(`/api/fs/pick-folder?${folderQuery.toString()}`);
+    if (folderResp.status === 204) {
+      return;
+    }
+    if (!folderResp.ok) {
+      setLoadingError("Unable to open file selection window.");
+      return;
+    }
+    const folderBody = await folderResp.json() as { path?: string };
+    if (folderBody.path) {
+      setLoadingError(null);
+      const nextPath = joinPath(folderBody.path, defaultName);
+      setExportNamesPath(nextPath);
+      const storageKey = buildExportPathStorageKey(projectLocation);
+      if (storageKey && typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(storageKey, nextPath);
+        } catch {
+          // Ignore storage failures and continue with in-memory state.
+        }
+      }
+      return;
+    }
+
+    setLoadingError("Unable to open file selection window.");
+  };
+
+  const exportNames = async () => {
+    if (!selectedSessionId) {
+      return;
+    }
+    const csvPath = exportNamesPath.trim();
+    if (!csvPath) {
+      setLoadingError("Please choose a CSV file path for export.");
+      return;
+    }
+
+    setIsExportingNames(true);
+    setLoadingError(null);
+    setExportMessage(null);
+    try {
+      const resp = await fetch(`/api/review/sessions/${selectedSessionId}/export-names`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          csv_path: csvPath,
+        }),
+      });
+      if (!resp.ok) {
+        const errorBody = await resp.json().catch(() => ({ message: "Export failed" })) as { message?: string };
+        setLoadingError(errorBody.message ?? "Export failed");
+        return;
+      }
+      const body = await resp.json() as { csv_path: string; exported_count: number };
+      setExportMessage(
+        `Exported ${body.exported_count} resolved group name${body.exported_count === 1 ? "" : "s"} to ${body.csv_path}`,
+      );
+      const storageKey = buildExportPathStorageKey(projectLocation);
+      if (storageKey && typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(storageKey, csvPath);
+        } catch {
+          // Ignore storage failures and continue with export success feedback.
+        }
+      }
+      setShowExportNamesModal(false);
+    } finally {
+      setIsExportingNames(false);
+    }
   };
 
   const handleDropCandidateIntoNewGroup = (rawPayload: string) => {
@@ -953,6 +1109,49 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
       {hasPendingGroupingSettings && (
         <div className="export-banner">
           Grouping settings changed. Click Recalculate in Grouping settings to apply them to existing groups.
+        </div>
+      )}
+
+      {showExportNamesModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Export names">
+          <div className="modal-panel export-names-modal">
+            <h3>Export names</h3>
+            <p className="export-names-modal-hint">
+              Choose a CSV file destination for resolved group names.
+            </p>
+            <label>
+              Export file
+              <div className="review-load-row">
+                <input
+                  type="text"
+                  value={exportNamesPath}
+                  onChange={(e) => setExportNamesPath(e.target.value)}
+                  placeholder="C:/output/group-names.csv"
+                />
+                <button type="button" className="ghost-action" onClick={() => { void browseExportNamesPath(); }}>
+                  Browse
+                </button>
+              </div>
+            </label>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="ghost-action"
+                onClick={() => setShowExportNamesModal(false)}
+                disabled={isExportingNames}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                onClick={() => { void exportNames(); }}
+                disabled={!selectedSessionId || isExportingNames}
+              >
+                {isExportingNames ? "Exporting..." : "Export names"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1015,8 +1214,8 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
                 max={Math.max(totalGroups, 1)}
               />
               <div className="candidate-list-actions">
-                <button type="button" className="primary-action" onClick={() => { void exportSession(); }} disabled={!selectedSessionId}>
-                  Export review
+                <button type="button" className="primary-action" onClick={openExportNamesModal} disabled={!selectedSessionId}>
+                  Export names
                 </button>
               </div>
             </div>

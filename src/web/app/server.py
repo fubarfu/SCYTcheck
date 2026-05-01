@@ -395,6 +395,15 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
+        export_names_match = re.fullmatch(r"/api/review/sessions/([^/]+)/export-names", path)
+        if export_names_match and method == "POST":
+            status, body = self._services.review_export.post_export_names(
+                export_names_match.group(1),
+                self._read_json_body(),
+            )
+            self._send_json(status, body)
+            return True
+
         session_match = re.fullmatch(r"/api/review/sessions/([^/]+)", path)
         if session_match and method == "GET":
             status, body = self._services.review_sessions.get_session(session_match.group(1))
@@ -405,6 +414,14 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             query = parse_qs(urlparse(self.path).query)
             initial_dir = query.get("initial_dir", [""])[0]
             status, body = self._services.fs.get_pick_folder(initial_dir)
+            self._send_json(status, body)
+            return True
+
+        if path == "/api/fs/pick-save-file" and method == "GET":
+            query = parse_qs(urlparse(self.path).query)
+            initial_dir = query.get("initial_dir", [""])[0]
+            default_name = query.get("default_name", [""])[0]
+            status, body = self._services.fs.get_pick_save_file(initial_dir, default_name)
             self._send_json(status, body)
             return True
 

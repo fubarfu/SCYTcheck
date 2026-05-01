@@ -56,6 +56,27 @@ class _DialogWorker:
         done.wait(timeout=120)
         return result[0] or ""
 
+    def ask_save_file(self, title: str = "", initial_dir: str = "", default_name: str = "") -> str:
+        result: list[str | None] = [None]
+        done = threading.Event()
+
+        def _ask(root: tkinter.Tk) -> str:
+            root.attributes("-topmost", True)
+            chosen = tkinter.filedialog.asksaveasfilename(
+                parent=root,
+                title=title,
+                initialdir=initial_dir or None,
+                initialfile=default_name or None,
+                defaultextension=".csv",
+                filetypes=(("CSV files", "*.csv"), ("All files", "*.*")),
+            )
+            root.attributes("-topmost", False)
+            return chosen or ""
+
+        self._q.put((_ask, result, done))
+        done.wait(timeout=120)
+        return result[0] or ""
+
 
 # Pre-warm the worker at import time so the first click is instant.
 _worker = _DialogWorker()
@@ -74,6 +95,20 @@ class FsHandler:
             path = _get_worker().ask_directory(
                 title="Choose output folder",
                 initial_dir=initial_dir,
+            )
+        except Exception:
+            path = ""
+        if not path:
+            return HTTPStatus.NO_CONTENT, {"path": ""}
+        return HTTPStatus.OK, {"path": path}
+
+    def get_pick_save_file(self, initial_dir: str = "", default_name: str = "") -> tuple[int, dict]:
+        """Open a native save-file chooser dialog and return the chosen file path."""
+        try:
+            path = _get_worker().ask_save_file(
+                title="Export names to CSV",
+                initial_dir=initial_dir,
+                default_name=default_name,
             )
         except Exception:
             path = ""
