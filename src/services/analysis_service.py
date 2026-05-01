@@ -149,6 +149,7 @@ class AnalysisService:
         on_log_record: Callable[[LogRecord], None] | None = None,
         output_csv_path: str | Path | None = None,
         frames_output_dir: str | Path | None = None,
+        on_candidate_discovered: Callable[[str], None] | None = None,
     ) -> VideoAnalysis:
         tolerance_value = max(0.60, min(float(tolerance_value), 0.95))
         gating_threshold = max(0.0, min(float(gating_threshold), 1.0))
@@ -172,6 +173,7 @@ class AnalysisService:
         processed_frames = 0
         previous_region_crops: dict[str, np.ndarray] = {}
         previous_region_accepts: dict[str, list[tuple[str, str, str | None]]] = {}
+        seen_normalized: set[str] = set()
         detailed_logging_enabled = should_write_detailed_sidecar(logging_enabled)
         timing_enabled = detailed_logging_enabled
         decode_ms = 0.0
@@ -365,6 +367,9 @@ class AnalysisService:
                             matched_pattern_id=pattern_id,
                         )
                     )
+                    if on_candidate_discovered is not None and normalized_name not in seen_normalized:
+                        seen_normalized.add(normalized_name)
+                        on_candidate_discovered(cleaned)
 
                     if resolved_frames_output_dir is not None:
                         x, y, width, height = region

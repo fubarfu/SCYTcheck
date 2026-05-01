@@ -23,6 +23,7 @@ from src.services.export_service import ExportService
 from src.services.history_service import HistoryService
 from src.services.logging import SidecarLogWriter, write_sidecar_log
 from src.services.ocr_service import OCRService
+from src.services.validation_service import ValidationService
 from src.services.video_service import VideoService
 
 
@@ -287,6 +288,11 @@ class AnalysisHandler:
                 if stop_event is not None and stop_event.is_set():
                     raise _AnalysisCancelled("Analysis cancelled")
 
+            validation_svc: ValidationService | None = None
+            if advanced.validation_enabled:
+                validation_svc = ValidationService()
+                validation_svc.start()
+
             writer = log_writer_ctx.__enter__() if log_writer_ctx is not None else None
             try:
                 analysis = analysis_service.analyze(
@@ -310,6 +316,7 @@ class AnalysisHandler:
                     on_log_record=writer.write_record if writer is not None else None,
                     output_csv_path=output_path,
                     frames_output_dir=frames_output_dir,
+                    on_candidate_discovered=validation_svc.enqueue if validation_svc is not None else None,
                 )
                 exported = self.export_service.export_to_csv(
                     analysis,
@@ -380,6 +387,40 @@ class AnalysisHandler:
                     history_id=str(merge_result["history_id"]),
                     history_run_id=str(merge_result["run_id"]),
                 )
+                if validation_svc is not None:
+                    validation_svc.stop()
+                    validation_svc.wait()
+                    outcomes = {
+                        k: {
+                            "state": v.state,
+                            "spelling": v.spelling,
+                            "checked_at": v.checked_at.isoformat() if v.checked_at else None,
+                            "source": v.source,
+                        }
+                        for k, v in validation_svc.get_outcomes().items()
+                    }
+                    state = self.adapter.progress(run_id)
+                    if state is not None:
+                        state.set_validation_state(outcomes, 0)
+                        state.review_ready = True
+                    # Persist outcomes to sidecar
+                    sidecar_path = ReviewSidecarStore.workspace_review_state_path(
+                        workspace_root
+                    )
+                    if sidecar_path.exists():
+                        try:
+                            sidecar_payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+                            sidecar_payload["validation_outcomes"] = outcomes
+                            sidecar_path.write_text(
+                                json.dumps(sidecar_payload, ensure_ascii=True, indent=2),
+                                encoding="utf-8",
+                            )
+                        except Exception:
+                            pass
+                else:
+                    state = self.adapter.progress(run_id)
+                    if state is not None:
+                        state.review_ready = True
                 self.adapter.update_progress(run_id, 100, 100, "Completed")
                 return str(exported)
             finally:
@@ -468,6 +509,7 @@ class AnalysisHandler:
             tolerance_value=float(payload.get("tolerance_value", base.tolerance_value)),
             gating_enabled=bool(payload.get("gating_enabled", base.gating_enabled)),
             gating_threshold=float(payload.get("gating_threshold", base.gating_threshold)),
+            validation_enabled=bool(payload.get("validation_enabled", base.validation_enabled)),
         )
 
     @staticmethod
@@ -510,6 +552,7 @@ class AnalysisHandler:
             "candidates": candidates,
             "candidates_original": [dict(candidate) for candidate in candidates],
             "action_history": [],
+            "validation_outcomes": {},
         }
         self._sidecar_store.save(csv_path, payload)
 
@@ -619,7 +662,9 @@ class AnalysisHandler:
             "frames_processed": state.frames_processed,
             "frames_estimated_total": state.frames_estimated_total,
             "progress_percent": progress_percent,
-            "review_ready": state.status == RunStatus.COMPLETED,
+            "review_ready": state.review_ready,
+            "validation_queue_size": state.validation_queue_size,
+            "validation_outcomes": state.validation_outcomes,
             "video_id": state.video_id,
             "recovery_message": recovery_message,
             "recovery_action": recovery_action,

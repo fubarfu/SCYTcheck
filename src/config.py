@@ -81,6 +81,7 @@ class AdvancedSettings:
     gating_enabled: bool = False
     gating_threshold: float = 0.02
     project_location: str = ""
+    validation_enabled: bool = True
 
 def default_advanced_settings() -> AdvancedSettings:
     return AdvancedSettings(
@@ -126,6 +127,7 @@ def default_advanced_settings() -> AdvancedSettings:
         gating_enabled=False,
         gating_threshold=0.02,
         project_location=str(default_project_location()),
+        validation_enabled=True,
     )
 
 def load_config() -> AppConfig:
@@ -266,6 +268,7 @@ def load_advanced_settings(base_dir: str | None = None) -> AdvancedSettings:
             )
         ),
         project_location=str(payload.get("project_location", defaults.project_location) or defaults.project_location),
+        validation_enabled=bool(payload.get("validation_enabled", defaults.validation_enabled)),
     )
 
 def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = None) -> None:
@@ -287,6 +290,7 @@ def save_advanced_settings(settings: AdvancedSettings, base_dir: str | None = No
                 "gating_enabled": settings.gating_enabled,
                 "gating_threshold": float(max(0.0, min(settings.gating_threshold, 1.0))),
                 "project_location": settings.project_location,
+                "validation_enabled": settings.validation_enabled,
             },            indent=2,
         ),
         encoding="utf-8",

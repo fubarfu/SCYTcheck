@@ -23,6 +23,7 @@ export interface Candidate {
   temporal_proximity?: number;
   recommendation_score?: number;
   recommendation?: "auto_confirm" | "review";
+  validation_state?: "unchecked" | "checking" | "found" | "not_found" | "failed";
 }
 
 interface Props {
@@ -41,6 +42,7 @@ interface Props {
   }) => void;
   onOpenThumbnail: (candidateId: string) => void;
   thumbnailCheckUrl?: string | null;
+  onRecheck?: (candidateId: string, spelling: string) => void;
   validationError?: {
     message: string;
     hint?: string | null;
@@ -100,6 +102,7 @@ function CandidateRowComponent({
   showOccurrenceMetadata = false,
   onAction,
   onOpenThumbnail,
+  onRecheck,
   validationError = null,
   thumbnailCheckUrl,
 }: Props & { thumbnailCheckUrl?: string | null }) {
@@ -260,6 +263,18 @@ function CandidateRowComponent({
           <div>
           <div className="candidate-radio-row">
             <strong>{currentText}</strong>
+            {candidate.validation_state === "found" && (
+              <span className="material-symbols-outlined validation-icon validation-found" title="RSI profile found">check_circle</span>
+            )}
+            {candidate.validation_state === "not_found" && (
+              <span className="material-symbols-outlined validation-icon validation-not-found" title="RSI profile not found">person_off</span>
+            )}
+            {candidate.validation_state === "checking" && (
+              <span className="material-symbols-outlined validation-icon validation-checking" title="Checking RSI profile…">progress_activity</span>
+            )}
+            {candidate.validation_state === "failed" && (
+              <span className="material-symbols-outlined validation-icon validation-failed" title="RSI validation failed">error_outline</span>
+            )}
           </div>
           <div className="candidate-meta-inline">
             <span>{candidate.start_timestamp ?? "-"}</span>
@@ -360,6 +375,17 @@ function CandidateRowComponent({
             >
               <span className="material-symbols-outlined" aria-hidden="true">delete</span>
             </button>
+            {onRecheck && (
+              <button
+                type="button"
+                className="ghost-action icon-tool-button"
+                aria-label="Re-check RSI profile"
+                title="Re-check RSI player profile"
+                onClick={() => onRecheck(candidate.candidate_id, candidate.corrected_text ?? candidate.extracted_name)}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">manage_accounts</span>
+              </button>
+            )}
           </div>
         </div>
       )}

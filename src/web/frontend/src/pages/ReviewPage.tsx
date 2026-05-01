@@ -56,6 +56,7 @@ interface ReviewSessionPayload {
     temporal_influence?: number;
   };
   groups?: CandidateGroup[];
+  validation_outcomes?: Record<string, { state: string; spelling: string; checked_at: string | null; source?: string }>;
 }
 
 interface HistoryListResponse {
@@ -518,6 +519,17 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
     const resp = await fetch(`/api/review/sessions/${normalizedSessionId}?_ts=${Date.now()}`, { cache: "no-store" });
     if (!resp.ok) return;
     const session = await resp.json() as ReviewSessionPayload;
+    // Enrich candidates with validation_state from validation_outcomes
+    if (session.validation_outcomes && session.candidates) {
+      session.candidates = session.candidates.map((c) => {
+        const key = (c.corrected_text ?? c.extracted_name).toLowerCase().trim();
+        const outcome = session.validation_outcomes![key];
+        if (outcome && !c.validation_state) {
+          return { ...c, validation_state: outcome.state as Candidate["validation_state"] };
+        }
+        return c;
+      });
+    }
     if (fetchToken !== latestSessionFetchTokenRef.current) {
       return;
     }

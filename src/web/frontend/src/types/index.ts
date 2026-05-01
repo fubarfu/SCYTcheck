@@ -1,3 +1,12 @@
+export type ValidationState = "unchecked" | "checking" | "found" | "not_found" | "failed";
+
+export interface ValidationOutcomeRecord {
+  state: ValidationState;
+  spelling: string;
+  checked_at: string | null;
+  source?: "analysis_batch" | "manual_review";
+}
+
 export interface AnalysisProgress {
   status: "in_progress" | "completed" | "failed";
   progress_percent: number;
@@ -10,6 +19,8 @@ export interface AnalysisProgress {
   estimated_remaining_ms?: number;
   review_ready?: boolean;
   video_id?: string;
+  validation_queue_size?: number;
+  validation_outcomes?: Record<string, ValidationOutcomeRecord>;
 }
 
 export interface Candidate {
@@ -18,6 +29,7 @@ export interface Candidate {
   discovered_in_run: string;
   marked_new: boolean;
   decision: "unreviewed" | "reviewed" | "confirmed" | "rejected" | "edited";
+  validation_state?: ValidationState;
 }
 
 export interface CandidateGroup {

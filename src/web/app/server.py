@@ -305,6 +305,15 @@ class _RequestHandler(SimpleHTTPRequestHandler):
             self._send_json(status, body)
             return True
 
+        validate_candidate_match = re.fullmatch(r"/api/review/sessions/([^/]+)/candidates/([^/]+)/validate", path)
+        if validate_candidate_match and method == "POST":
+            session_id, candidate_id = validate_candidate_match.groups()
+            status, body = self._services.review_actions.post_validate_candidate(
+                session_id, candidate_id, self._read_json_body()
+            )
+            self._send_json(status, body)
+            return True
+
         thumb_png_match = re.fullmatch(r"/api/review/sessions/([^/]+)/thumbnails/([^/]+)\.png", path)
         if thumb_png_match and method == "GET":
             session_id, candidate_id = thumb_png_match.groups()

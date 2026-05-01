@@ -119,6 +119,7 @@ class SettingsStore:
             "gating_threshold": advanced.gating_threshold,
             "filter_non_matching": advanced.filter_non_matching,
             "logging_enabled": advanced.logging_enabled,
+            "validation_enabled": advanced.validation_enabled,
             "context_patterns": list(advanced.context_patterns),
             "project_location": advanced.project_location or str(default_project_location()),
         }

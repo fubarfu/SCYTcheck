@@ -8,6 +8,7 @@ interface Settings {
   gating_threshold?: number;
   filter_non_matching?: boolean;
   logging_enabled?: boolean;
+  validation_enabled?: boolean;
 }
 
 interface Props {
@@ -111,6 +112,15 @@ export function AnalysisSettingsPanel({ settings, onChange, disabled = false }: 
             onChange={(e) => update({ logging_enabled: e.target.checked })}
           />
           Detailed sidecar log
+        </label>
+
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={settings.validation_enabled ?? true}
+            onChange={(e) => update({ validation_enabled: e.target.checked })}
+          />
+          Validate RSI player profiles
         </label>
       </div>
       </fieldset>

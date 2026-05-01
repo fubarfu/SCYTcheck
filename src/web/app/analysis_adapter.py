@@ -31,6 +31,17 @@ class AnalysisRunState:
     error_message: str | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
+    validation_outcomes: dict[str, dict] | None = None
+    validation_queue_size: int = 0
+    review_ready: bool = False
+
+    def set_validation_state(
+        self,
+        outcomes: dict[str, dict] | None,
+        queue_size: int,
+    ) -> None:
+        self.validation_outcomes = outcomes
+        self.validation_queue_size = queue_size
 
 
 ProgressCallback = Callable[[AnalysisRunState], None]  # noqa: E501

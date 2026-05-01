@@ -22,6 +22,7 @@ interface Settings {
   gating_threshold?: number;
   filter_non_matching?: boolean;
   logging_enabled?: boolean;
+  validation_enabled?: boolean;
   context_patterns?: unknown[];
   output_folder?: string;
   scan_region?: ScanRegion;
@@ -110,6 +111,8 @@ export function AnalysisPage({ reopenPayload = null, activeReviewVideoId = "" }:
   const [progressMessage, setProgressMessage] = useState("");
   const [projectStatus, setProjectStatus] = useState<"creating" | "merging" | null>(null);
   const [progressPercent, setProgressPercent] = useState(0);
+  const [validationQueueSize, setValidationQueueSize] = useState(0);
+  const [reviewReady, setReviewReady] = useState(false);
   const [preview, setPreview] = useState<PreviewFrame | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -550,6 +553,7 @@ export function AnalysisPage({ reopenPayload = null, activeReviewVideoId = "" }:
       gating_threshold: settings.gating_threshold,
       filter_non_matching: settings.filter_non_matching,
       logging_enabled: settings.logging_enabled,
+      validation_enabled: settings.validation_enabled ?? true,
       context_patterns: settings.context_patterns,
     };
 
@@ -608,11 +612,19 @@ export function AnalysisPage({ reopenPayload = null, activeReviewVideoId = "" }:
           project_status: "creating" | "merging";
           message: string;
           video_id?: string;
+          validation_queue_size?: number;
+          review_ready?: boolean;
         };
         setProgressStatus(data.status);
         setProgressPercent(data.progress_percent);
         setProgressMessage(data.message);
         setProjectStatus(data.project_status);
+        if (typeof data.validation_queue_size === "number") {
+          setValidationQueueSize(data.validation_queue_size);
+        }
+        if (data.review_ready) {
+          setReviewReady(true);
+        }
         if (data.video_id) {
           setVideoId(data.video_id);
         }
@@ -819,6 +831,18 @@ export function AnalysisPage({ reopenPayload = null, activeReviewVideoId = "" }:
           projectInfo={projectStatus === "creating" ? "Creating project" : "Merging into existing project"}
         />
       ) : null}
+      {!isRunning && reviewReady && validationQueueSize === 0 && (
+        <div className="validation-complete-notice">
+          <span className="material-symbols-outlined" style={{ verticalAlign: "middle", marginRight: 4 }}>verified</span>
+          RSI validation complete.
+        </div>
+      )}
+      {!isRunning && validationQueueSize > 0 && (
+        <div className="validation-queue-notice">
+          <span className="material-symbols-outlined" style={{ verticalAlign: "middle", marginRight: 4 }}>progress_activity</span>
+          Validating players… {validationQueueSize} remaining
+        </div>
+      )}
     </section>
   );
 }

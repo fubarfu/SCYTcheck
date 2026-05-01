@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from src.services.validation_service import ValidationService
 from src.web.api.schemas import (
     REVIEW_ACTION_TYPES,
     ReviewActionRequestDTO,
@@ -199,6 +200,41 @@ class ReviewActionsHandler:
             "session_id": session_id,
             "undone_action_id": action_id,
             "remaining_undo_count": len(history),
+        }
+
+    def post_validate_candidate(self, session_id: str, candidate_id: str, payload: dict[str, Any]) -> tuple[int, dict]:
+        """Synchronously recheck a single candidate's RSI profile and persist the outcome."""
+        state = self.sessions.get(session_id)
+        if state is None:
+            return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
+
+        spelling = str(payload.get("spelling", "")).strip()
+        if not spelling:
+            return 400, {"error": "validation_error", "message": "spelling is required"}
+
+        outcome = ValidationService.check_single(spelling, source="manual_review")
+
+        # Persist outcome into the sidecar
+        session_payload = dict(state.payload or {})
+        validation_outcomes: dict[str, Any] = dict(session_payload.get("validation_outcomes") or {})
+        key = spelling.lower()
+        validation_outcomes[key] = {
+            "state": outcome.state,
+            "spelling": outcome.spelling,
+            "checked_at": outcome.checked_at.isoformat() if outcome.checked_at else None,
+            "source": outcome.source,
+        }
+        session_payload["validation_outcomes"] = validation_outcomes
+        session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), session_payload)
+        self.sessions.upsert(state.session_id, state.csv_path, session_payload)
+        self._sidecar.save(Path(state.csv_path), session_payload)
+
+        return 200, {
+            "candidate_id": candidate_id,
+            "spelling": outcome.spelling,
+            "state": outcome.state,
+            "checked_at": outcome.checked_at.isoformat() if outcome.checked_at else None,
+            "source": outcome.source,
         }
 
 
