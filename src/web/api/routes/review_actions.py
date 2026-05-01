@@ -208,14 +208,28 @@ class ReviewActionsHandler:
         if state is None:
             return 404, {"error": "not_found", "message": f"session_id {session_id} not found"}
 
-        spelling = str(payload.get("spelling", "")).strip()
+        session_payload = dict(state.payload or {})
+
+        candidate_record: dict[str, Any] | None = None
+        for item in list(session_payload.get("candidates") or []):
+            if str(item.get("candidate_id", "")).strip() == candidate_id:
+                candidate_record = item
+                break
+
+        corrected_spelling = ""
+        extracted_spelling = ""
+        if isinstance(candidate_record, dict):
+            corrected_spelling = str(candidate_record.get("corrected_text") or "").strip()
+            extracted_spelling = str(candidate_record.get("extracted_name") or "").strip()
+
+        # Always prefer corrected candidate text when available.
+        spelling = corrected_spelling or str(payload.get("spelling", "")).strip() or extracted_spelling
         if not spelling:
             return 400, {"error": "validation_error", "message": "spelling is required"}
 
         outcome = ValidationService.check_single(spelling, source="manual_review")
 
         # Persist outcome into the sidecar while preserving any existing outcomes.
-        session_payload = dict(state.payload or {})
         persisted_payload = self._sidecar.load(Path(state.csv_path)) or {}
         validation_outcomes: dict[str, Any] = {}
         validation_outcomes.update(dict(persisted_payload.get("validation_outcomes") or {}))
@@ -227,10 +241,21 @@ class ReviewActionsHandler:
             "checked_at": outcome.checked_at.isoformat() if outcome.checked_at else None,
             "source": outcome.source,
         }
+
+        # Keep the in-memory session payload fresh for immediate UI reads.
         session_payload["validation_outcomes"] = validation_outcomes
+
+        # When a persisted workspace review_state exists, preserve it as the base payload.
+        # This avoids clobbering persisted candidate_decisions/corrections during retries.
+        save_payload: dict[str, Any] = dict(session_payload)
+        if isinstance(persisted_payload, dict) and persisted_payload:
+            save_payload = dict(persisted_payload)
+            save_payload["validation_outcomes"] = validation_outcomes
+
         session_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), session_payload)
+        save_payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), save_payload)
         self.sessions.upsert(state.session_id, state.csv_path, session_payload)
-        self._sidecar.save(Path(state.csv_path), session_payload)
+        self._sidecar.save(Path(state.csv_path), save_payload)
 
         return 200, {
             "candidate_id": candidate_id,

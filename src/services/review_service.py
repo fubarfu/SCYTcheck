@@ -41,6 +41,10 @@ class ReviewService:
             effective_run_count = max(effective_run_count, metadata_run_count)
 
         prior_state_path = workspace_root / "review_state.json"
+        if not prior_state_path.exists():
+            legacy_prior_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
+            if legacy_prior_state_path.exists():
+                prior_state_path = legacy_prior_state_path
         prior_state = self._load_prior_state(prior_state_path)
         prior_decisions = self._extract_prior_decisions(prior_state)
         thresholds = self._extract_thresholds(prior_state)
@@ -162,20 +166,17 @@ class ReviewService:
                     continue
                 merged[key] = dict(outcome)
 
-        if merged:
-            return merged
-
         fallback = prior_state.get("validation_outcomes") if isinstance(prior_state, dict) else None
-        if not isinstance(fallback, dict):
-            return {}
+        if isinstance(fallback, dict):
+            # Prefer persisted review_state outcomes (includes manual retries)
+            # over older run sidecar snapshots when keys overlap.
+            for name, outcome in fallback.items():
+                key = str(name or "").strip().lower()
+                if not key or not isinstance(outcome, dict):
+                    continue
+                merged[key] = dict(outcome)
 
-        normalized: dict[str, dict[str, Any]] = {}
-        for name, outcome in fallback.items():
-            key = str(name or "").strip().lower()
-            if not key or not isinstance(outcome, dict):
-                continue
-            normalized[key] = dict(outcome)
-        return normalized
+        return merged
 
     @staticmethod
     def _read_workspace_metadata_run_count(workspace_root: Path) -> int | None:
@@ -263,11 +264,14 @@ class ReviewService:
         if action not in {"confirmed", "rejected", "edited", "clear_new", "unreviewed"}:
             raise ValueError("Action must be one of: confirmed, rejected, edited, clear_new, unreviewed")
 
-        workspace_root = Path(project_location) / video_id / ".scyt_review_workspaces"
+        workspace_root = Path(project_location) / video_id
         workspace_root.mkdir(parents=True, exist_ok=True)
         review_state_path = workspace_root / "review_state.json"
+        legacy_review_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
 
         payload = self._load_prior_state(review_state_path)
+        if not payload and legacy_review_state_path.exists():
+            payload = self._load_prior_state(legacy_review_state_path)
         decisions = payload.get("candidate_decisions")
         if not isinstance(decisions, dict):
             decisions = {}
@@ -386,11 +390,14 @@ class ReviewService:
         *,
         reset_decisions: bool,
     ) -> dict[str, Any]:
-        workspace_root = Path(project_location) / video_id / ".scyt_review_workspaces"
+        workspace_root = Path(project_location) / video_id
         workspace_root.mkdir(parents=True, exist_ok=True)
         review_state_path = workspace_root / "review_state.json"
+        legacy_review_state_path = workspace_root / ".scyt_review_workspaces" / "review_state.json"
 
         payload = self._load_prior_state(review_state_path)
+        if not payload and legacy_review_state_path.exists():
+            payload = self._load_prior_state(legacy_review_state_path)
         payload["thresholds"] = self._extract_thresholds({"thresholds": thresholds})
         if reset_decisions:
             payload["candidate_decisions"] = {}

@@ -110,7 +110,7 @@ def test_marked_new_clear_persists_after_user_action(tmp_path: Path) -> None:
     again = next(c for c in merged_again["candidates"] if c["spelling"] == "NewName")
     assert again["marked_new"] is False
 
-    state_path = workspace / ".scyt_review_workspaces" / "review_state.json"
+    state_path = workspace / "review_state.json"
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     assert payload["candidate_decisions"][str(new_candidate["id"])]["marked_new"] is False
 
@@ -165,7 +165,7 @@ def test_confirm_action_propagates_group_selection_semantics(tmp_path: Path, mon
         action="confirmed",
     )
 
-    state_path = workspace / ".scyt_review_workspaces" / "review_state.json"
+    state_path = workspace / "review_state.json"
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     decisions = payload["candidate_decisions"]
     assert decisions["cand-a"]["decision"] == "confirmed"
@@ -227,7 +227,7 @@ def test_reject_action_rejects_same_spelling_in_group(tmp_path: Path, monkeypatc
         action="rejected",
     )
 
-    state_path = workspace / ".scyt_review_workspaces" / "review_state.json"
+    state_path = workspace / "review_state.json"
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     decisions = payload["candidate_decisions"]
     assert decisions["cand-a1"]["decision"] == "rejected"
@@ -478,3 +478,89 @@ def test_accepted_group_name_prefers_confirmed_edited_text(tmp_path: Path, monke
     assert candidate["decision"] == "confirmed"
     assert candidate["corrected_text"] == "Grynsi"
     assert group["name"] == "Grynsi"
+
+
+def test_marker_state_uses_validation_outcomes_from_review_state(tmp_path: Path) -> None:
+    project_root = tmp_path / "projects"
+    video_id = "video-marker-from-prior"
+    workspace = project_root / video_id
+    workspace.mkdir(parents=True)
+
+    _write_sidecar(
+        workspace / "result_1.review.json",
+        "https://www.youtube.com/watch?v=marker-from-prior",
+        [{"candidate_id": "cand-1", "extracted_name": "RocketJockey"}],
+    )
+
+    (workspace / "review_state.json").write_text(
+        json.dumps(
+            {
+                "validation_outcomes": {
+                    "rocketjockey": {
+                        "state": "not_found",
+                        "spelling": "RocketJockey",
+                        "checked_at": "2026-05-01T00:00:00+00:00",
+                        "source": "manual_review",
+                    }
+                }
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    service = ReviewService()
+    merged = service.merge_review_context(str(project_root), video_id)
+    candidate = next(c for c in merged["candidates"] if c["id"] == "cand-1")
+    assert candidate["validation_state"] == "not_found"
+
+
+def test_marker_state_prefers_review_state_outcome_over_run_snapshot(tmp_path: Path) -> None:
+    project_root = tmp_path / "projects"
+    video_id = "video-marker-prior-overrides-run"
+    workspace = project_root / video_id
+    workspace.mkdir(parents=True)
+
+    (workspace / "result_1.review.json").write_text(
+        json.dumps(
+            {
+                "source_value": "https://www.youtube.com/watch?v=marker-prior-overrides-run",
+                "candidates": [{"candidate_id": "cand-1", "extracted_name": "RocketJockey"}],
+                "validation_outcomes": {
+                    "rocketjockey": {
+                        "state": "checking",
+                        "spelling": "RocketJockey",
+                        "checked_at": "2026-05-01T00:00:00+00:00",
+                        "source": "analysis_batch",
+                    }
+                },
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    (workspace / "review_state.json").write_text(
+        json.dumps(
+            {
+                "validation_outcomes": {
+                    "rocketjockey": {
+                        "state": "found",
+                        "spelling": "RocketJockey",
+                        "checked_at": "2026-05-01T00:01:00+00:00",
+                        "source": "manual_review",
+                    }
+                }
+            },
+            ensure_ascii=True,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    service = ReviewService()
+    merged = service.merge_review_context(str(project_root), video_id)
+    candidate = next(c for c in merged["candidates"] if c["id"] == "cand-1")
+    assert candidate["validation_state"] == "found"
