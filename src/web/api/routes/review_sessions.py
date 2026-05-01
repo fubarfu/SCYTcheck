@@ -27,17 +27,26 @@ class ReviewSessionHandler:
         self._sidecar = ReviewSidecarStore()
         self._history = history_store or ReviewHistoryStore(self._sidecar)
 
-    def _flush_session_history(self, state, trigger_type: str) -> str | None:
-        if not state.has_pending_history:
+    def _flush_session_history(self, state, trigger_type: str, *, force: bool = False) -> str | None:
+        if not force and not state.has_pending_history:
             return None
         payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), dict(state.payload or {}))
-        entry = self._history.append_snapshot_if_changed(Path(state.csv_path), payload, trigger_type)
+        if force:
+            entry = self._history.append_snapshot(Path(state.csv_path), payload, trigger_type)
+        else:
+            entry = self._history.append_snapshot_if_changed(Path(state.csv_path), payload, trigger_type)
         self.sessions.clear_history_pending(state.session_id)
         if entry is None:
             return None
         return str(entry.get("entry_id", "")) or None
 
-    def _flush_active_session_history_if_switching(self, next_video_id: str, next_session_id: str | None = None) -> str | None:
+    def _flush_active_session_history_if_switching(
+        self,
+        next_video_id: str,
+        next_session_id: str | None = None,
+        *,
+        force: bool = False,
+    ) -> str | None:
         active_state = self.sessions.get_active_session()
         if active_state is None:
             return None
@@ -47,7 +56,7 @@ class ReviewSessionHandler:
         active_video_id = str(active_payload.get("workspace", {}).get("video_id", "")).strip()
         if active_video_id == next_video_id:
             return None
-        return self._flush_session_history(active_state, "video-switch")
+        return self._flush_session_history(active_state, "video-switch", force=force)
 
     def flush_all_pending_history(self, trigger_type: str = "app-close") -> int:
         flushed = 0
@@ -65,21 +74,14 @@ class ReviewSessionHandler:
                 "history_entry_id": None,
                 "reason": "session_not_found",
             }
-        if not state.has_pending_history:
-            return 200, {
-                "session_id": session_id,
-                "flushed": False,
-                "history_entry_id": None,
-                "reason": "no_diff_from_last_entry",
-            }
         payload = self._sidecar.ensure_workspace_metadata(Path(state.csv_path), dict(state.payload or {}))
-        entry = self._history.append_snapshot_if_changed(Path(state.csv_path), payload, "browser-close")
+        entry = self._history.append_snapshot(Path(state.csv_path), payload, "browser-close")
         self.sessions.clear_history_pending(state.session_id)
         return 200, {
             "session_id": session_id,
-            "flushed": entry is not None,
-            "history_entry_id": (str(entry.get("entry_id", "")) if entry is not None else None),
-            "reason": ("flushed" if entry is not None else "no_diff_from_last_entry"),
+            "flushed": True,
+            "history_entry_id": str(entry.get("entry_id", "")),
+            "reason": "flushed",
         }
 
     def post_load(self, payload: dict[str, Any]) -> tuple[int, dict]:
@@ -142,7 +144,7 @@ class ReviewSessionHandler:
         }
         session_payload = recompute_groups(session_payload)
         session_payload = self._sidecar.ensure_workspace_metadata(csv_path, session_payload)
-        self._flush_active_session_history_if_switching(session_payload["workspace"]["video_id"])
+        self._flush_active_session_history_if_switching(session_payload["workspace"]["video_id"], force=True)
         self.sessions.upsert(session_id, str(csv_path), session_payload)
         self._sidecar.save(csv_path, session_payload)
 

@@ -87,8 +87,8 @@ def test_restore_flow_deletes_newer_snapshots_after_video_switch(tmp_path: Path)
 
     list_status, list_body = history.get_history(video_id, session_id=session_id)
     assert list_status == 200
-    assert len(list_body["entries"]) == 1
-    assert list_body["entries"][0]["entry_id"] == entry_id
+    assert len(list_body["entries"]) == 2
+    assert list_body["entries"][1]["entry_id"] == entry_id
 
 
 def test_non_state_mutation_does_not_create_snapshot(tmp_path: Path) -> None:
@@ -243,15 +243,15 @@ def test_browser_close_flush_creates_entry_only_when_different_from_latest(tmp_p
 
     second_flush_status, second_flush = sessions.post_flush_on_close(session_id)
     assert second_flush_status == 200
-    assert second_flush["flushed"] is False
-    assert second_flush["reason"] == "no_diff_from_last_entry"
+    assert second_flush["flushed"] is True
+    assert second_flush["reason"] == "flushed"
 
     list_status, list_body = history.get_history(video_id, session_id=session_id)
     assert list_status == 200
-    assert len(list_body["entries"]) == 1
+    assert len(list_body["entries"]) == 2
 
 
-def test_browser_close_flush_without_edits_does_not_create_snapshot(tmp_path: Path) -> None:
+def test_browser_close_flush_without_edits_creates_snapshot(tmp_path: Path) -> None:
     sessions, _, history = _services()
 
     load_status, load_body = sessions.post_load({"csv_path": str(_csv(tmp_path))})
@@ -265,15 +265,15 @@ def test_browser_close_flush_without_edits_does_not_create_snapshot(tmp_path: Pa
 
     close_status, close_body = sessions.post_flush_on_close(session_id)
     assert close_status == 200
-    assert close_body["flushed"] is False
-    assert close_body["reason"] == "no_diff_from_last_entry"
+    assert close_body["flushed"] is True
+    assert close_body["reason"] == "flushed"
 
     after_status, after_body = history.get_history(video_id, session_id=session_id)
     assert after_status == 200
-    assert len(after_body["entries"]) == 0
+    assert len(after_body["entries"]) == 1
 
 
-def test_browser_close_flush_skips_when_state_matches_latest_entry(tmp_path: Path) -> None:
+def test_browser_close_flush_creates_entry_even_when_state_matches_latest_entry(tmp_path: Path) -> None:
     sessions, actions, history = _services()
 
     load_status, load_body = sessions.post_load({"csv_path": str(_csv(tmp_path))})
@@ -304,15 +304,15 @@ def test_browser_close_flush_skips_when_state_matches_latest_entry(tmp_path: Pat
 
     close_status, close_body = sessions.post_flush_on_close(session_id)
     assert close_status == 200
-    assert close_body["flushed"] is False
-    assert close_body["reason"] == "no_diff_from_last_entry"
+    assert close_body["flushed"] is True
+    assert close_body["reason"] == "flushed"
 
     list_status, list_body = history.get_history(video_id, session_id=session_id)
     assert list_status == 200
-    assert len(list_body["entries"]) == 1
+    assert len(list_body["entries"]) == 2
 
 
-def test_video_switch_flush_skips_when_state_matches_latest_entry(tmp_path: Path) -> None:
+def test_video_switch_flush_creates_entry_even_when_state_matches_latest_entry(tmp_path: Path) -> None:
     sessions, actions, history = _services()
 
     base_csv = _csv(tmp_path)
@@ -351,7 +351,7 @@ def test_video_switch_flush_skips_when_state_matches_latest_entry(tmp_path: Path
 
     final_status, final_history = history.get_history(video_id, session_id=session_id)
     assert final_status == 200
-    assert len(final_history["entries"]) == 1
+    assert len(final_history["entries"]) == 2
 
 
 # ---------------------------------------------------------------------------

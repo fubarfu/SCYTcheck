@@ -38,7 +38,11 @@ class _AppServices:
         self.analysis = AnalysisHandler()
         self.fs = FsHandler()
         self.projects = ProjectsHandler(settings_handler=self.settings)
-        self.review = ReviewHandler(settings_handler=self.settings)
+        self.review = ReviewHandler(
+            settings_handler=self.settings,
+            session_manager=session_manager,
+            history_store=history_store,
+        )
         self.review_sessions = ReviewSessionHandler(
             session_manager=session_manager,
             history_store=history_store,

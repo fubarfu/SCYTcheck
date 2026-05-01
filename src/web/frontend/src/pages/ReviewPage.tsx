@@ -124,7 +124,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
   const [hasPendingGroupingSettings, setHasPendingGroupingSettings] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [showRecalculateConfirm, setShowRecalculateConfirm] = useState(false);
-  const [undoCount, setUndoCount] = useState(0);
   const [groupToggles, setGroupToggles] = useState<GroupToggleState>({});
   const [groupValidationFeedback, setGroupValidationFeedback] = useState<Record<string, GroupValidationFeedbackState>>({});
   const [newGroupDropActive, setNewGroupDropActive] = useState(false);
@@ -453,20 +452,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
       }));
       return;
     }
-    if (isVideoContextSession) {
-      setStoreState((prev) => ({
-        ...prev,
-        editHistory: {
-          ...prev.editHistory,
-          entries: [],
-          selectedEntryId: null,
-          restoredEntryId: null,
-          loading: false,
-          error: null,
-        },
-      }));
-      return;
-    }
     setStoreState((prev) => ({
       ...prev,
       editHistory: {
@@ -476,7 +461,7 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
       },
     }));
     void fetchEditHistory(videoId, selectedSessionId);
-  }, [selectedSessionId, videoId, isVideoContextSession]);
+  }, [selectedSessionId, videoId]);
 
   // Keep selectedGroupId valid: prefer an unresolved group (with validation error first),
   // then any visible group. Reset to null when no groups remain.
@@ -645,8 +630,8 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
           }
         }
         setLoadingError(null);
-        setUndoCount((value) => value + 1);
         await loadReviewContext(videoId);
+        await fetchEditHistory(videoId, videoId);
         return;
       }
 
@@ -721,7 +706,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
       });
     }
     setLoadingError(null);
-    setUndoCount((v) => v + 1);
     await fetchSession(selectedSessionId);
     if (videoId) {
       await fetchEditHistory(videoId, selectedSessionId);
@@ -764,7 +748,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
           return;
         }
         await loadReviewContext(videoId);
-        setUndoCount(0);
         return;
       }
       const thresholdsChanged = spellingRelaxation !== appliedSpellingRelaxation
@@ -791,7 +774,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
       const reconciled = reconcileGroupMutationState(session);
       setSelectedSession(reconciled);
       syncGroupingSettingsDraft(reconciled);
-      setUndoCount(0);
     } finally {
       setIsRecalculatingGroups(false);
     }
@@ -802,22 +784,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
       return;
     }
     setShowRecalculateConfirm(true);
-  };
-
-  const handleUndo = async () => {
-    if (!selectedSessionId) return;
-    setExportMessage(null);
-    const resp = await fetch(`/api/review/sessions/${selectedSessionId}/undo`, { method: "POST" });
-    if (!resp.ok) {
-      setLoadingError("Undo failed");
-      return;
-    }
-    const body = await resp.json() as { remaining_undo_count: number };
-    setUndoCount(body.remaining_undo_count);
-    await fetchSession(selectedSessionId);
-    if (videoId) {
-      await fetchEditHistory(videoId, selectedSessionId);
-    }
   };
 
   const openThumbnail = async (candidateId: string) => {
@@ -955,14 +921,6 @@ export function ReviewPage({ reopenContext = null, autoCsvPath = null, activeRev
                 max={Math.max(totalGroups, 1)}
               />
               <div className="candidate-list-actions">
-                <button
-                  type="button"
-                  className="ghost-action"
-                  onClick={() => { void handleUndo(); }}
-                  disabled={undoCount <= 0}
-                >
-                  Undo
-                </button>
                 <button type="button" className="primary-action" onClick={() => { void exportSession(); }} disabled={!selectedSessionId}>
                   Export review
                 </button>
