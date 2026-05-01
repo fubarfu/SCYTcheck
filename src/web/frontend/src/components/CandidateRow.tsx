@@ -91,6 +91,11 @@ function buildYouTubeTimestampLink(sourceValue: string, timestampSeconds: number
   }
 }
 
+function buildRsiCitizenLink(spelling: string): string {
+  const safeName = encodeURIComponent(spelling.trim());
+  return `https://robertsspaceindustries.com/en/citizens/${safeName}`;
+}
+
 function CandidateRowComponent({
   candidate,
   groupId,
@@ -250,6 +255,15 @@ function CandidateRowComponent({
     onAction({ action_type: "remove", target_ids: [candidate.candidate_id] });
   }, [onAction, candidate.candidate_id]);
 
+  const handleOpenRsiProfile = useCallback(() => {
+    const spelling = (candidate.corrected_text ?? candidate.extracted_name).trim();
+    if (!spelling) {
+      return;
+    }
+    const url = buildRsiCitizenLink(spelling);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, [candidate.corrected_text, candidate.extracted_name]);
+
   const validationState = candidate.validation_state ?? "unchecked";
   const validationIcon =
     validationState === "found"
@@ -263,14 +277,15 @@ function CandidateRowComponent({
             : "help";
   const validationTitle =
     validationState === "found"
-      ? "RSI profile found"
+      ? "RSI profile found (open profile)"
       : validationState === "not_found"
-        ? "RSI profile not found"
+        ? "RSI profile not found (open profile)"
         : validationState === "checking"
           ? "Checking RSI profile"
           : validationState === "failed"
             ? "RSI validation failed"
             : "RSI profile not checked";
+  const canOpenRsiProfile = validationState === "found" || validationState === "not_found";
   return (
     <div
       className="candidate-row"
@@ -372,7 +387,8 @@ function CandidateRowComponent({
               className={`ghost-action icon-tool-button validation-state-button validation-state-${validationState}`}
               aria-label={validationTitle}
               title={validationTitle}
-              disabled
+              onClick={canOpenRsiProfile ? handleOpenRsiProfile : undefined}
+              disabled={!canOpenRsiProfile}
             >
               <span className="material-symbols-outlined" aria-hidden="true">{validationIcon}</span>
             </button>
