@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+
+def _default_frontend_dist_dir() -> Path:
+    """Return the frontend dist path, resolving against sys._MEIPASS when frozen."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / "src/web/frontend/dist"
+    return Path("src/web/frontend/dist")
 
 
 @dataclass(frozen=True)
@@ -35,14 +43,15 @@ def load_web_config() -> WebAppConfig:
     except ValueError:
         history_max_items = DEFAULT_WEB_CONFIG.history_max_items
 
+    dist_dir_env = os.getenv("SCYTCHECK_WEB_DIST_DIR")
+    frontend_dist_dir = Path(dist_dir_env) if dist_dir_env else _default_frontend_dist_dir()
+
     return WebAppConfig(
         host=host,
         port=max(1024, min(65535, port)),
         auto_open_browser=auto_open.strip() not in {"0", "false", "False"},
         startup_timeout_seconds=DEFAULT_WEB_CONFIG.startup_timeout_seconds,
-        frontend_dist_dir=Path(
-            os.getenv("SCYTCHECK_WEB_DIST_DIR", str(DEFAULT_WEB_CONFIG.frontend_dist_dir))
-        ),
+        frontend_dist_dir=frontend_dist_dir,
         history_max_items=max(1, min(5000, history_max_items)),
         history_include_deleted=include_deleted_raw.strip() in {"1", "true", "True"},
     )
