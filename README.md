@@ -1,18 +1,19 @@
 # SCYTcheck
 
-SCYTcheck analyzes text in selected regions of a YouTube video and exports:
-- a summary CSV (player name + first seen timestamp)
-- an optional detailed log CSV for troubleshooting and validation
+SCYTcheck watches selected regions of a YouTube (or local) video, reads text using OCR, and exports a CSV of detected player names with their first-seen timestamps.
+
+An optional detailed log CSV is also available for troubleshooting.
 
 ## 60-Second Quick Start
 
 1. Download the latest `SCYTcheck-<version>-<arch>.zip` from Releases.
 2. Extract the ZIP.
 3. Open the extracted folder and run `SCYTcheck.exe`.
-4. Paste a YouTube URL.
-5. Pick an output folder.
-6. Click **Select Regions + Analyze**, select regions, and confirm.
-7. Open the exported CSV when analysis finishes.
+4. SCYTcheck opens in your browser on the **Analysis** view.
+5. Paste a YouTube URL (or switch to **Local file**) and click **Load**.
+6. Draw one or more scan regions on the preview frame.
+7. Click **Run analysis**.
+8. Review opens automatically when scanning finishes.
 
 If Windows SmartScreen appears, choose **More info** and then **Run anyway**.
 
@@ -26,63 +27,58 @@ Use the portable release package. You do not need to install Python or run pip.
 4. Run `SCYTcheck.exe`.
 5. If Windows SmartScreen appears, select **More info** and then **Run anyway**.
 
-Settings are saved between runs in `%APPDATA%/SCYTcheck/scytcheck_settings.json` when writable, otherwise next to the executable as `scytcheck_settings.json`.
+Settings are saved between runs in `%APPDATA%/SCYTcheck/scytcheck_settings.json`.
+If `%APPDATA%` is unavailable, SCYTcheck falls back to a local `scytcheck_settings.json`.
 
-## First Run Workflow
+## Detailed Workflow
 
-1. Enter a valid YouTube URL.
-2. Choose an output folder.
-3. Optional: open **Advanced Settings** to adjust video quality, OCR confidence, context patterns, event-gap threshold, and detailed logging.
-4. Click **Select Regions + Analyze**.
-5. In the region selector, choose one or more regions and confirm.
-6. Watch progress messaging that tells you whether SCYTcheck is creating a new project or merging into an existing video project.
-7. When analysis completes, the app automatically opens Review for that video.
-8. In Review, newly discovered spellings are highlighted as new until you confirm/reject/edit/clear them.
+1. Open **Analysis** and enter a YouTube URL or local file path.
+2. Click **Load** to fetch a preview frame from the video.
+3. Draw one or more scan regions over the areas that show player names.
+4. Optionally expand **Analysis settings** and **Text patterns** to fine-tune detection.
+5. Click **Run analysis** to start. SCYTcheck will tell you whether it is creating a new project or merging into an existing one.
+6. **Review** opens automatically when scanning finishes.
+7. In Review, confirm, reject, or edit candidate names and resolve grouped spellings.
 
-## Video-Primary Workflow
+## How Projects Work
 
-SCYTcheck now treats a video as the primary review unit instead of individual CSV files.
+Each video has a single project that accumulates data across multiple analysis runs.
 
-- Analysis automatically resolves whether a run creates a new project or merges with prior runs for the same video.
-- Review auto-loads merged context by `video_id` and preserves prior human decisions.
-- Videos view discovers projects directly from the configured project location (filesystem source of truth).
-- Settings view (gear icon) controls project location and validates writability.
-
-## User Story Summary
-
-- US1: Auto-load merged review context after analysis without manual file picking.
-- US2: Emphasize newly found candidates and clear the marker on user action.
-- US3: Move project controls to Videos and Settings for video-centric navigation.
+- Running analysis on a video you have analyzed before merges the new results into the existing project rather than overwriting it.
+- Review always shows the combined, up-to-date picture for that video, including decisions you made in previous sessions.
+- The **Videos** tab lists all projects found in your configured project location. Click any entry to open it in Review.
+- The **Settings** gear icon lets you change the project location and verify it is writable.
 
 ## Robustness and Speed Controls
 
-Advanced Settings now includes controls for OCR robustness and speed:
+The **Analysis settings** panel includes controls for OCR robustness and speed:
 
-- `Matching tolerance` (`0.60` to `0.95`, default `0.75`):
-	- Lower values are more lenient and can recover names when OCR introduces character substitutions.
-	- Keep `0.75` for strict/default behavior.
-- `Enable Frame-Change Gating` (default off):
-	- Skips OCR when a region is visually unchanged between sampled frames.
-	- Improves runtime on static overlays while preserving output accuracy.
-- `Gating threshold` (`0.0` to `1.0`, default `0.02`):
-	- Lower values are stricter about detecting change.
+| Setting | Default | Effect |
+|---------|---------|--------|
+| Matching tolerance | `0.75` | How closely OCR output must match a known pattern. Lower values (e.g. `0.65`) tolerate more OCR errors; raise it to reduce false positives. Range: `0.60`–`0.95`. |
+| Gating enabled | Off | Skips OCR on a region when it has not visually changed since the last frame. Speeds up analysis on static overlays without affecting accuracy. |
+| Gating threshold | `0.02` | Sensitivity of the change detector. Lower values require more change before OCR runs. |
+| Detailed sidecar log | Off | Writes a full per-frame log CSV alongside the summary for troubleshooting. |
+| Validate RSI player profiles | On | Checks each detected name against `robertsspaceindustries.com` as scanning runs (max 1 request/second). Found names score higher in recommendations; not-found names score lower. |
 
-Completion status now includes a gating summary:
+When gating is enabled, analysis completion shows:
 
 ```text
 Gating Summary: Evaluated <total>, OCR Executed <executed>, OCR Skipped <skipped> (<skip_pct>%).
 ```
 
-If export fails after analysis (for example due to file lock or permissions), use **Retry Export** to write output again without re-running OCR.
+## Where Files Are Saved
+
+All output goes into the **Project location** set in **Settings** (default: `%APPDATA%\SCYTcheck\projects`). Inside that folder, each video gets its own sub-folder identified by a hash of the video URL. Each analysis run writes `result_latest.csv` and keeps a sidecar file that stores your review decisions.
 
 ## Reset Settings to Defaults
 
-To reset all Advanced Settings back to app defaults:
+To reset all analysis settings back to app defaults:
 
 1. Close SCYTcheck.
 2. Delete the persisted settings file:
 	- Preferred location: `%APPDATA%/SCYTcheck/scytcheck_settings.json`
-	- Fallback location (portable/no APPDATA write access): `scytcheck_settings.json` in the same folder as `SCYTcheck.exe`
+	- Fallback location (when `%APPDATA%` is unavailable): local `scytcheck_settings.json`
 3. Start SCYTcheck again. A fresh settings file is created automatically with default values.
 
 ## Output Formats
@@ -96,37 +92,33 @@ PlayerName,StartTimestamp
 Optional sidecar log CSV header:
 
 ```text
-TimestampSec,RawString,TestedStringRaw,TestedStringNormalized,Accepted,RejectionReason,ExtractedName,RegionId,MatchedPattern,NormalizedName,OccurrenceCount,StartTimestamp,EndTimestamp,RepresentativeRegion
+TimestampSec,TestedStringNormalized,Accepted,RejectionReason,ExtractedName,RegionId,MatchedPattern,NormalizedName,OccurrenceCount,StartTimestamp,EndTimestamp,RepresentativeRegion
 ```
 
 ## Troubleshooting
 
-App does not start:
-- Ensure the app is run from the extracted folder, not from inside the ZIP.
-- Verify security software did not quarantine bundled files.
+**App does not start**
+- Run `SCYTcheck.exe` from the extracted folder, not from inside the ZIP.
+- Check that security software has not quarantined bundled files.
 
-No text detected:
-- Re-check selected regions.
-- Lower OCR confidence in Advanced Settings.
-- Choose a clearer video quality.
-- Lower matching tolerance (for example from `0.75` to `0.65`) if OCR substitutions are common.
+**No text detected**
+- Make sure your scan regions cover the area where names appear.
+- Try a higher video quality in Analysis settings.
+- Lower matching tolerance (e.g. `0.65`) if OCR often misreads characters.
 
-Analysis feels slow on static overlays:
-- Keep frame-change gating enabled.
-- Verify gating threshold is near the default (`0.02`).
+**Analysis is slow**
+- Enable **Gating** in Analysis settings to skip OCR on unchanged frames.
+- Make sure the gating threshold is near `0.02`.
 
-YouTube URL rejected or inaccessible:
-- Confirm the URL is a standard YouTube link.
-- Confirm internet access and that the video is available.
+**YouTube URL not accepted or video unavailable**
+- Use a standard `youtube.com/watch?v=...` or `youtu.be/...` URL.
+- Confirm you have internet access and the video is publicly available.
 
 ## For Developers (Source Run)
 
-Use this path only if you are developing SCYTcheck.
+This section is for contributors working on SCYTcheck itself.
 
-For web UI features, Google Stitch is the authoritative source for UI design decisions.
-Feature specs define behavior and acceptance criteria, but developers should consult the
-active Stitch project/screens/design system whenever making UI decisions and document any
-necessary implementation deviation.
+For UI changes, the Google Stitch project is the design authority. Consult it before implementing any frontend work and note any deviations in the relevant spec.
 
 Requirements:
 - Python 3.11+
